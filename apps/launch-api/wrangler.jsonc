@@ -1,0 +1,33 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "launch-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": { "enabled": true },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "launch-db", "migrations_dir": "migrations" }
+  ],
+  "workflows": [
+    { "name": "launch-site", "binding": "LAUNCH", "class_name": "LaunchSiteWorkflow" }
+  ],
+  "vars": {
+    "GITHUB_OWNER": "adeshsarwan",
+    "GITHUB_REPO": "site-builder",
+    "GITHUB_BRANCH": "main",
+    "CF_ACCOUNT_ID": "", // injected at deploy time from the CLOUDFLARE_ACCOUNT_ID repo secret
+    "ALLOWED_ORIGINS": "",
+    "GA4_ACCOUNT_ID": "",
+    "OWNER_EMAILS": "adesh@thebesads.com",
+    "CLAUDE_MODEL": "claude-sonnet-5-5",
+    "PO_RUNTIME_URL": "https://serve.thebesads.com/runtime/config",
+    "DRY_RUN": "false"
+  }
+  // Secrets (wrangler secret put …):
+  //   API_KEY            – bearer key your frontend sends
+  //   CF_API_TOKEN       – Zone:Edit, DNS:Edit, Workers Scripts:Edit, Workers Routes:Edit, Zone Rulesets:Edit
+  //   GITHUB_TOKEN       – fine-grained PAT on adeshsarwan/site-builder: Contents RW, Actions RW
+  //   GCP_SA_JSON        – service-account JSON (Site Verification, Search Console, Analytics Admin)
+  //   ANTHROPIC_API_KEY  – for generated articles
+  //   WEBHOOK_SECRET     – HMAC key for status webhooks
+}

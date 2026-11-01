@@ -1,0 +1,19 @@
+---
+import type { Job } from '@/lib/jobs';
+interface Props { job: Job }
+const { job } = Astro.props;
+const posted = job.postedAt ? new Date(job.postedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '';
+---
+<article class="job">
+  <div>
+    <h3><a href={job.url} rel="nofollow sponsored noopener" target="_blank">{job.title}</a></h3>
+    <p class="job-co">{job.company} · {job.location}{job.remote && job.location !== 'Remote' ? ' · Remote' : ''}</p>
+    {job.snippet && <p class="job-snippet">{job.snippet}</p>}
+  </div>
+  <div class="job-side">
+    {job.salary && <span class="pill">{job.salary}</span>}
+    {job.type && <span class="pill pill--muted">{job.type}</span>}
+    {posted && <span class="meta">{posted}</span>}
+    <a class="btn btn--sm" href={job.url} rel="nofollow sponsored noopener" target="_blank">Apply</a>
+  </div>
+</article>

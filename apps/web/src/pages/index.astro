@@ -1,0 +1,55 @@
+---
+import Base from '@/layouts/Base.astro';
+import ArticleCard from '@/components/ArticleCard.astro';
+import AdSlot from '@/components/AdSlot.astro';
+import { allArticles } from '@/lib/articles';
+import { site } from '@/lib/site';
+
+const all = await allArticles();
+const featured = all.slice(0, 4);
+const latest = all.slice(4, 12);
+const sections = site.categories
+  .map((c) => ({ c, items: all.filter((a) => a.data.categorySlug === c.slug).slice(0, 3) }))
+  .filter((s) => s.items.length);
+const seo = { title: `${site.name} — ${site.tagline}`, description: site.description, path: '/' };
+---
+<Base seo={seo}>
+  <section class="wrap hero">
+    <h1>{site.tagline}</h1>
+    <p>{site.description}</p>
+    {site.jobs.enabled && (
+      <form class="hero-search" action="/jobs" method="get">
+        <input name="q" placeholder="Job title or keyword" aria-label="Job title or keyword" />
+        <input name="location" placeholder="City, state or remote" aria-label="Location" />
+        <button class="btn" type="submit">Find jobs</button>
+      </form>
+    )}
+  </section>
+
+  {featured.length > 0 && (
+    <section class="wrap">
+      <h2 class="section-title">Featured</h2>
+      <div class="grid grid--4">{featured.map((a) => <ArticleCard a={a} />)}</div>
+    </section>
+  )}
+
+  <div class="wrap with-sidebar">
+    <section>
+      <h2 class="section-title">Latest guides</h2>
+      <div class="grid grid--2">{latest.slice(0, 4).map((a) => <ArticleCard a={a} />)}</div>
+      <AdSlot id="ad-incontent" />
+      <div class="grid grid--2">{latest.slice(4).map((a) => <ArticleCard a={a} />)}</div>
+    </section>
+    <aside class="sidebar"><AdSlot id="ad-sidebar" /></aside>
+  </div>
+
+  {sections.map(({ c, items }) => (
+    <section class="wrap">
+      <div class="section-head">
+        <h2 class="section-title">{c.name}</h2>
+        <a href={`/category/${c.slug}`}>See all →</a>
+      </div>
+      <div class="grid grid--3">{items.map((a) => <ArticleCard a={a} size="sm" />)}</div>
+    </section>
+  ))}
+</Base>

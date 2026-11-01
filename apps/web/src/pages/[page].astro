@@ -1,0 +1,48 @@
+---
+// Trust pages that ad networks and Search expect on every site. Text is generic — review it for each brand.
+import Base from '@/layouts/Base.astro';
+import { site } from '@/lib/site';
+
+export function getStaticPaths() {
+  return ['about', 'contact', 'privacy', 'terms'].map((page) => ({ params: { page } }));
+}
+const { page } = Astro.params;
+const n = site.name, co = site.legal.companyName, mail = site.legal.contactEmail;
+const titles: Record<string, string> = { about: `About ${n}`, contact: 'Contact us', privacy: 'Privacy policy', terms: 'Terms of use' };
+const seo = { title: `${titles[page!]} | ${n}`, description: `${titles[page!]} — ${n}.`, path: `/${page}` };
+---
+<Base seo={seo}>
+  <article class="wrap-narrow prose page-legal">
+    <h1>{titles[page!]}</h1>
+    {page === 'about' && (
+      <>
+        <p>{n} publishes practical guides on finding work, preparing for interviews and growing a career, alongside current job listings.</p>
+        <p>{site.description}</p>
+        <p>Questions or corrections: <a href={`mailto:${mail}`}>{mail}</a>.</p>
+      </>
+    )}
+    {page === 'contact' && <p>Email <a href={`mailto:${mail}`}>{mail}</a>. We aim to reply within two business days.</p>}
+    {page === 'privacy' && (
+      <>
+        <p>This policy explains what {co} collects when you use {site.domain}.</p>
+        <h2>Information we collect</h2>
+        <p>Usage data such as pages viewed, approximate location derived from IP address, device and browser type. If you answer our job-preference questions, your answers are stored in a cookie on your device and used to filter job listings.</p>
+        <h2>Advertising</h2>
+        <p>We show ads served through Google Ad Manager and partners. These services may use cookies or similar technologies to show ads based on your visits to this and other sites. You can manage personalised advertising at <a href="https://adssettings.google.com" rel="nofollow">Google Ad Settings</a> and through the consent message shown on this site.</p>
+        <h2>Analytics</h2>
+        <p>We use Google Analytics to understand how the site is used. Data is aggregated and not used to identify you.</p>
+        <h2>Job listings</h2>
+        <p>Job listings link to third-party employers and job boards. Their privacy policies apply once you leave this site.</p>
+        <h2>Your choices</h2>
+        <p>You can clear or block cookies in your browser at any time. For any request about your data, contact <a href={`mailto:${mail}`}>{mail}</a>.</p>
+      </>
+    )}
+    {page === 'terms' && (
+      <>
+        <p>By using {site.domain} you agree to these terms. Content is provided for general information and is not legal, financial or professional advice.</p>
+        <p>Job listings are supplied by third parties; we do not guarantee their accuracy or availability and are not party to any employment relationship.</p>
+        <p>All content © {co}. Do not republish without permission.</p>
+      </>
+    )}
+  </article>
+</Base>

@@ -1,0 +1,80 @@
+---
+// Question funnel shown before gated pages. One question per screen, answers saved in a cookie,
+// then the visitor continues to `next`. Works without JS (all steps in one form) and is enhanced with JS.
+export const prerender = false;
+import Base from '@/layouts/Base.astro';
+import AdSlot from '@/components/AdSlot.astro';
+import { getFunnel, funnelCookie, sanitizeAnswers, encodeAnswers, safeNext } from '@/lib/funnels';
+
+const f = getFunnel(Astro.params.funnel!);
+if (!f) return new Response('Not found', { status: 404 });
+const next = safeNext(Astro.url.searchParams.get('next'), f.gate[0] ?? '/');
+
+if (Astro.url.searchParams.get('reset')) Astro.cookies.delete(funnelCookie(f.id), { path: '/' });
+
+if (Astro.request.method === 'POST') {
+  const form = await Astro.request.formData();
+  const answers = sanitizeAnswers(f, Object.fromEntries(form));
+  if (Object.keys(answers).length === f.steps.length) {
+    Astro.cookies.set(funnelCookie(f.id), encodeAnswers(answers), {
+      path: '/', httpOnly: true, secure: true, sameSite: 'lax', maxAge: 60 * 60 * 24 * (f.rememberDays ?? 30),
+    });
+    return Astro.redirect(safeNext(String(form.get('next') ?? next)), 303);
+  }
+}
+const seo = { title: f.title, description: f.intro ?? f.title, path: `/start/${f.id}`, noindex: true };
+---
+<Base seo={seo} leaderboard={false}>
+  <section class="wrap-narrow funnel" data-funnel={f.id} data-interstitial-after={f.interstitialAfterStep ?? ''}>
+    <h1>{f.title}</h1>
+    {f.intro && <p class="dek">{f.intro}</p>}
+    <div class="progress" aria-hidden="true"><span style="width:0%"></span></div>
+    <form method="post">
+      <input type="hidden" name="next" value={next} />
+      {f.steps.map((s, i) => (
+        <fieldset class="step" data-step={i}>
+          <legend><span class="meta">Question {i + 1} of {f.steps.length}</span>{s.question}</legend>
+          {s.help && <p class="meta">{s.help}</p>}
+          <div class="options">
+            {s.options.map((o) => (
+              <label class="option"><input type="radio" name={s.key} value={o.value} required /> <span>{o.label}</span></label>
+            ))}
+          </div>
+        </fieldset>
+      ))}
+      <div class="funnel-actions">
+        <button type="button" class="btn btn--ghost" data-back hidden>Back</button>
+        <button type="submit" class="btn">See my jobs</button>
+      </div>
+    </form>
+    <AdSlot id="ad-incontent" />
+  </section>
+  <script>
+    // Progressive enhancement: one step at a time, auto-advance on answer.
+    const root = document.querySelector<HTMLElement>('.funnel')!;
+    const steps = [...root.querySelectorAll<HTMLFieldSetElement>('.step')];
+    const bar = root.querySelector<HTMLSpanElement>('.progress span')!;
+    const back = root.querySelector<HTMLButtonElement>('[data-back]')!;
+    const submit = root.querySelector<HTMLButtonElement>('button[type=submit]')!;
+    const interstitialAfter = root.dataset.interstitialAfter === '' ? -1 : Number(root.dataset.interstitialAfter);
+    let i = 0;
+    root.classList.add('js');
+    const show = (n: number) => {
+      i = n;
+      steps.forEach((s, k) => (s.hidden = k !== n));
+      bar.style.width = `${(n / steps.length) * 100}%`;
+      back.hidden = n === 0;
+      submit.hidden = n !== steps.length - 1 || !steps[n].querySelector('input:checked');
+    };
+    steps.forEach((s, k) =>
+      s.addEventListener('change', async () => {
+        if (k === steps.length - 1) { submit.hidden = false; bar.style.width = '100%'; return; }
+        // Publisher-chosen transition for an interstitial opportunity; the flow continues regardless of the result.
+        if (k === interstitialAfter) await (window as any).siteAds?.requestInterstitialOpportunity?.();
+        show(k + 1);
+      }),
+    );
+    back.addEventListener('click', () => show(Math.max(0, i - 1)));
+    show(0);
+  </script>
+</Base>

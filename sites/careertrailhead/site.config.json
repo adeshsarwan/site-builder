@@ -1,0 +1,51 @@
+{
+  "slug": "careertrailhead",
+  "domain": "careertrailhead.com",
+  "name": "Careertrailhead",
+  "tagline": "The shortcut to a better one",
+  "description": "Practical, sourced guides on job searching, resumes, interviews, salary negotiation and career change — plus current job listings.",
+  "locale": "en-US",
+  "country": "US",
+  "theme": { "primary": "#0f766e", "accent": "#f59e0b", "logoText": "Careertrailhead" },
+  "categories": [
+    { "slug": "job-search-strategy", "name": "Job Search Strategy", "description": "How to find openings, organise your search and get more interviews from fewer applications." },
+    { "slug": "resume-cover-letters", "name": "Resume & Cover Letters", "description": "Templates, examples and fixes for resumes and cover letters that get read." },
+    { "slug": "interview-prep", "name": "Interview Prep", "description": "Question-by-question preparation for every interview format." },
+    { "slug": "salary-negotiation", "name": "Salary & Negotiation", "description": "What to ask for, when, and the words to use." },
+    { "slug": "workplace-success", "name": "Workplace Success", "description": "Habits and scripts for your first months in a new role." },
+    { "slug": "career-change-growth", "name": "Career Change & Growth", "description": "Realistic routes, costs and timelines for changing fields." }
+  ],
+  "ads": {
+    "enabled": true,
+    "poSite": "careertrailhead.com",
+    "sdkUrl": "https://serve.thebesads.com/sdk/publisher-sdk.js",
+    "runtimeUrl": "https://serve.thebesads.com/runtime/config",
+    "adsTxt": [],
+    "anchor": true
+  },
+  "analytics": { "ga4MeasurementId": "" },
+  "searchConsole": { "googleSiteVerification": "" },
+  "jobs": { "enabled": true, "pageSize": 20, "defaultQuery": { "country": "US" } },
+  "funnels": [
+    {
+      "id": "job-match",
+      "title": "Let's find jobs that fit you",
+      "intro": "Three quick questions so we can show you the most relevant openings.",
+      "gate": ["/jobs"],
+      "interstitialAfterStep": 1,
+      "rememberDays": 30,
+      "steps": [
+        { "key": "category", "question": "What kind of work are you looking for?", "options": [
+          { "value": "healthcare", "label": "Healthcare" }, { "value": "tech", "label": "Tech & IT" },
+          { "value": "sales", "label": "Sales & customer service" }, { "value": "office", "label": "Office & admin" },
+          { "value": "trades", "label": "Warehouse, driving & trades" }, { "value": "any", "label": "Open to anything" } ] },
+        { "key": "level", "question": "How much experience do you have?", "options": [
+          { "value": "entry", "label": "Just starting out" }, { "value": "mid", "label": "2–5 years" }, { "value": "senior", "label": "5+ years" } ] },
+        { "key": "remote", "question": "Where do you want to work?", "options": [
+          { "value": "yes", "label": "Remote only" }, { "value": "hybrid", "label": "Hybrid is fine" }, { "value": "no", "label": "On-site near me" } ] }
+      ]
+    }
+  ],
+  "legal": { "companyName": "Careertrailhead", "contactEmail": "hello@careertrailhead.com" },
+  "social": { "defaultImage": "" }
+}

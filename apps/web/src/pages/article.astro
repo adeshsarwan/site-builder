@@ -1,0 +1,12 @@
+---
+import Base from '@/layouts/Base.astro';
+import ArticleCard from '@/components/ArticleCard.astro';
+import { allArticles } from '@/lib/articles';
+import { site } from '@/lib/site';
+const all = await allArticles();
+const seo = { title: `All guides | ${site.name}`, description: `Every career guide on ${site.name}.`, path: '/article' };
+---
+<Base seo={seo}>
+  <section class="wrap page-head"><h1>All guides</h1><p>{all.length} guides</p></section>
+  <section class="wrap"><div class="grid grid--3">{all.map((a) => <ArticleCard a={a} size="sm" />)}</div></section>
+</Base>

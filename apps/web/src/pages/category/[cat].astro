@@ -1,0 +1,41 @@
+---
+import Base from '@/layouts/Base.astro';
+import ArticleCard from '@/components/ArticleCard.astro';
+import AdSlot from '@/components/AdSlot.astro';
+import { articlesInCategory } from '@/lib/articles';
+import { breadcrumbLd } from '@/lib/seo';
+import { site, abs } from '@/lib/site';
+
+export async function getStaticPaths() {
+  return site.categories.map((c) => ({ params: { cat: c.slug }, props: { c } }));
+}
+const { c } = Astro.props as { c: (typeof site.categories)[number] };
+const items = await articlesInCategory(c.slug);
+const path = `/category/${c.slug}`;
+const seo = {
+  title: `${c.name} | ${site.name}`,
+  description: c.description,
+  path,
+  noindex: items.length === 0, // keep empty categories out of the index until they have content
+  jsonLd: [
+    breadcrumbLd([{ name: 'Home', path: '/' }, { name: c.name, path }]),
+    { '@context': 'https://schema.org', '@type': 'CollectionPage', name: c.name, url: abs(path),
+      mainEntity: { '@type': 'ItemList', itemListElement: items.map((a, i) => ({ '@type': 'ListItem', position: i + 1, url: abs(`/${a.id}`) })) } },
+  ],
+};
+---
+<Base seo={seo}>
+  <section class="wrap page-head">
+    <h1>{c.name}</h1>
+    <p>{c.description}</p>
+  </section>
+  <div class="wrap with-sidebar">
+    <section>
+      {items.length === 0 && <p>New guides are on the way.</p>}
+      <div class="grid grid--2">{items.slice(0, 6).map((a) => <ArticleCard a={a} />)}</div>
+      {items.length > 6 && <AdSlot id="ad-incontent" />}
+      <div class="grid grid--2">{items.slice(6).map((a) => <ArticleCard a={a} />)}</div>
+    </section>
+    <aside class="sidebar"><AdSlot id="ad-sidebar" class="sticky" /></aside>
+  </div>
+</Base>

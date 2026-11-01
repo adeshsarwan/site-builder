@@ -1,0 +1,11 @@
+---
+import Base from '@/layouts/Base.astro';
+import { site } from '@/lib/site';
+const seo = { title: `Page not found | ${site.name}`, description: 'Page not found', path: '/404', noindex: true };
+---
+<Base seo={seo} leaderboard={false}>
+  <section class="wrap-narrow page-head">
+    <h1>We couldn't find that page</h1>
+    <p><a href="/">Go to the homepage</a> or <a href="/article">browse all guides</a>.</p>
+  </section>
+</Base>

@@ -1,0 +1,102 @@
+---
+import '@/styles/global.css';
+import { site, abs } from '@/lib/site';
+import { websiteLd, type PageSeo } from '@/lib/seo';
+import AdSlot from '@/components/AdSlot.astro';
+
+interface Props { seo: PageSeo; leaderboard?: boolean }
+const { seo, leaderboard = true } = Astro.props;
+const canonical = seo.canonical ?? abs(seo.path);
+const image = seo.image ? abs(seo.image) : site.social?.defaultImage ? abs(site.social.defaultImage) : undefined;
+const ld = [websiteLd(), ...(seo.jsonLd ?? [])];
+const nav = site.nav ?? [
+  ...site.categories.slice(0, 5).map((c) => ({ label: c.name, href: `/category/${c.slug}` })),
+  ...(site.jobs.enabled ? [{ label: 'Find Jobs', href: '/jobs' }] : []),
+];
+const ga = site.analytics?.ga4MeasurementId;
+const path = Astro.url.pathname;
+---
+<!doctype html>
+<html lang={site.locale}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{seo.title}</title>
+    <meta name="description" content={seo.description} />
+    <link rel="canonical" href={canonical} />
+    <meta name="robots" content={seo.noindex ? 'noindex, follow' : 'index, follow, max-image-preview:large'} />
+    {site.searchConsole?.googleSiteVerification && <meta name="google-site-verification" content={site.searchConsole.googleSiteVerification} />}
+    <meta property="og:site_name" content={site.name} />
+    <meta property="og:title" content={seo.title} />
+    <meta property="og:description" content={seo.description} />
+    <meta property="og:type" content={seo.ogType ?? 'website'} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:locale" content={site.locale.replace('-', '_')} />
+    {image && <meta property="og:image" content={image} />}
+    {image && seo.imageAlt && <meta property="og:image:alt" content={seo.imageAlt} />}
+    <meta name="twitter:card" content={image ? 'summary_large_image' : 'summary'} />
+    <meta name="twitter:title" content={seo.title} />
+    <meta name="twitter:description" content={seo.description} />
+    {image && <meta name="twitter:image" content={image} />}
+    <meta name="theme-color" content={site.theme.primary} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="sitemap" href="/sitemap.xml" />
+    <style set:html={`:root{--primary:${site.theme.primary};--accent:${site.theme.accent}}`}></style>
+    {ld.map((o) => <script type="application/ld+json" set:html={JSON.stringify(o)} />)}
+
+    {site.ads.enabled && (
+      <>
+        <!-- Price Optimiser: exactly one SDK, deferred, then the integration file. No async, no inline init. -->
+        <script is:inline defer data-auto-init="false" data-po-site={site.ads.poSite} data-po-runtime-config-url={site.ads.runtimeUrl} src={site.ads.sdkUrl}></script>
+        <script is:inline defer src="/assets/price-optimiser-integration.js"></script>
+      </>
+    )}
+    {ga && (
+      <>
+        <script is:inline async src={`https://www.googletagmanager.com/gtag/js?id=${ga}`}></script>
+        <script is:inline define:vars={{ ga }}>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config',ga);</script>
+      </>
+    )}
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="site-header">
+      <div class="wrap header-row">
+        <a class="logo" href="/">{site.theme.logoText ?? site.name}</a>
+        <form class="search" action="/jobs" method="get" role="search">
+          <input name="q" type="search" placeholder="Search jobs" aria-label="Search jobs" />
+        </form>
+      </div>
+      <nav class="wrap nav" aria-label="Primary">
+        {nav.map((n) => <a href={n.href} aria-current={path === n.href ? 'page' : undefined}>{n.label}</a>)}
+      </nav>
+    </header>
+    {leaderboard && <div class="wrap"><AdSlot id="ad-leaderboard" /></div>}
+    <main id="main"><slot /></main>
+    <footer class="site-footer">
+      <div class="wrap footer-grid">
+        <div>
+          <div class="logo logo--footer">{site.name}</div>
+          <p>{site.tagline}</p>
+        </div>
+        <div>
+          <h4>Categories</h4>
+          <ul>{site.categories.map((c) => <li><a href={`/category/${c.slug}`}>{c.name}</a></li>)}</ul>
+        </div>
+        <div>
+          <h4>Site</h4>
+          <ul>
+            <li><a href="/article">All guides</a></li>
+            {site.jobs.enabled && <li><a href="/jobs">Find jobs</a></li>}
+            <li><a href="/about">About</a></li>
+            <li><a href="/contact">Contact</a></li>
+            <li><a href="/privacy">Privacy policy</a></li>
+            <li><a href="/terms">Terms</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="wrap copyright">© {new Date().getFullYear()} {site.legal.companyName}. All rights reserved.</div>
+    </footer>
+    {site.ads.enabled && site.ads.anchor !== false && <AdSlot id="ad-anchor" />}
+  </body>
+</html>

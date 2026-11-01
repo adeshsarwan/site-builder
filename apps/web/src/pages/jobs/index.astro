@@ -1,0 +1,69 @@
+---
+// Live jobs — server-rendered on every request (behind the funnel gate if one is configured).
+export const prerender = false;
+import Base from '@/layouts/Base.astro';
+import JobCard from '@/components/JobCard.astro';
+import AdSlot from '@/components/AdSlot.astro';
+import { searchJobs, type JobQuery, type JobResult } from '@/lib/jobs';
+import { site } from '@/lib/site';
+
+if (!site.jobs.enabled) return Astro.redirect('/', 302);
+
+const sp = Astro.url.searchParams;
+const answers = Astro.locals.funnelAnswers ?? {};
+const query: JobQuery = {
+  ...answers, // funnel answers become API filters (e.g. category, level, remote)
+  q: sp.get('q') ?? undefined,
+  location: sp.get('location') ?? answers.location ?? undefined,
+  remote: sp.get('remote') ?? answers.remote ?? undefined,
+  page: Math.max(1, Number(sp.get('page') ?? 1) || 1),
+};
+let result: JobResult | null = null;
+let error = '';
+try {
+  result = await searchJobs(query);
+} catch (e) {
+  error = 'Jobs are temporarily unavailable. Please try again shortly.';
+}
+Astro.response.headers.set('Cache-Control', 'private, max-age=60');
+const seo = {
+  title: `${query.q ? `${query.q} jobs` : 'Find jobs'} | ${site.name}`,
+  description: `Browse current openings on ${site.name}.`,
+  path: '/jobs',
+  noindex: Boolean(query.q || query.location || query.page !== 1),
+};
+const pages = result ? Math.ceil(result.total / result.pageSize) : 0;
+const pageHref = (p: number) => { const u = new URLSearchParams(sp); u.set('page', String(p)); return `/jobs?${u}`; };
+---
+<Base seo={seo}>
+  <section class="wrap page-head">
+    <h1>{query.q ? `${query.q} jobs` : 'Jobs for you'}</h1>
+    <form class="hero-search" method="get">
+      <input name="q" value={query.q ?? ''} placeholder="Job title or keyword" aria-label="Keyword" />
+      <input name="location" value={query.location ?? ''} placeholder="City, state or remote" aria-label="Location" />
+      <label class="check"><input type="checkbox" name="remote" value="yes" checked={query.remote === 'yes'} /> Remote only</label>
+      <button class="btn" type="submit">Search</button>
+    </form>
+    {site.funnels.length > 0 && <p class="meta"><a href={`/start/${site.funnels[0].id}?next=/jobs&reset=1`}>Change my preferences</a></p>}
+  </section>
+  <div class="wrap with-sidebar">
+    <section aria-live="polite">
+      {error && <p class="notice">{error}</p>}
+      {result && result.source === 'demo' && <p class="notice">Showing demo listings — connect JOBS_API_BASE to show live jobs.</p>}
+      {result && result.jobs.length === 0 && <p>No jobs match yet. Try a broader search.</p>}
+      {result?.jobs.slice(0, 3).map((j) => <JobCard job={j} />)}
+      {result && result.jobs.length > 0 && <AdSlot id="ad-results" />}
+      {result?.jobs.slice(3, 10).map((j) => <JobCard job={j} />)}
+      {result && result.jobs.length > 10 && <AdSlot id="ad-incontent" />}
+      {result?.jobs.slice(10).map((j) => <JobCard job={j} />)}
+      {pages > 1 && (
+        <nav class="pager" aria-label="Pagination">
+          {query.page! > 1 && <a href={pageHref(query.page! - 1)}>← Previous</a>}
+          <span>Page {query.page} of {pages}</span>
+          {query.page! < pages && <a href={pageHref(query.page! + 1)}>Next →</a>}
+        </nav>
+      )}
+    </section>
+    <aside class="sidebar"><AdSlot id="ad-sidebar" class="sticky" /></aside>
+  </div>
+</Base>

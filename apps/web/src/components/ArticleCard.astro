@@ -1,0 +1,14 @@
+---
+import type { Article } from '@/lib/articles';
+import { categoryName } from '@/lib/articles';
+interface Props { a: Article; size?: 'lg' | 'md' | 'sm'; showImage?: boolean }
+const { a, size = 'md', showImage = true } = Astro.props;
+const d = a.data;
+---
+<a class={`card card--${size}`} href={`/${a.id}`}>
+  {showImage && d.heroImage && <img src={d.heroImage} alt="" loading="lazy" decoding="async" width="640" height="360" />}
+  <span class="kicker">{categoryName(d.categorySlug)}</span>
+  <h3>{d.title}</h3>
+  {size !== 'sm' && <p>{d.description}</p>}
+  <span class="meta">{d.author}{d.readTime ? ` · ${d.readTime} min read` : ''}</span>
+</a>

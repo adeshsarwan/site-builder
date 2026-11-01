@@ -1,0 +1,10 @@
+---
+// A registered Price Optimiser display container. Each id may appear only once per page.
+// Space is reserved in CSS (per slot) to avoid layout shift.
+import { site } from '@/lib/site';
+export type SlotId = 'ad-leaderboard' | 'ad-incontent' | 'ad-results' | 'ad-sidebar' | 'ad-incontent-2' | 'ad-incontent-3' | 'ad-anchor';
+interface Props { id: SlotId; class?: string }
+const { id, class: cls = '' } = Astro.props;
+const variant = id.replace('ad-', '').replace(/-\d$/, '');
+---
+{site.ads.enabled && <div id={id} class={`ad-slot ad-slot--${variant} ${cls}`} aria-label="Advertisement"></div>}

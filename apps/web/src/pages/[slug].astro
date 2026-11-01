@@ -1,0 +1,60 @@
+---
+import Base from '@/layouts/Base.astro';
+import AdSlot from '@/components/AdSlot.astro';
+import ArticleCard from '@/components/ArticleCard.astro';
+import { render } from 'astro:content';
+import { allArticles, relatedFor, categoryName, fmtDate, type Article } from '@/lib/articles';
+import { articleSeo } from '@/lib/seo';
+import { site } from '@/lib/site';
+
+export async function getStaticPaths() {
+  const all = await allArticles();
+  return all.map((a) => ({ params: { slug: a.id }, props: { a } }));
+}
+
+const { a } = Astro.props as { a: Article };
+const d = a.data;
+const cat = categoryName(d.categorySlug);
+const { Content } = await render(a);
+const related = await relatedFor(a, 4);
+const seo = articleSeo(a, cat);
+---
+<Base seo={seo}>
+  <article class="article">
+    <header class="wrap-narrow article-head">
+      <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Home</a> › <a href={`/category/${d.categorySlug}`}>{cat}</a></nav>
+      <h1>{d.title}</h1>
+      <p class="dek">{d.description}</p>
+      <p class="meta">By {d.author}{d.pubDate && <> · <time datetime={d.pubDate.toISOString()}>{fmtDate(d.pubDate)}</time></>}{d.readTime && ` · ${d.readTime} min read`}</p>
+    </header>
+    {d.heroImage && (
+      <div class="wrap-hero"><img src={d.heroImage} alt={d.heroAlt} width="1280" height="720" fetchpriority="high" /></div>
+    )}
+    <div class="wrap with-sidebar">
+      <div class="prose"><Content /></div>
+      <aside class="sidebar">
+        <AdSlot id="ad-sidebar" class="sticky" />
+        {site.jobs.enabled && (
+          <div class="side-cta">
+            <h4>Ready to apply?</h4>
+            <p>Browse open roles matched to you.</p>
+            <a class="btn" href="/jobs">Find jobs</a>
+          </div>
+        )}
+      </aside>
+    </div>
+    {d.authorBio && (
+      <section class="wrap-narrow author-box">
+        <span class="kicker">Written by</span>
+        <strong>{d.author}</strong>
+        <p>{d.authorBio}</p>
+      </section>
+    )}
+  </article>
+  {related.length > 0 && (
+    <section class="wrap">
+      <h2 class="section-title">More in {cat}</h2>
+      <div class="grid grid--4">{related.map((r) => <ArticleCard a={r} size="sm" />)}</div>
+    </section>
+  )}
+</Base>
