@@ -140,9 +140,9 @@ export class LaunchSiteWorkflow extends WorkflowEntrypoint<Env, LaunchParams> {
               let picked = null;
               try { picked = imgEnv.IMAGE_PROVIDER === 'none' ? null : await pickImageWithFallback(imgEnv, imageQueries(art.imageQuery, plan.title, plan.categorySlug), plan.slug, slug, used); } catch { picked = null; }
               return { md: toMarkdown(input, art, today, picked?.hero ?? null), image: picked?.blob ?? null };
-            }),
+            }).catch(() => null), // one failing article never stops the launch
           ));
-          for (const b of batch) { generated.push(b.md); if (b.image) images.push(b.image); }
+          for (const b of batch) { if (!b) continue; generated.push(b.md); if (b.image) images.push(b.image); }
         }
         const out = { generated, images };
         await step.do('content:done', () => emit('content', 'done', `${generated.length} new articles · ${images.length} photos`, out));

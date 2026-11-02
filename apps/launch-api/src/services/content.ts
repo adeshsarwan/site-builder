@@ -22,10 +22,25 @@ async function claude(env: Env, system: string, user: string, maxTokens: number)
   return body.content.map((c: any) => c.text ?? '').join('');
 }
 
-const json = <T>(text: string): T => {
-  const m = text.match(/```(?:json)?\s*([\s\S]*?)```/) ?? text.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
-  return JSON.parse(m ? m[1] : text);
-};
+/** Extracts the first complete JSON value from a model reply (string-aware bracket matching). */
+export function extractJson<T>(text: string): T {
+  const t = text.trim();
+  try { return JSON.parse(t); } catch { /* fall through */ }
+  const fence = t.match(/^```(?:json)?\s*([\s\S]*?)\s*```\s*$/);
+  if (fence) { try { return JSON.parse(fence[1]); } catch { /* fall through */ } }
+  const start = t.search(/[\[{]/);
+  if (start < 0) throw new Error('No JSON in model reply');
+  let depth = 0, inStr = false, esc = false;
+  for (let i = start; i < t.length; i++) {
+    const ch = t[i];
+    if (inStr) { if (esc) esc = false; else if (ch === '\\') esc = true; else if (ch === '"') inStr = false; continue; }
+    if (ch === '"') inStr = true;
+    else if (ch === '{' || ch === '[') depth++;
+    else if (ch === '}' || ch === ']') { depth--; if (depth === 0) return JSON.parse(t.slice(start, i + 1)); }
+  }
+  throw new Error('Incomplete JSON in model reply (output may have been cut off)');
+}
+const json = extractJson;
 
 export const slugify = (s: string) => s.toLowerCase().replace(/['’]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 70).replace(/-$/, '');
 

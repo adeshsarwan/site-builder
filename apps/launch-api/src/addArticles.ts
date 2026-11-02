@@ -39,18 +39,22 @@ export class AddArticlesWorkflow extends WorkflowEntrypoint<Env, AddArticlesPara
     const today = new Date(event.timestamp).toISOString().slice(0, 10);
     const BATCH = 4;
     let written = 0;
+    const failed: string[] = [];
     for (let i = 0; i < plans.length; i += BATCH) {
       // Each batch is written and committed on its own, so progress is kept even if a later batch fails.
-      const files = await Promise.all(plans.slice(i, i + BATCH).map((plan, k) =>
+      const results = await Promise.all(plans.slice(i, i + BATCH).map((plan, k) =>
         step.do(`article-${i + k}`, { retries: { limit: 3, delay: '30 seconds', backoff: 'exponential' }, timeout: '8 minutes' }, async () =>
-          toMarkdown(input, await writeArticle(env, input, plan), today, null))));
+          toMarkdown(input, await writeArticle(env, input, plan), today, null))
+          .catch((e: any) => { failed.push(`${plan.title}: ${String(e?.message ?? e).slice(0, 160)}`); return null; })));
+      const files = results.filter((f): f is { path: string; content: string } => Boolean(f));
+      if (!files.length) continue;
       await step.do(`commit-${i}`, { retries: { limit: 3, delay: '20 seconds' } }, async () => {
         await gh.commitFiles(env, files.map((f) => ({ path: `${base}/${f.path}`, content: f.content })), `Add ${files.length} articles to ${siteSlug} (${i + files.length}/${plans.length}) [skip ci]`);
       });
       written += files.length;
     }
 
-    await step.do('deploy', async () => { await gh.dispatchDeploy(env, siteSlug, `articles-${event.instanceId}`); });
-    return { site: siteSlug, planned: plans.length, written, titles: plans.map((p) => p.title) };
+    if (written) await step.do('deploy', async () => { await gh.dispatchDeploy(env, siteSlug, `articles-${event.instanceId}`); });
+    return { site: siteSlug, planned: plans.length, written, failed, titles: plans.map((p) => p.title) };
   }
 }
