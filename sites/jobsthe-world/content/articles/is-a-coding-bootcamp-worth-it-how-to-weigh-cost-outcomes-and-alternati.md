@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1773
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/is-a-coding-bootcamp-worth-it-how-to-weigh-cost-outcomes-and-alternati.jpg"
+heroAlt: "coding, programming, working, macbook"
+heroCredit:
+  name: "StockSnap"
+  url: "https://pixabay.com/users/StockSnap-894430/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/coding-programming-working-macbook-924920/"
 seo:
   title: "Is a Coding Bootcamp Worth It? Cost vs. Outcomes"
   metaDescription: "Weigh coding bootcamp tuition, placement claims and cheaper self-study options with a practical checklist for remote-first career switchers."

@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1758
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/pivoting-without-starting-over-mapping-your-existing-strengths-to-a-ne.jpg"
+heroAlt: "woman, athlete, running, exercise"
+heroCredit:
+  name: "RyanMcGuire"
+  url: "https://pixabay.com/users/RyanMcGuire-123690/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/woman-athlete-running-exercise-498257/"
 seo:
   title: "Career Pivot: Map Your Strengths to a New Field"
   metaDescription: "Changing fields mid-career? Use a five-step method to translate past achievements into target-role language and avoid being treated as a beginner."

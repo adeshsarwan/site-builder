@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 2111
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/the-four-week-job-search-reset-a-plan-for-when-your-applications-go-no.jpg"
+heroAlt: "crown, thorns, happy easter, love"
+heroCredit:
+  name: "jclk8888"
+  url: "https://pixabay.com/users/jclk8888-894784/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/crown-thorns-happy-easter-love-699480/"
 seo:
   title: "Job Search Reset: A 4-Week Plan When No One Replies"
   metaDescription: "Sent dozens of applications with no replies? Use this four-week job search reset to diagnose the problem, fix your materials, and restart smarter."

@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1553
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/is-the-google-cybersecurity-certificate-enough-to-get-hired-a-realisti.jpg"
+heroAlt: "bar, ipad, mockup, business"
+heroCredit:
+  name: "Firmbee"
+  url: "https://pixabay.com/users/Firmbee-663163/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/bar-ipad-mockup-business-computer-621033/"
 seo:
   title: "Is the Google Cybersecurity Certificate Enough to Get Hired?"
   metaDescription: "The Google Cybersecurity Certificate is a start, not a guarantee. See which entry-level security roles hire beginners and what to add to stand out."
