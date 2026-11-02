@@ -57,8 +57,14 @@ function buildFunnel(id: string, input: any, prev: any | null, p: Problem) {
   if (!f.title) { p.error = 'title is required'; return null; }
   if (b.intro) f.intro = String(b.intro).slice(0, 300);
 
+  const apply = b.trigger === 'apply';
+  if (apply) {
+    f.trigger = 'apply';
+    f.message = String(b.message ?? 'To access the direct application page at {company}, please support us by watching a short sponsor video.').slice(0, 400);
+    f.applyFrequency = ['job', 'session', 'always'].includes(b.applyFrequency) ? b.applyFrequency : 'job';
+  }
   const steps = Array.isArray(b.steps) ? b.steps : [];
-  if (steps.length < 1 || steps.length > 6) { p.error = 'steps: give 1–6 questions'; return null; }
+  if (apply ? steps.length > 0 : steps.length < 1 || steps.length > 6) { p.error = apply ? 'apply funnels have no questions (leave steps out)' : 'steps: give 1–6 questions'; return null; }
   const keys = new Set<string>();
   f.steps = [];
   for (const [i, s] of steps.entries()) {
@@ -82,7 +88,7 @@ function buildFunnel(id: string, input: any, prev: any | null, p: Problem) {
   const pages = (Array.isArray(b.pages) ? b.pages : []).map(toPattern).filter(Boolean) as string[];
   f.pages = [...new Set(pages)];
   f.gate = (Array.isArray(b.gate) ? b.gate : []).map(toPattern).filter((x: string | null) => x && !x.startsWith('!') && !x.includes('*')) as string[];
-  if (!f.pages.length && !f.gate.length) p.warnings.push('No pages yet: add URLs with pages (on-page gate) or gate (server pages such as /jobs). It will not show anywhere until then.');
+  if (!apply && !f.pages.length && !f.gate.length) p.warnings.push('No pages yet: add URLs with pages (on-page gate) or gate (server pages such as /jobs). It will not show anywhere until then.');
   if (b.query && typeof b.query === 'object' && Object.keys(b.query).length) f.query = Object.fromEntries(Object.entries(b.query).map(([k, v]) => [String(k), String(v)]));
   f.frequency = ['once', 'session', 'always'].includes(b.frequency) ? b.frequency : 'once';
   f.rememberDays = Math.max(1, Math.min(365, Number(b.rememberDays ?? 30) || 30));
@@ -93,8 +99,9 @@ function buildFunnel(id: string, input: any, prev: any | null, p: Problem) {
     ...(r.title ? { title: String(r.title).slice(0, 100) } : {}),
     ...(r.cta ? { cta: String(r.cta).slice(0, 80) } : {}),
     ...(r.skip ? { skip: String(r.skip).slice(0, 80) } : {}),
-    allowSkip: r.allowSkip !== false,
+    allowSkip: apply ? r.allowSkip === true : r.allowSkip !== false,
   };
+  if (apply) { delete f.gate; delete f.frequency; delete f.rememberDays; delete f.query; }
   if (b.interstitialAfterStep !== undefined && b.interstitialAfterStep !== null) f.interstitialAfterStep = Number(b.interstitialAfterStep);
   return f;
 }
@@ -102,7 +109,11 @@ function buildFunnel(id: string, input: any, prev: any | null, p: Problem) {
 /** Warnings about URLs: never-gated pages, stories that don't exist, overlaps with earlier funnels. */
 async function urlWarnings(env: Env, site: any, list: any[], f: any, p: Problem) {
   if (!site.config.ads?.enabled && f.rewarded?.enabled) p.warnings.push('Ads are not enabled on this site yet: visitors get the questions, then the page, with no video until stage 2.');
-  if (f.rewarded?.enabled && !f.rewarded.allowSkip) p.warnings.push('allowSkip=false: visitors must choose the video. If no ad fills, the page is still shown.');
+  if (f.rewarded?.enabled && !f.rewarded.allowSkip) p.warnings.push(f.trigger === 'apply' ? 'No skip button: visitors watch the video to reveal the link. If no ad fills, the link opens anyway.' : 'allowSkip=false: visitors must choose the video. If no ad fills, the page is still shown.');
+  if (f.trigger === 'apply') {
+    if (list.some((x) => x.id !== f.id && x.trigger === 'apply' && x.enabled !== false) && f.enabled !== false) p.warnings.push('Another apply funnel is enabled; on each page the first one in the list is used.');
+    return;
+  }
   let slugs: Set<string> | null = null;
   for (const pat of f.pages.filter((x: string) => !x.startsWith('!'))) {
     if (NEVER.some((r) => r.test(pat))) { p.warnings.push(`${pat} is never gated (trust pages, /start and machine files are always open).`); continue; }
@@ -114,7 +125,7 @@ async function urlWarnings(env: Env, site: any, list: any[], f: any, p: Problem)
   }
   const mine = list.findIndex((x) => x.id === f.id);
   for (const [i, other] of list.entries()) {
-    if (other.id === f.id || other.enabled === false || !other.pages?.length) continue;
+    if (other.id === f.id || other.enabled === false || other.trigger === 'apply' || !other.pages?.length) continue;
     for (const pat of f.pages.filter((x: string) => !x.startsWith('!'))) {
       const probe = pat.endsWith('/*') ? pat.slice(0, -2) || '/' : pat;
       const otherInc = other.pages.filter((o: string) => !o.startsWith('!'));
@@ -127,9 +138,16 @@ async function urlWarnings(env: Env, site: any, list: any[], f: any, p: Problem)
 
 function matchFor(list: any[], path: string) {
   const p = norm(path);
-  if (NEVER.some((r) => r.test(p))) return { funnel: null, reason: 'never gated (trust page, /start or machine file)' };
+  if (NEVER.some((r) => r.test(p))) return { funnel: null, reason: 'never gated (trust page, /start or machine file)', applyFunnel: /^\/start(\/|$)/.test(p) ? list.find((f) => f.enabled !== false && f.trigger === 'apply')?.id ?? null : null };
+  const apply = list.find((f) => f.enabled !== false && f.trigger === 'apply' && (!f.pages?.length
+    || (f.pages.some((x: string) => !x.startsWith('!') && pageMatches(x, p)) || !f.pages.some((x: string) => !x.startsWith('!'))) && !f.pages.some((x: string) => x.startsWith('!') && pageMatches(x.slice(1), p))));
+  const res = pageGateFor(list, p);
+  return { ...res, applyFunnel: apply?.id ?? null };
+}
+
+function pageGateFor(list: any[], p: string) {
   for (const f of list) {
-    if (f.enabled === false) continue;
+    if (f.enabled === false || f.trigger === 'apply') continue;
     if (f.pages?.length) {
       const inc = f.pages.find((x: string) => !x.startsWith('!') && pageMatches(x, p));
       const exc = f.pages.find((x: string) => x.startsWith('!') && pageMatches(x.slice(1), p));
@@ -141,7 +159,7 @@ function matchFor(list: any[], path: string) {
   return { funnel: null, reason: 'no funnel covers this URL' };
 }
 
-const view = (site: any, f: any, i: number) => ({ ...f, position: i, previewUrl: f.pages?.find((x: string) => !x.startsWith('!') && !x.includes('*')) ? `https://${site.domain}${f.pages.find((x: string) => !x.startsWith('!') && !x.includes('*'))}?funnel=preview` : null, startUrl: `https://${site.domain}/start/${f.id}` });
+const view = (site: any, f: any, i: number) => ({ ...f, position: i, previewUrl: f.pages?.find((x: string) => !x.startsWith('!') && !x.includes('*')) ? `https://${site.domain}${f.pages.find((x: string) => !x.startsWith('!') && !x.includes('*'))}?funnel=preview` : null, startUrl: f.trigger === 'apply' ? null : `https://${site.domain}/start/${f.id}` });
 
 // ---------- routes ----------
 funnels.get('/sites/:id/funnels', async (c) => {

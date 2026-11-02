@@ -1,0 +1,135 @@
+---
+// Rewarded "reveal link" before an external job application.
+// Any link with data-apply (Apply buttons and job titles, including ones added later by script) is
+// intercepted: an overlay asks the visitor to watch a short sponsor video; after the reward is granted
+// the job opens in a new tab. Rules from the Price Optimiser guide:
+//  - rewarded is shown only after the visitor opts in (the "Watch" button) and is preloaded beforehand;
+//  - the link is unlocked only from onGranted (not from closing the video);
+//  - no fill / error / timeout → the visitor still gets the link (never trapped).
+// Browsers block tabs opened long after a click, so after the video we try to open the tab and always
+// show a one-tap "Open application" button as well.
+import type { Funnel } from '@/lib/site';
+interface Props { funnel: Funnel }
+const { funnel: f } = Astro.props;
+const message = f.message ?? 'To access the direct application page at {company}, please support us by watching a short sponsor video.';
+const allowSkip = f.rewarded?.allowSkip === true; // apply funnels: no skip unless asked for
+---
+<dialog class="apply-gate" id="apply-gate" data-funnel={f.id} data-message={message} data-frequency={f.applyFrequency ?? 'job'} aria-labelledby="ag-title">
+  <button type="button" class="ag-close" data-ag-close aria-label="Close">×</button>
+  <div class="ag-view" data-view="ask">
+    <div class="ag-logo" aria-hidden="true"><img alt="" width="56" height="56" hidden /><span></span></div>
+    <h2 id="ag-title">{f.title || 'One quick step'}</h2>
+    <p class="ag-job meta"></p>
+    <p class="ag-msg"></p>
+    <button type="button" class="btn btn--wide" data-ag-watch>{f.rewarded?.cta ?? 'Watch Ad & Reveal Link'}</button>
+    {allowSkip && <a class="btn btn--ghost btn--wide" data-ag-skip target="_blank" rel="nofollow sponsored noopener">{f.rewarded?.skip ?? 'No thanks, continue'}</a>}
+    <p class="ag-note meta">The application opens in a new tab, so you can keep browsing here.</p>
+  </div>
+  <div class="ag-view" data-view="loading" hidden>
+    <div class="ag-spinner" aria-hidden="true"></div>
+    <p>Loading the sponsor video…</p>
+  </div>
+  <div class="ag-view" data-view="ready" hidden>
+    <div class="fn-ready-icon" aria-hidden="true">✓</div>
+    <h2>Thanks for your support!</h2>
+    <p class="ag-ready-msg">Your application link is ready.</p>
+    <a class="btn btn--wide" data-ag-open target="_blank" rel="nofollow sponsored noopener">Open application</a>
+  </div>
+  <div class="ag-view" data-view="incomplete" hidden>
+    <h2>The video was closed early</h2>
+    <p>Watch it to the end to reveal the application link.</p>
+    <button type="button" class="btn btn--wide" data-ag-watch>Watch again</button>
+    {allowSkip && <a class="btn btn--ghost btn--wide" data-ag-skip target="_blank" rel="nofollow sponsored noopener">{f.rewarded?.skip ?? 'No thanks, continue'}</a>}
+  </div>
+</dialog>
+
+<script>
+  const dlg = document.getElementById('apply-gate') as HTMLDialogElement | null;
+  if (dlg) {
+    const id = dlg.dataset.funnel!;
+    const freq = dlg.dataset.frequency || 'job';
+    const template = dlg.dataset.message || '';
+    const ads = () => (window as any).siteAds as any | undefined;
+    const track = (name: string, p: Record<string, unknown> = {}) => { try { (window as any).gtag?.('event', name, { funnel_id: id, ...p }); } catch {} };
+    const views = [...dlg.querySelectorAll<HTMLElement>('.ag-view')];
+    const view = (v: string) => views.forEach((el) => (el.hidden = el.dataset.view !== v));
+    const store = (() => { try { return sessionStorage; } catch { return null; } })();
+    const unlockedKey = `ag_${id}`;
+    const isUnlocked = (url: string) => {
+      if (freq === 'always' || !store) return false;
+      const v = store.getItem(unlockedKey) || '';
+      return freq === 'session' ? v !== '' : v.split('\n').includes(url);
+    };
+    const remember = (url: string) => { if (!store) return; store.setItem(unlockedKey, freq === 'session' ? '1' : [...(store.getItem(unlockedKey) || '').split('\n').filter(Boolean), url].slice(-50).join('\n')); };
+    const slug = (s: string) => s.toLowerCase().replace(/['’]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+    // Preload once the page shows job links (also covers lists rendered later), so the video starts fast.
+    let preloaded = false;
+    const preload = () => { if (preloaded) return; preloaded = true; ads()?.preloadReward?.()?.catch?.(() => { preloaded = false; }); };
+    const maybePreload = () => { if (document.querySelector('a[data-apply]')) (ads() ? preload() : document.addEventListener('siteads:ready', preload, { once: true })); };
+    setTimeout(maybePreload, 1500);
+    new MutationObserver(() => { if (!preloaded) maybePreload(); }).observe(document.body, { childList: true, subtree: true });
+
+    let current: { url: string; company: string; title: string } | null = null;
+    const openJob = (how: string) => {
+      if (!current) return;
+      remember(current.url);
+      const w = window.open(current.url, '_blank');
+      if (w) { try { w.opener = null; } catch {} }
+      track('apply_gate_reveal', { via: how, company: current.company, auto_opened: Boolean(w) });
+      const msg = dlg.querySelector('.ag-ready-msg')!;
+      msg.textContent = w ? `The application at ${current.company} opened in a new tab.` : `Your application link at ${current.company} is ready.`;
+      (dlg.querySelector('[data-ag-open]') as HTMLAnchorElement).textContent = w ? 'Open it again' : `Open application at ${current.company}`;
+      view('ready');
+      preloaded = false; preload(); // next click gets a fresh video
+    };
+
+    document.addEventListener('click', (e) => {
+      const a = (e.target as Element)?.closest?.('a[data-apply]') as HTMLAnchorElement | null;
+      if (!a || dlg.contains(a)) return;
+      if (!ads() || isUnlocked(a.href)) return; // ad SDK missing, or already unlocked → normal link
+      e.preventDefault();
+      current = { url: a.href, company: a.dataset.company || 'the employer', title: a.dataset.title || '' };
+      const fill = (s: string) => s.replace(/\{company\}/g, current!.company).replace(/\{title\}/g, current!.title);
+      dlg.querySelector('.ag-msg')!.textContent = fill(template);
+      dlg.querySelector('.ag-job')!.textContent = current.title ? `${current.title} · ${current.company}` : current.company;
+      const img = dlg.querySelector('.ag-logo img') as HTMLImageElement;
+      const initial = dlg.querySelector('.ag-logo span') as HTMLElement;
+      initial.textContent = current.company.slice(0, 1).toUpperCase();
+      img.hidden = true;
+      img.onload = () => { img.hidden = false; initial.textContent = ''; };
+      img.src = `/logos/${slug(current.company)}`;
+      dlg.querySelectorAll<HTMLAnchorElement>('[data-ag-open],[data-ag-skip]').forEach((l) => (l.href = current!.url));
+      dlg.querySelectorAll<HTMLButtonElement>('[data-ag-watch]').forEach((b) => (b.disabled = false));
+      view('ask');
+      dlg.showModal();
+      track('apply_gate_open', { company: current.company });
+    }, true);
+
+    dlg.querySelectorAll<HTMLButtonElement>('[data-ag-watch]').forEach((btn) => btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      view('loading');
+      let granted = false, closed = false, fallback: string | null = null;
+      const a = ads();
+      if (!a) return openJob('no-sdk');
+      const res = await a.showRewardAfterOptIn({
+        onGranted() { granted = true; },
+        onClosed() { closed = true; },
+        onFallback(r: any) { fallback = String(r?.status ?? 'unavailable'); },
+      });
+      if (granted) { track('apply_gate_granted'); return openJob('granted'); }
+      // The visitor chose to stop (declined / closed early) → offer to watch again.
+      // No ad could be shown (no fill, error, timeout, busy) → don't trap them: reveal the link.
+      const status = fallback ?? (closed ? 'closed' : String(res?.status ?? 'unavailable'));
+      const userStopped = /declin|dismiss|clos|cancel|skip/i.test(status) || (closed && !fallback);
+      if (!userStopped) { track('apply_gate_fallback', { status }); return openJob(`fallback-${status}`); }
+      track('apply_gate_incomplete', { status });
+      view('incomplete');
+      dlg.querySelectorAll<HTMLButtonElement>('[data-ag-watch]').forEach((b) => (b.disabled = false));
+    }));
+    dlg.querySelectorAll('[data-ag-skip]').forEach((l) => l.addEventListener('click', () => { if (current) remember(current.url); track('apply_gate_skip'); dlg.close(); }));
+    dlg.querySelector('[data-ag-open]')!.addEventListener('click', () => setTimeout(() => dlg.close(), 50));
+    dlg.querySelector('[data-ag-close]')!.addEventListener('click', () => { track('apply_gate_dismiss'); dlg.close(); });
+    dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+  }
+</script>

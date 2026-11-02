@@ -136,6 +136,21 @@ Responses include `warnings`: a URL with no story, a URL that is never gated, an
 
 Answers are kept in the visitor's browser. They also unlock any server page the same funnel gates (`gate`, e.g. `/jobs`), and are sent to GA4 as events: `funnel_start`, `funnel_answers`, `rewarded_granted`, `rewarded_skip` and `funnel_complete` (with `via`).
 
+### Apply funnel: rewarded video before an external job link
+An apply funnel has no questions. When a visitor clicks **Apply** (or a job title) on any job list (`/jobs`, `/find-jobs`, `/companies/*`, funnel results), an overlay shows your message. The visitor taps **Watch Ad & Reveal Link**, the rewarded video plays, and the employer's page opens in a new tab. If the browser blocks the automatic tab, the overlay shows a one-tap **Open application** button. Closing the video early offers **Watch again**. If no ad is available (no fill, error, timeout), the link opens anyway. The rewarded ad is preloaded while the visitor browses the list.
+```http
+PUT /v1/sites/jobsthe.world/funnels/apply-unlock
+{
+  "trigger": "apply",
+  "title": "One quick step",
+  "message": "To access the direct application page at {company}, please support us by watching a short sponsor video.",
+  "rewarded": { "cta": "Watch Ad & Reveal Link", "allowSkip": false, "skip": "No thanks, continue" },
+  "applyFrequency": "job",
+  "pages": []
+}
+```
+`{company}` and `{title}` are filled in from the job. `applyFrequency`: `job` (once per job per visit, default), `session` (once per visit), `always` (every click). Leave `pages` empty for every page, or list paths/patterns to limit where it runs. `allowSkip: true` adds a "No thanks, continue" link. Pause with `PATCH … { "enabled": false }`. GA4 events: `apply_gate_open`, `apply_gate_granted`, `apply_gate_reveal`, `apply_gate_incomplete`, `apply_gate_fallback`, `apply_gate_skip`, `apply_gate_dismiss`.
+
 ## 4. Ads (stage 2)
 
 After you create the ad units in Price Optimiser for the domain:

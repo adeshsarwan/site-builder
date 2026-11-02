@@ -12,7 +12,7 @@ import { site } from '@/lib/site';
 import { getFunnel, funnelCookie, sanitizeAnswers, encodeAnswers, safeNext } from '@/lib/funnels';
 
 const f = getFunnel(Astro.params.funnel!);
-if (!f) return new Response('Not found', { status: 404 });
+if (!f || f.trigger === 'apply' || !f.steps?.length) return new Response('Not found', { status: 404 });
 const next = safeNext(Astro.url.searchParams.get('next'), f.gate[0] ?? '/');
 
 if (Astro.url.searchParams.get('reset')) Astro.cookies.delete(funnelCookie(f.id), { path: '/' });
@@ -149,12 +149,12 @@ const seo = { title: f.title, description: f.intro ?? f.title, path: `/start/${f
     const esc = (s = '') => s.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]!);
     const card = (j: Job) => `
       <article class="job"><div>
-        <h3><a href="${esc(j.url)}" rel="nofollow sponsored noopener" target="_blank">${esc(j.title)}</a></h3>
+        <h3><a href="${esc(j.url)}" rel="nofollow sponsored noopener" target="_blank" data-apply data-company="${esc(j.company)}" data-title="${esc(j.title)}">${esc(j.title)}</a></h3>
         <p class="job-co">${esc(j.company)} · ${esc(j.location)}</p>
         ${j.snippet ? `<p class="job-snippet">${esc(j.snippet)}</p>` : ''}
       </div><div class="job-side">
         ${j.salary ? `<span class="pill">${esc(j.salary)}</span>` : ''}${j.type ? `<span class="pill pill--muted">${esc(j.type)}</span>` : ''}
-        <a class="btn btn--sm" href="${esc(j.url)}" rel="nofollow sponsored noopener" target="_blank">Apply</a>
+        <a class="btn btn--sm" href="${esc(j.url)}" rel="nofollow sponsored noopener" target="_blank" data-apply data-company="${esc(j.company)}" data-title="${esc(j.title)}">Apply</a>
       </div></article>`;
 
     // 4. Show the results view in this document, then reveal its (preloaded) slots.

@@ -53,9 +53,21 @@ export function pageMatches(pattern: string, path: string) {
 export function gateFunnelFor(path: string): Funnel | undefined {
   if (NEVER.some((r) => r.test(norm(path)))) return undefined;
   return site.funnels.find((f) => {
-    if (f.enabled === false || !f.pages?.length || !f.steps?.length) return false;
+    if (f.enabled === false || f.trigger === 'apply' || !f.pages?.length || !f.steps?.length) return false;
     const inc = f.pages.filter((x) => !x.startsWith('!'));
     const exc = f.pages.filter((x) => x.startsWith('!')).map((x) => x.slice(1));
     return inc.some((x) => pageMatches(x, path)) && !exc.some((x) => pageMatches(x, path));
+  });
+}
+
+/** The first enabled "apply" funnel for this page (no `pages` = every page). */
+export function applyFunnelFor(path: string): Funnel | undefined {
+  if (NEVER.some((r) => r.test(norm(path)) && !/^\/start(\/|$)/.test(norm(path)))) return undefined;
+  return site.funnels.find((f) => {
+    if (f.enabled === false || f.trigger !== 'apply') return false;
+    if (!f.pages?.length) return true;
+    const inc = f.pages.filter((x) => !x.startsWith('!'));
+    const exc = f.pages.filter((x) => x.startsWith('!')).map((x) => x.slice(1));
+    return (!inc.length || inc.some((x) => pageMatches(x, path))) && !exc.some((x) => pageMatches(x, path));
   });
 }

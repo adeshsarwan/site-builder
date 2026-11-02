@@ -280,6 +280,21 @@
         "cta": "Watch a short video to see your jobs",
         "skip": "No thanks, show my jobs"
       }
+    },
+    {
+      "id": "apply-unlock",
+      "trigger": "apply",
+      "title": "One quick step",
+      "message": "To access the direct application page at {company}, please support us by watching a short sponsor video.",
+      "applyFrequency": "job",
+      "steps": [],
+      "pages": [],
+      "enabled": true,
+      "rewarded": {
+        "enabled": true,
+        "cta": "Watch Ad & Reveal Link",
+        "allowSkip": false
+      }
     }
   ],
   "legal": {

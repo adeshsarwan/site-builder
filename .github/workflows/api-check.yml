@@ -24,4 +24,6 @@ jobs:
           get "/v1/sites/$D/ads.txt"
           get "/v1/sites/$D/config"
           get "/v1/sites/$D/health"
+          get "/v1/sites/$D/funnels"
+          printf "apply overlay on /jobs: "; curl -s "https://$D/jobs" -o /dev/null -w "%{http_code} "; curl -s "https://$D/" | grep -c "id=\"apply-gate\"" || true
           get "/v1/jobs/health"

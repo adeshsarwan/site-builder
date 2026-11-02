@@ -26,6 +26,15 @@ export interface Funnel {
   query?: Record<string, string>;
   /** once = once per rememberDays (default), session = once per browser session, always = every page view */
   frequency?: 'once' | 'session' | 'always';
+  /**
+   * "page" (default): questions + video before the URLs in `pages`.
+   * "apply": video before leaving for an external job link (Apply / job title). `pages` optionally limits where.
+   */
+  trigger?: 'page' | 'apply';
+  /** Apply funnels: text in the overlay; {company} and {title} are filled in. */
+  message?: string;
+  /** Apply funnels: how often to ask. job = once per job per visit (default), session = once per visit, always = every click */
+  applyFrequency?: 'job' | 'session' | 'always';
   /** false = paused (kept in config, not shown) */
   enabled?: boolean;
 }

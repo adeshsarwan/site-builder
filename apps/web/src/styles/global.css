@@ -191,3 +191,15 @@ a { color: var(--primary); }
 .fn-gate { display: none; }
 html.fn-gated .fn-gate { display: block; }
 html.fn-gated main, html.fn-gated .gate-hide, html.fn-gated .site-footer { display: none !important; }
+
+/* Apply gate (rewarded "reveal link" before an external application) */
+.apply-gate { border: 0; border-radius: 18px; padding: 32px 28px 26px; width: min(460px, calc(100vw - 32px)); text-align: center; box-shadow: 0 24px 60px rgba(15, 23, 42, .28); }
+.apply-gate::backdrop { background: rgba(15, 23, 42, .55); backdrop-filter: blur(2px); }
+.apply-gate h2 { font: 800 24px/1.25 var(--serif); margin: 10px 0 6px; }
+.apply-gate .ag-msg { margin: 12px 0 4px; line-height: 1.55; }
+.apply-gate .ag-note { margin-top: 14px; font-size: 13px; }
+.ag-close { position: absolute; top: 10px; right: 12px; border: 0; background: none; font-size: 26px; line-height: 1; cursor: pointer; color: var(--muted, #64748b); }
+.ag-logo { width: 64px; height: 64px; margin: 0 auto; border: 1px solid var(--line); border-radius: 14px; display: grid; place-items: center; overflow: hidden; background: #fff; font: 800 26px var(--serif); color: var(--primary); }
+.ag-logo img { width: 56px; height: 56px; object-fit: contain; }
+.ag-spinner { width: 42px; height: 42px; margin: 8px auto 14px; border: 4px solid var(--line); border-top-color: var(--primary); border-radius: 50%; animation: ag-spin .8s linear infinite; }
+@keyframes ag-spin { to { transform: rotate(360deg); } }
