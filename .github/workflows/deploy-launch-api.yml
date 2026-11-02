@@ -31,3 +31,10 @@ jobs:
       # D1 database is auto-provisioned on first deploy (no database_id in wrangler.jsonc).
       - run: npx wrangler deploy --var CF_ACCOUNT_ID:${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       - run: npx wrangler d1 migrations apply launch-db --remote
+      # Lets /api/v1/jobs/* reach the jobs API (same key the sites use). Skipped if the GitHub secret is missing.
+      - name: Sync JOBS_API_KEY to the Worker
+        env:
+          JOBS_API_KEY: ${{ secrets.JOBS_API_KEY }}
+        run: |
+          if [ -z "$JOBS_API_KEY" ]; then echo "JOBS_API_KEY GitHub secret not set — skipping"; exit 0; fi
+          printf '%s' "$JOBS_API_KEY" | npx wrangler secret put JOBS_API_KEY
