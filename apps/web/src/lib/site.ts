@@ -16,7 +16,18 @@ export interface Funnel {
   /** Cookie lifetime in days */
   rememberDays?: number;
   /** Offer an opt-in rewarded video before showing results (preloaded while the visitor answers). */
-  rewarded?: { enabled: boolean; title?: string; cta?: string; skip?: string };
+  rewarded?: { enabled: boolean; title?: string; cta?: string; skip?: string; allowSkip?: boolean };
+  /**
+   * On-page gate: on these URLs the questions appear the moment the visitor lands, then the rewarded
+   * video, then the page itself. Patterns: "/exact-path", "/prefix/*", "*" (every page), "!/path" (exclude).
+   */
+  pages?: string[];
+  /** Only gate visits whose URL has these query values ("*" = any value), e.g. { "utm_source": "facebook" } */
+  query?: Record<string, string>;
+  /** once = once per rememberDays (default), session = once per browser session, always = every page view */
+  frequency?: 'once' | 'session' | 'always';
+  /** false = paused (kept in config, not shown) */
+  enabled?: boolean;
 }
 export interface Category { slug: string; name: string; description: string }
 

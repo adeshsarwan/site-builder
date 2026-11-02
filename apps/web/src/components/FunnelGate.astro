@@ -1,0 +1,126 @@
+---
+// On-page funnel gate. On a gated URL the visitor first answers the questions, then (opt-in) watches
+// the rewarded video, then sees the page they came for. Following the Price Optimiser guide:
+//  - while the visitor answers, the rewarded ad is preloaded (preloadRewarded);
+//  - the page's own ad slots stay hidden (not requested) until the page is shown;
+//  - while the video plays, those slots are preloaded (preloadSlots); after it closes the page is
+//    shown and the slots are revealed (revealSlots). No-fill, skip or SDK failure → page shown anyway.
+// A small inline script in <head> (see Base.astro) decides before first paint whether to gate this
+// visit (already answered? query rules?). Without JavaScript the page is shown normally.
+import type { Funnel } from '@/lib/site';
+import { site } from '@/lib/site';
+interface Props { funnel: Funnel }
+const { funnel: f } = Astro.props;
+const rewarded = Boolean(site.ads.enabled && f.rewarded?.enabled);
+const allowSkip = f.rewarded?.allowSkip !== false;
+---
+<section class="wrap-narrow funnel fn-gate" id="fn-gate" data-funnel={f.id} data-rewarded={rewarded ? '1' : ''} data-days={f.rememberDays ?? 30} data-frequency={f.frequency ?? 'once'} aria-live="polite">
+  <h1>{f.title}</h1>
+  {f.intro && <p class="dek">{f.intro}</p>}
+  <div class="progress" aria-hidden="true"><span style="width:0%"></span></div>
+  <form id="fn-gate-form" onsubmit="return false">
+    {f.steps.map((s, i) => (
+      <fieldset class="step" data-step={i} hidden={i > 0}>
+        <legend><span class="meta">Question {i + 1} of {f.steps.length}</span>{s.question}</legend>
+        {s.help && <p class="meta">{s.help}</p>}
+        <div class="options">
+          {s.options.map((o) => <label class="option"><input type="radio" name={s.key} value={o.value} /> <span>{o.label}</span></label>)}
+        </div>
+      </fieldset>
+    ))}
+    <div class="funnel-actions"><button type="button" class="btn btn--ghost" data-back hidden>Back</button></div>
+  </form>
+  <div class="fn-ready" id="fn-gate-ready" hidden>
+    <div class="fn-ready-icon" aria-hidden="true">✓</div>
+    <h2>{f.rewarded?.title ?? 'Your page is ready'}</h2>
+    {rewarded && <button type="button" class="btn btn--wide" id="fn-gate-watch">{f.rewarded?.cta ?? 'Watch a short video to continue'}</button>}
+    {(!rewarded || allowSkip) && <button type="button" class={rewarded ? 'btn btn--ghost btn--wide' : 'btn btn--wide'} id="fn-gate-skip">{rewarded ? (f.rewarded?.skip ?? 'No thanks, continue') : 'Continue'}</button>}
+  </div>
+</section>
+
+<script>
+  const html = document.documentElement;
+  const g = document.getElementById('fn-gate') as HTMLElement | null;
+  if (g && html.classList.contains('fn-gated')) {
+    const id = g.dataset.funnel!;
+    const useRewarded = g.dataset.rewarded === '1';
+    const days = Number(g.dataset.days || 30);
+    const freq = g.dataset.frequency || 'once';
+    const form = document.getElementById('fn-gate-form') as HTMLFormElement;
+    const steps = [...g.querySelectorAll<HTMLFieldSetElement>('.step')];
+    const bar = g.querySelector<HTMLSpanElement>('.progress span')!;
+    const back = g.querySelector<HTMLButtonElement>('[data-back]')!;
+    const ready = document.getElementById('fn-gate-ready')!;
+    const ads = () => (window as any).siteAds as any | undefined;
+    const whenAds = () => new Promise<any>((resolve) => {
+      if (ads()) return resolve(ads());
+      document.addEventListener('siteads:ready', () => resolve(ads()), { once: true });
+      setTimeout(() => resolve(ads()), 8000);
+    });
+    const track = (name: string, params: Record<string, unknown> = {}) => { try { (window as any).gtag?.('event', name, { funnel_id: id, page_path: location.pathname, ...params }); } catch {} };
+    // The page's own display slots (everything outside the gate), revealed with the page.
+    const pageSlots = () => [...document.querySelectorAll<HTMLElement>('.ad-slot[id]')].filter((el) => !g.contains(el)).map((el) => el.id);
+
+    track('funnel_start');
+    // 1. Preload the rewarded ad while the visitor answers.
+    if (useRewarded) whenAds().then((a) => a?.preloadReward?.()).catch(() => {});
+
+    let i = 0;
+    g.classList.add('js');
+    const show = (n: number) => { i = n; steps.forEach((s, k) => (s.hidden = k !== n)); bar.style.width = `${(n / steps.length) * 100}%`; back.hidden = n === 0; };
+    back.addEventListener('click', () => show(Math.max(0, i - 1)));
+
+    let revealed = false;
+    const reveal = (how: string) => {
+      if (revealed) return;
+      revealed = true;
+      g.hidden = true;
+      html.classList.remove('fn-gated');
+      window.scrollTo({ top: 0 });
+      track('funnel_complete', { via: how });
+      ads()?.revealNextViewAds?.(pageSlots())?.catch?.(() => {});
+    };
+
+    const finish = () => {
+      bar.style.width = '100%';
+      const answers = Object.fromEntries(new FormData(form)) as Record<string, string>;
+      try {
+        localStorage.setItem(`fn_ans_${id}`, JSON.stringify(answers));
+        if (freq === 'session') sessionStorage.setItem(`fn_done_${id}`, String(Date.now()));
+        else if (freq === 'once') localStorage.setItem(`fn_done_${id}`, String(Date.now()));
+      } catch {}
+      // Same answers also unlock server pages gated by this funnel (e.g. /jobs) for `days`.
+      fetch(`/start/${id}`, { method: 'POST', body: new FormData(form), headers: { 'x-funnel': '1' }, credentials: 'same-origin' }).catch(() => {});
+      track('funnel_answers', answers);
+      if (!useRewarded) {
+        ads()?.preloadNextViewAds?.(pageSlots())?.catch?.(() => {});
+        return reveal('no-rewarded');
+      }
+      form.hidden = true;
+      ready.hidden = false;
+    };
+    steps.forEach((s, k) => s.addEventListener('change', () => (k === steps.length - 1 ? finish() : show(k + 1))));
+    show(0);
+
+    document.getElementById('fn-gate-skip')?.addEventListener('click', () => {
+      ads()?.preloadNextViewAds?.(pageSlots())?.catch?.(() => {});
+      track('rewarded_skip');
+      reveal('skip');
+    });
+    const watch = document.getElementById('fn-gate-watch') as HTMLButtonElement | null;
+    watch?.addEventListener('click', async () => {
+      watch.disabled = true;
+      const a = await whenAds();
+      if (!a) return reveal('no-sdk');
+      // 3. While the video plays, preload the page's display slots.
+      a.preloadNextViewAds?.(pageSlots())?.catch?.(() => {});
+      let how = 'closed';
+      await a.showRewardAfterOptIn({
+        onGranted() { how = 'granted'; track('rewarded_granted'); },
+        onClosed() {},
+        onFallback(r: any) { how = `fallback-${r?.status ?? 'unknown'}`; },
+      });
+      reveal(how);
+    });
+  }
+</script>

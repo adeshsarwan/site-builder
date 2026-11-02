@@ -186,3 +186,8 @@ a { color: var(--primary); }
 .co-about { border: 1px solid var(--line); border-radius: 14px; padding: 18px 22px; background: var(--soft); margin-bottom: 8px; }
 .co-about h2 { font: 800 22px/1.2 var(--serif); margin: 0 0 8px; }
 .co-about p { margin: 0 0 10px; }
+
+/* On-page funnel gate: the page (and its ads) stay hidden until the questions + video are done. */
+.fn-gate { display: none; }
+html.fn-gated .fn-gate { display: block; }
+html.fn-gated main, html.fn-gated .gate-hide, html.fn-gated .site-footer { display: none !important; }

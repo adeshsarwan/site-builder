@@ -7,6 +7,7 @@ import { backfillImages } from './services/backfill';
 import { manage } from './manage';
 import { openapi } from './openapi';
 import { stories } from './storiesApi';
+import { funnels } from './funnelsApi';
 import { slugFromDomain, type Env, type LaunchInput } from './types';
 
 export { LaunchSiteWorkflow } from './workflow';
@@ -181,6 +182,7 @@ api.post('/v1/sites/:id/retry', async (c) => {
 
 api.route('/v1', manage);
 api.route('/v1', stories);
+api.route('/v1', funnels);
 api.get('/openapi.json', (c) => c.json(openapi));
 app.route('/api', api);
 app.get('/', (c) => c.json({ service: 'site-builder launch API', docs: 'https://github.com/adeshsarwan/site-builder/blob/main/docs/API.md', openapi: '/api/openapi.json', api: '/api/v1/sites' }));

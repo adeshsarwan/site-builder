@@ -17,6 +17,7 @@ export const openapi = {
     { name: 'Launch', description: 'Stage 1: create and launch a site' },
     { name: 'Stories', description: 'List, write, edit, rewrite, re-photo and delete stories (articles)' },
     { name: 'Content', description: 'Older content endpoints (kept for compatibility)' },
+    { name: 'Funnels', description: 'Questions + rewarded video before chosen URLs' },
     { name: 'Ads', description: 'Stage 2: enable ads, manage ads.txt' },
     { name: 'Site', description: 'Config, deploys, live health' },
     { name: 'Jobs data', description: 'Shared jobs database (Cloud Run)' },
@@ -89,6 +90,20 @@ export const openapi = {
       },
     },
     '/v1/sites/{id}/images': { post: { tags: ['Content'], summary: 'Older: add photos from the Worker (photos are added on every deploy now)', deprecated: true, parameters: [id], responses: { 200: json({ type: 'object' }) } } },
+
+    '/v1/sites/{id}/funnels': { get: { tags: ['Funnels'], summary: 'List funnels in priority order (the first funnel that covers a URL wins)', parameters: [id], responses: { 200: json({ type: 'object', properties: { funnels: { type: 'array', items: ref('Funnel') } } }) } } },
+    '/v1/sites/{id}/funnels/match': { get: { tags: ['Funnels'], summary: 'Which funnel a URL gets (page gate, redirect, or none) and why', parameters: [id, { name: 'url', in: 'query', required: true, schema: { type: 'string' }, description: 'Full URL or path' }], responses: { 200: json({ type: 'object' }) } } },
+    '/v1/sites/{id}/funnels/{fid}': {
+      get: { tags: ['Funnels'], summary: 'One funnel', parameters: [id, { name: 'fid', in: 'path', required: true, schema: { type: 'string' }, description: 'Funnel id, e.g. guide-unlock' }], responses: { 200: json(ref('Funnel')), 404: json(ref('Error')) } },
+      put: { tags: ['Funnels'], summary: 'Create or replace a funnel (then deploys)', parameters: [id, { name: 'fid', in: 'path', required: true, schema: { type: 'string' }, description: 'Funnel id, e.g. guide-unlock' }], requestBody: { required: true, content: { 'application/json': { schema: ref('FunnelInput') } } }, responses: { 201: accepted, 202: accepted, 400: json(ref('Error')) } },
+      patch: { tags: ['Funnels'], summary: 'Change some fields (position reorders; enabled:false pauses)', parameters: [id, { name: 'fid', in: 'path', required: true, schema: { type: 'string' }, description: 'Funnel id, e.g. guide-unlock' }], requestBody: { required: true, content: { 'application/json': { schema: ref('FunnelInput') } } }, responses: { 202: accepted, 400: json(ref('Error')) } },
+      delete: { tags: ['Funnels'], summary: 'Delete a funnel', parameters: [id, { name: 'fid', in: 'path', required: true, schema: { type: 'string' }, description: 'Funnel id, e.g. guide-unlock' }], responses: { 202: accepted } },
+    },
+    '/v1/sites/{id}/funnels/{fid}/pages': {
+      patch: { tags: ['Funnels'], summary: 'Add/remove URLs for a funnel (full URLs or paths; "/prefix/*", "*", "!/exclude")', parameters: [id, { name: 'fid', in: 'path', required: true, schema: { type: 'string' }, description: 'Funnel id, e.g. guide-unlock' }],
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', properties: { add: { type: 'array', items: { type: 'string' } }, remove: { type: 'array', items: { type: 'string' } }, deploy: { type: 'boolean' } } } } } },
+        responses: { 202: accepted } },
+    },
 
     '/v1/sites/{id}/ads': { get: { tags: ['Ads'], summary: 'Ads state + what the Price Optimiser runtime serves for the domain', parameters: [id], responses: { 200: json(ref('AdsState')) } } },
     '/v1/sites/{id}/ads/enable': {
@@ -201,6 +216,22 @@ export const openapi = {
           error: { type: ['string', 'null'] },
         },
       },
+      FunnelInput: {
+        type: 'object',
+        properties: {
+          title: { type: 'string', example: 'Quick question before you read' }, intro: { type: 'string' },
+          steps: { type: 'array', minItems: 1, maxItems: 6, items: { type: 'object', required: ['question', 'options'], properties: {
+            question: { type: 'string' }, help: { type: 'string' }, key: { type: 'string', description: 'Optional; made from the question' },
+            options: { type: 'array', minItems: 2, maxItems: 12, items: { oneOf: [{ type: 'string' }, { type: 'object', properties: { label: { type: 'string' }, value: { type: 'string' } } }] } } } } },
+          pages: { type: 'array', items: { type: 'string' }, description: 'On-page gate: "/exact", "https://site/exact", "/prefix/*", "*", "!/exclude"' },
+          gate: { type: 'array', items: { type: 'string' }, description: 'Server pages that redirect to /start/<id> (e.g. /jobs)' },
+          query: { type: 'object', additionalProperties: { type: 'string' }, description: 'Only visits with these query values ("*" = any), e.g. {"utm_source":"facebook"}' },
+          frequency: { enum: ['once', 'session', 'always'], default: 'once' }, rememberDays: { type: 'integer', default: 30 },
+          rewarded: { type: 'object', properties: { enabled: { type: 'boolean', default: true }, title: { type: 'string' }, cta: { type: 'string' }, skip: { type: 'string' }, allowSkip: { type: 'boolean', default: true } } },
+          enabled: { type: 'boolean', default: true }, position: { type: 'integer', description: 'Priority (0 = first)' }, deploy: { type: 'boolean', default: true },
+        },
+      },
+      Funnel: { allOf: [{ $ref: '#/components/schemas/FunnelInput' }, { type: 'object', properties: { id: { type: 'string' }, previewUrl: { type: ['string', 'null'], description: 'Opens the page with ?funnel=preview (always shows the funnel)' }, startUrl: { type: 'string' } } }] },
       AdsState: {
         type: 'object',
         properties: {

@@ -35,3 +35,27 @@ export function sanitizeAnswers(f: Funnel, input: Record<string, unknown>) {
 
 export const safeNext = (next: string | null | undefined, fallback = '/') =>
   next && next.startsWith('/') && !next.startsWith('//') ? next : fallback;
+
+// ---------- on-page gates ----------
+/** Pages that are never gated (trust pages, the funnels themselves, machine files). */
+const NEVER = [/^\/(about|contact|privacy|terms|404)$/, /^\/start(\/|$)/, /^\/api\//, /^\/(ads|robots)\.txt$/, /^\/sitemap/, /^\/logos\//];
+const norm = (p: string) => { const x = p.replace(/\.html$/, '').replace(/\/index$/, '/'); return (x.length > 1 ? x.replace(/\/+$/, '') : x) || '/'; };
+
+export function pageMatches(pattern: string, path: string) {
+  const pat = norm(pattern.trim());
+  const p = norm(path);
+  if (pat === '*') return true;
+  if (pat.endsWith('/*')) { const base = pat.slice(0, -2) || '/'; return base === '/' ? true : p === base || p.startsWith(base + '/'); }
+  return p === pat;
+}
+
+/** The first enabled funnel whose `pages` include this path (and don't exclude it). */
+export function gateFunnelFor(path: string): Funnel | undefined {
+  if (NEVER.some((r) => r.test(norm(path)))) return undefined;
+  return site.funnels.find((f) => {
+    if (f.enabled === false || !f.pages?.length || !f.steps?.length) return false;
+    const inc = f.pages.filter((x) => !x.startsWith('!'));
+    const exc = f.pages.filter((x) => x.startsWith('!')).map((x) => x.slice(1));
+    return inc.some((x) => pageMatches(x, path)) && !exc.some((x) => pageMatches(x, path));
+  });
+}

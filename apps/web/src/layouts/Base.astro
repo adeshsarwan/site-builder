@@ -3,6 +3,8 @@ import '@/styles/global.css';
 import { site, abs } from '@/lib/site';
 import { websiteLd, type PageSeo } from '@/lib/seo';
 import AdSlot from '@/components/AdSlot.astro';
+import FunnelGate from '@/components/FunnelGate.astro';
+import { gateFunnelFor } from '@/lib/funnels';
 
 interface Props { seo: PageSeo; leaderboard?: boolean; anchor?: boolean }
 const { seo, leaderboard = true, anchor = true } = Astro.props;
@@ -15,6 +17,8 @@ const nav = site.nav ?? [
 ];
 const ga = site.analytics?.ga4MeasurementId;
 const path = Astro.url.pathname;
+const gate = gateFunnelFor(path);
+const gateCfg = gate ? { id: gate.id, days: gate.rememberDays ?? 30, freq: gate.frequency ?? 'once', query: gate.query ?? null } : null;
 ---
 <!doctype html>
 <html lang={site.locale}>
@@ -42,6 +46,26 @@ const path = Astro.url.pathname;
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="sitemap" href="/sitemap.xml" />
     <style set:html={`:root{--primary:${site.theme.primary};--accent:${site.theme.accent}}`}></style>
+    {gateCfg && (
+      // Runs before first paint and before the (deferred) ad SDK: gate this visit unless already answered.
+      // ?funnel=preview always shows it; ?funnel=off never does.
+      <script is:inline define:vars={{ g: gateCfg }}>
+        (function () {
+          try {
+            var sp = new URLSearchParams(location.search), force = sp.get('funnel');
+            if (force === 'off') return;
+            if (force !== 'preview') {
+              if (g.query) for (var k in g.query) { var v = g.query[k]; if (v === '*' ? !sp.has(k) : sp.get(k) !== v) return; }
+              var key = 'fn_done_' + g.id, t = null;
+              if (g.freq === 'session') t = sessionStorage.getItem(key);
+              else if (g.freq === 'once') { t = localStorage.getItem(key); if (t && Date.now() - Number(t) > g.days * 864e5) t = null; }
+              if (t) return;
+            }
+            document.documentElement.classList.add('fn-gated');
+          } catch (e) {}
+        })();
+      </script>
+    )}
     {ld.map((o) => <script type="application/ld+json" set:html={JSON.stringify(o)} />)}
 
     {site.ads.enabled && (
@@ -71,7 +95,8 @@ const path = Astro.url.pathname;
         {nav.map((n) => <a href={n.href} aria-current={path === n.href ? 'page' : undefined}>{n.label}</a>)}
       </nav>
     </header>
-    {leaderboard && <div class="wrap"><AdSlot id="ad-leaderboard" /></div>}
+    {leaderboard && <div class="wrap gate-hide"><AdSlot id="ad-leaderboard" /></div>}
+    {gate && <FunnelGate funnel={gate} />}
     <main id="main"><slot /></main>
     <footer class="site-footer">
       <div class="wrap footer-grid">
@@ -97,6 +122,6 @@ const path = Astro.url.pathname;
       </div>
       <div class="wrap copyright">© {new Date().getFullYear()} {site.legal.companyName}. All rights reserved.</div>
     </footer>
-    {anchor && site.ads.enabled && site.ads.anchor !== false && <AdSlot id="ad-anchor" />}
+    {anchor && site.ads.enabled && site.ads.anchor !== false && <div class="gate-hide"><AdSlot id="ad-anchor" /></div>}
   </body>
 </html>

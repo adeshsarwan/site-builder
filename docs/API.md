@@ -94,7 +94,49 @@ DELETE /v1/sites/{id}/stories/{slug}                                            
 ```
 A rewrite keeps the URL, publish date and photo, and sets `updatedDate`.
 
-## 3. Ads (stage 2)
+## 3. Funnels (questions → rewarded video → page)
+
+A funnel is up to 6 multiple-choice questions plus an opt-in rewarded video. On the URLs you give it, the visitor sees the questions as soon as they land. The rewarded ad preloads while they answer. After the last answer they tap "Watch a short video" (or "No thanks" if `allowSkip`). The page's own ads preload while the video plays, then the page and its ads appear together. A no-fill, a closed video or a failed ad SDK still shows the page. Visitors who already answered go straight to the page (`frequency`: `once` per `rememberDays`, `session`, or `always`). Search engines and visitors without JavaScript get the page normally.
+
+### Create a funnel and choose its URLs
+```http
+PUT /v1/sites/jobsthe.world/funnels/guide-unlock
+{
+  "title": "Quick question before you read",
+  "intro": "Three taps so we can point you to the right jobs.",
+  "steps": [
+    { "question": "Where do you live?", "options": ["United States", "United Kingdom", "Canada", "Australia"] },
+    { "question": "What brings you here?", "options": ["Finding a new job", "Growing in my job"] },
+    { "question": "Do you want remote work?", "options": ["Yes", "No"] }
+  ],
+  "pages": ["https://jobsthe.world/remote-offer-red-flags", "/category/interview-prep/*", "!/category/salary-negotiation"],
+  "rewarded": { "title": "Your guide is ready", "cta": "Watch a short video to read it", "skip": "No thanks, continue", "allowSkip": true },
+  "frequency": "once", "rememberDays": 7
+}
+```
+URL patterns: a full URL or path (`/remote-offer-red-flags`), a prefix (`/category/*`), every page (`*`), or an exclusion (`!/category/salary-negotiation`). The about, contact, privacy and terms pages, `/start/*`, ads.txt, robots.txt and the sitemap are never gated. Options can be plain labels (values are made for you) or `{ "label", "value" }`.
+
+Only for some traffic: `"query": { "utm_source": "facebook" }` gates a visit only when the URL has that value (`"*"` = any value).
+
+### Change which URLs a funnel covers
+```http
+PATCH /v1/sites/jobsthe.world/funnels/guide-unlock/pages
+{ "add": ["https://jobsthe.world/how-to-ask-for-a-four-day-week"], "remove": ["/category/interview-prep/*"] }
+```
+
+### Other calls
+```http
+GET    /v1/sites/{id}/funnels                    list (priority order; first match wins)
+GET    /v1/sites/{id}/funnels/match?url=…        which funnel a URL gets, and why
+GET    /v1/sites/{id}/funnels/{fid}
+PATCH  /v1/sites/{id}/funnels/{fid}              e.g. { "enabled": false } to pause, { "position": 0 } to make it first
+DELETE /v1/sites/{id}/funnels/{fid}
+```
+Responses include `warnings`: a URL with no story, a URL that is never gated, an overlap with another funnel, or ads not enabled yet (then visitors get questions → page, without a video). Changes go live with the deploy (`deploy.statusUrl`). To test, open a gated URL with `?funnel=preview` (always shows the funnel) or `?funnel=off`.
+
+Answers are kept in the visitor's browser. They also unlock any server page the same funnel gates (`gate`, e.g. `/jobs`), and are sent to GA4 as events: `funnel_start`, `funnel_answers`, `rewarded_granted`, `rewarded_skip` and `funnel_complete` (with `via`).
+
+## 4. Ads (stage 2)
 
 After you create the ad units in Price Optimiser for the domain:
 ```http
@@ -111,7 +153,7 @@ PATCH /v1/sites/{id}/ads.txt  { "add": [...], "remove": [...] }                 
 ```
 Lines are trimmed and de-duplicated. Comments (`#`) and variables (`OWNERDOMAIN=`, `MANAGERDOMAIN=`, `CONTACT=` …) are kept. Lines that don't look like `domain, account, DIRECT|RESELLER[, cert]` are kept but reported in `warnings`. When nothing changes the call returns `200 { changed: false }`. Once the deploy finishes, `GET /v1/sites/{id}/health` reports whether the live `https://<domain>/ads.txt` matches.
 
-## 4. Site settings, deploys, health
+## 5. Site settings, deploys, health
 ```http
 GET   /v1/sites/{id}/config
 PATCH /v1/sites/{id}/config  { "name", "tagline", "description", "theme": { "primary", "accent", "logoText" }, "legal": { "contactEmail" }, "jobs": { "landing": {…} } }
@@ -120,7 +162,7 @@ GET   /v1/deploys/{runKey}
 GET   /v1/sites/{id}/health   → live checks: home/find-jobs pages, ads.txt in sync, SDK tag, runtime, GA4 tag
 ```
 
-## 5. Shared jobs data
+## 6. Shared jobs data
 ```http
 GET  /v1/jobs/health | /v1/jobs/usage?month=2026-11
 GET  /v1/jobs/search?country=us&category=software&remote=true&q=react&limit=20

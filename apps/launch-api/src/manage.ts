@@ -37,7 +37,7 @@ export async function resolveSite(env: Env, idOrDomain: string): Promise<SiteRef
 
 const notFound = (c: any) => c.json({ error: 'site not found' }, 404);
 
-async function saveConfig(env: Env, site: SiteRef, config: any, message: string, deploy = true) {
+export async function saveConfig(env: Env, site: SiteRef, config: any, message: string, deploy = true) {
   const commit = await gh.commitFiles(env, [{ path: site.path, content: JSON.stringify(config, null, 2) + '\n' }], `${message} [skip ci]`);
   const runKey = `${site.slug}-${Date.now().toString(36)}`;
   if (deploy) await gh.dispatchDeploy(env, site.slug, runKey);
