@@ -37,6 +37,8 @@ export interface LaunchInput {
   generateArticles?: number;
   /** "pixabay" (download + self-host), "unsplash" (hotlink + credit) or "none". Default from IMAGE_PROVIDER. */
   imageProvider?: 'pixabay' | 'unsplash' | 'none';
+  /** Use an existing GA4 web stream (G-XXXX) instead of creating a property. */
+  ga4MeasurementId?: string;
   adsTxt?: string[];
   jobsDefaultQuery?: Record<string, string>;
   webhookUrl?: string;

@@ -5,6 +5,8 @@
   "compatibility_date": "2026-10-01",
   "compatibility_flags": ["nodejs_compat"],
   "observability": { "enabled": true },
+  // Requires the thebesads.com zone in this Cloudflare account. Wrangler creates the DNS record + certificate.
+  "routes": [{ "pattern": "sitebuilder.thebesads.com", "custom_domain": true }],
   "d1_databases": [
     { "binding": "DB", "database_name": "launch-db", "migrations_dir": "migrations" }
   ],

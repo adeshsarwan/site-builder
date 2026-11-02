@@ -7,15 +7,18 @@ import { slugFromDomain, type Env, type LaunchInput } from './types';
 
 export { LaunchSiteWorkflow } from './workflow';
 
-const app = new Hono<{ Bindings: Env & { ALLOWED_ORIGINS?: string } }>();
+type AppEnv = { Bindings: Env & { ALLOWED_ORIGINS?: string } };
+// Served at https://sitebuilder.thebesads.com — the API lives under /api (e.g. /api/v1/sites).
+const app = new Hono<AppEnv>();
+const api = new Hono<AppEnv>();
 
-app.use('/v1/*', async (c, next) => {
+api.use('/v1/*', async (c, next) => {
   const origins = (c.env.ALLOWED_ORIGINS ?? '').split(',').map((s) => s.trim()).filter(Boolean);
   return cors({ origin: origins.length ? origins : '*', allowHeaders: ['Authorization', 'Content-Type', 'Last-Event-ID'], allowMethods: ['GET', 'POST', 'OPTIONS'] })(c, next);
 });
 
 // Bearer auth (constant-time compare). EventSource can't send headers, so ?key= is accepted on the events stream.
-app.use('/v1/*', async (c, next) => {
+api.use('/v1/*', async (c, next) => {
   if (c.req.method === 'OPTIONS') return next();
   const header = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
   const key = header ?? (c.req.path.endsWith('/events') ? c.req.query('key') : undefined) ?? '';
@@ -26,11 +29,11 @@ app.use('/v1/*', async (c, next) => {
   return next();
 });
 
-app.get('/health', (c) => c.json({ ok: true }));
+api.get('/health', (c) => c.json({ ok: true }));
 
 const DOMAIN_RE = /^(?!-)[a-z0-9-]{1,63}(?<!-)(\.(?!-)[a-z0-9-]{1,63}(?<!-))+$/;
 
-app.post('/v1/sites', async (c) => {
+api.post('/v1/sites', async (c) => {
   const input = (await c.req.json().catch(() => null)) as LaunchInput | null;
   const domain = input?.domain?.toLowerCase().trim().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '');
   if (!input || !domain || !DOMAIN_RE.test(domain)) return c.json({ error: 'A valid "domain" is required, e.g. "jobsthe.world"' }, 400);
@@ -58,10 +61,10 @@ app.post('/v1/sites', async (c) => {
 
   await c.env.LAUNCH.create({ id: `${siteId}-1`, params: { siteId, attempt: 1 } });
   const status = await siteStatus(c.env, siteId);
-  return c.json({ ...status, statusUrl: `/v1/sites/${siteId}`, eventsUrl: `/v1/sites/${siteId}/events` }, 202);
+  return c.json({ ...status, statusUrl: `/api/v1/sites/${siteId}`, eventsUrl: `/api/v1/sites/${siteId}/events` }, 202);
 });
 
-app.get('/v1/sites', async (c) => {
+api.get('/v1/sites', async (c) => {
   const { results } = await c.env.DB.prepare('SELECT id, domain, name, status, current_step, live_url, created_at, updated_at FROM sites ORDER BY created_at DESC LIMIT 200').all();
   return c.json({ sites: results });
 });
@@ -69,14 +72,14 @@ app.get('/v1/sites', async (c) => {
 const resolveId = async (env: Env, idOrDomain: string) =>
   idOrDomain.startsWith('site_') ? idOrDomain : (await env.DB.prepare('SELECT id FROM sites WHERE domain = ?').bind(idOrDomain.toLowerCase()).first<any>())?.id;
 
-app.get('/v1/sites/:id', async (c) => {
+api.get('/v1/sites/:id', async (c) => {
   const id = await resolveId(c.env, c.req.param('id'));
   const s = id && (await siteStatus(c.env, id));
   return s ? c.json(s) : c.json({ error: 'not found' }, 404);
 });
 
 // Live progress as Server-Sent Events: `event: step` for each change, `event: status` with the full document.
-app.get('/v1/sites/:id/events', async (c) => {
+api.get('/v1/sites/:id/events', async (c) => {
   const id = await resolveId(c.env, c.req.param('id'));
   if (!id || !(await getSiteRow(c.env, id))) return c.json({ error: 'not found' }, 404);
   let last = Number(c.req.header('Last-Event-ID') ?? c.req.query('after') ?? 0) || 0;
@@ -100,7 +103,7 @@ app.get('/v1/sites/:id/events', async (c) => {
 });
 
 // Resume a failed launch: finished steps are skipped, the failed step runs again.
-app.post('/v1/sites/:id/retry', async (c) => {
+api.post('/v1/sites/:id/retry', async (c) => {
   const id = await resolveId(c.env, c.req.param('id'));
   const site = id && (await getSiteRow(c.env, id));
   if (!site) return c.json({ error: 'not found' }, 404);
@@ -113,5 +116,8 @@ app.post('/v1/sites/:id/retry', async (c) => {
   await c.env.LAUNCH.create({ id: `${id}-${attempt}`, params: { siteId: id, attempt } });
   return c.json(await siteStatus(c.env, id), 202);
 });
+
+app.route('/api', api);
+app.get('/', (c) => c.json({ service: 'site-builder launch API', docs: 'https://github.com/adeshsarwan/site-builder#launch-api', api: '/api/v1/sites' }));
 
 export default app;

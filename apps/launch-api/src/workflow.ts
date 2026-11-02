@@ -98,6 +98,7 @@ export class LaunchSiteWorkflow extends WorkflowEntrypoint<Env, LaunchParams> {
       // 3. GA4 -------------------------------------------------------------------
       const ga = await once('analytics', async () => {
         if (dry) return { output: { measurementId: 'G-DRYRUN000' }, detail: 'G-DRYRUN000' };
+        if (input.ga4MeasurementId) return { output: { measurementId: input.ga4MeasurementId }, detail: `Using existing stream ${input.ga4MeasurementId}` };
         if (!env.GA4_ACCOUNT_ID || !env.GCP_SA_JSON) throw new StepSkipped('GA4_ACCOUNT_ID / GCP_SA_JSON not configured');
         const token = await google.googleToken(env, google.SCOPES_GA);
         const r = await google.createGa4(token, env.GA4_ACCOUNT_ID, input.name ?? domain, domain);

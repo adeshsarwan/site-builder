@@ -1,7 +1,7 @@
 # site-builder
 
 One Astro codebase, many job sites. Push to `main` and changed sites deploy to Cloudflare.
-`POST /v1/sites` on the Launch API sets up a new domain end to end and reports progress.
+`POST /api/v1/sites` on the Launch API sets up a new domain end to end and reports progress.
 
 ```
 apps/web/          Shared Astro 7 app (articles, categories, live jobs, funnels, Price Optimiser ads)
@@ -44,22 +44,22 @@ Implemented exactly as the publisher integration guide says:
    npx wrangler secret put PIXABAY_API_KEY    # and/or UNSPLASH_ACCESS_KEY
    npx wrangler secret put WEBHOOK_SECRET     # optional
    ```
-   Set `GA4_ACCOUNT_ID` (numeric) and `ALLOWED_ORIGINS` in `wrangler.jsonc` vars. Optionally add a custom domain (e.g. `launch.thebesads.com`) to the `launch-api` Worker.
+   Set `GA4_ACCOUNT_ID` (numeric) and `ALLOWED_ORIGINS` in `wrangler.jsonc` vars. The API is served at `https://sitebuilder.thebesads.com/api` (custom domain in `wrangler.jsonc`; needs the thebesads.com zone in the same Cloudflare account).
 
 ## Launch API
 
-All `/v1` routes need `Authorization: Bearer <API_KEY>`. Call it from your frontend's **server** (never ship the key to browsers). The events stream also accepts `?key=` because `EventSource` can't send headers — proxy it through your backend.
+All `/api/v1` routes need `Authorization: Bearer <API_KEY>`. Call it from your frontend's **server** (never ship the key to browsers). The events stream also accepts `?key=` because `EventSource` can't send headers — proxy it through your backend.
 
 | Method | Path | |
 | --- | --- | --- |
-| POST | `/v1/sites` | Start a launch. Returns `202` with status + `nameservers` |
-| GET | `/v1/sites` | List launches |
-| GET | `/v1/sites/:id` | Status (id or domain) |
-| GET | `/v1/sites/:id/events` | Server-Sent Events: `step` and `status` events |
-| POST | `/v1/sites/:id/retry` | Resume a failed launch from the failed step |
+| POST | `/api/v1/sites` | Start a launch. Returns `202` with status + `nameservers` |
+| GET | `/api/v1/sites` | List launches |
+| GET | `/api/v1/sites/:id` | Status (id or domain) |
+| GET | `/api/v1/sites/:id/events` | Server-Sent Events: `step` and `status` events |
+| POST | `/api/v1/sites/:id/retry` | Resume a failed launch from the failed step |
 
 ```http
-POST /v1/sites
+POST /api/v1/sites
 {
   "domain": "jobsthe.world",
   "name": "Jobs The World",
@@ -86,10 +86,10 @@ Webhooks: each change POSTs `{ "type": "site.status", "data": <status> }` with `
 
 ```ts
 // server: start
-const r = await fetch(`${LAUNCH_API}/v1/sites`, { method: 'POST', headers: { Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ domain }) });
+const r = await fetch(`https://sitebuilder.thebesads.com/api/v1/sites`, { method: 'POST', headers: { Authorization: `Bearer ${KEY}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ domain }) });
 const { siteId, nameservers } = await r.json(); // show nameservers to set at the registrar
 
-// browser: live progress via your own proxy route that forwards /v1/sites/:id/events
+// browser: live progress via your own proxy route that forwards /api/v1/sites/:id/events
 const es = new EventSource(`/api/launch/${siteId}/events`);
 es.addEventListener('status', (e) => render(JSON.parse(e.data))); // { status, progress, steps[] }
 ```
