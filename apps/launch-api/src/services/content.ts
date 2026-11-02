@@ -32,9 +32,10 @@ async function claudeJson<T>(env: Env, system: string, user: string, schema: Rec
     method: 'POST',
     headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
     body: JSON.stringify({
-      model: env.CLAUDE_MODEL || 'claude-sonnet-5-5', max_tokens: maxTokens, system,
+      model: env.CLAUDE_MODEL || 'claude-sonnet-5-5', max_tokens: maxTokens,
+      system: `${system}\n\nAlways deliver your result by calling the submit tool exactly once. Do not write the result as plain text.`,
       tools: [{ name: 'submit', description: 'Submit the result.', input_schema: schema }],
-      tool_choice: { type: 'tool', name: 'submit' },
+      tool_choice: { type: 'auto' },
       messages: [{ role: 'user', content: user }],
     }),
   });
@@ -42,8 +43,11 @@ async function claudeJson<T>(env: Env, system: string, user: string, schema: Rec
   if (!res.ok) throw new Error(`Claude API ${res.status} (${purpose}): ${body.error?.message ?? ''}`);
   if (body.stop_reason === 'max_tokens') throw new Error(`Claude reply cut off at ${maxTokens} tokens (${purpose})`);
   const call = (body.content ?? []).find((c: any) => c.type === 'tool_use');
-  if (!call?.input) throw new Error(`Claude returned no structured result (${purpose}, stop_reason ${body.stop_reason})`);
-  return call.input as T;
+  if (call?.input) return call.input as T;
+  // Fallback: the model answered in text instead of calling the tool.
+  const text = (body.content ?? []).filter((c: any) => c.type === 'text').map((c: any) => c.text ?? '').join('');
+  if (!text.trim()) throw new Error(`Claude returned no result (${purpose}, stop_reason ${body.stop_reason})`);
+  return extractJson<T>(text);
 }
 
 /** Extracts the first complete JSON value from a model reply (string-aware bracket matching). */
