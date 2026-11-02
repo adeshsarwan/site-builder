@@ -1,4 +1,4 @@
-// What the scheduled refresh fetches. Each (country × category) is one "bucket" stored in Firestore.
+// What the scheduled refresh fetches. Each (country × category) is one "bucket"; jobs are upserted into Postgres.
 // Requests per refresh = countries × categories × PAGES_PER_BUCKET (each page = 1 JSearch request, 10 jobs).
 
 export const COUNTRIES = {
