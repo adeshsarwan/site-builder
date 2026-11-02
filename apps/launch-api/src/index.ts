@@ -4,6 +4,9 @@ import { streamSSE } from 'hono/streaming';
 import { createSite, events, getSiteRow, siteStatus, updateSite } from './db';
 import { ensureZone } from './services/cloudflare';
 import { backfillImages } from './services/backfill';
+import { manage } from './manage';
+import { openapi } from './openapi';
+import { stories } from './storiesApi';
 import { slugFromDomain, type Env, type LaunchInput } from './types';
 
 export { LaunchSiteWorkflow } from './workflow';
@@ -124,12 +127,25 @@ api.post('/v1/sites/:id/articles', async (c) => {
 });
 
 api.get('/v1/tasks/:id', async (c) => {
-  try {
-    const inst = await c.env.CONTENT.get(c.req.param('id'));
-    return c.json({ taskId: c.req.param('id'), ...(await inst.status()) });
-  } catch {
-    return c.json({ error: 'not found' }, 404);
-  }
+  const id = c.req.param('id');
+  const task = await c.env.DB.prepare('SELECT * FROM tasks WHERE id = ?').bind(id).first<any>().catch(() => null);
+  const items = task ? (await c.env.DB.prepare('SELECT idx, title, slug, category, status, error, updated_at FROM task_items WHERE task_id = ? ORDER BY idx').bind(id).all()).results : [];
+  let workflow: any = null;
+  try { workflow = await (await c.env.CONTENT.get(id)).status(); } catch { /* not found */ }
+  if (!task && !workflow) return c.json({ error: 'not found' }, 404);
+  const done = items.filter((i: any) => ['written', 'published', 'failed'].includes(i.status)).length;
+  return c.json({
+    taskId: id,
+    site: task?.site_slug ?? null,
+    kind: task?.kind ?? 'add',
+    status: workflow?.status === 'errored' ? 'failed' : task?.status ?? workflow?.status,
+    progress: items.length ? Math.round((done / items.length) * 100) : 0,
+    total: task?.total ?? items.length, written: task?.written ?? 0, failed: task?.failed ?? 0,
+    deploy: task?.run_key ? { runKey: task.run_key, statusUrl: `/api/v1/deploys/${task.run_key}` } : null,
+    stories: items,
+    error: task?.error ?? workflow?.error ?? null,
+    workflow: workflow ? { status: workflow.status, output: workflow.output ?? null } : null,
+  });
 });
 
 // Add photos to articles that have none, then redeploy the site.
@@ -163,7 +179,10 @@ api.post('/v1/sites/:id/retry', async (c) => {
   return c.json(await siteStatus(c.env, id), 202);
 });
 
+api.route('/v1', manage);
+api.route('/v1', stories);
+api.get('/openapi.json', (c) => c.json(openapi));
 app.route('/api', api);
-app.get('/', (c) => c.json({ service: 'site-builder launch API', docs: 'https://github.com/adeshsarwan/site-builder#launch-api', api: '/api/v1/sites' }));
+app.get('/', (c) => c.json({ service: 'site-builder launch API', docs: 'https://github.com/adeshsarwan/site-builder/blob/main/docs/API.md', openapi: '/api/openapi.json', api: '/api/v1/sites' }));
 
 export default app;

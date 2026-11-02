@@ -25,6 +25,7 @@
     "CLAUDE_MODEL": "claude-sonnet-5-5",
     "PO_RUNTIME_URL": "https://serve.thebesads.com/runtime/config",
     "IMAGE_PROVIDER": "pixabay",
+    "JOBS_API_BASE": "https://jobs-api-28975270991.us-central1.run.app", // JOBS_API_KEY is a secret
     "DRY_RUN": "false"
   }
   // Secrets (wrangler secret put …):

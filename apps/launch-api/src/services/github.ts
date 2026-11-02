@@ -46,7 +46,7 @@ export async function readBlob(env: Env, sha: string): Promise<string> {
   return decodeURIComponent(escape(atob(String(b.content).replace(/\n/g, ''))));
 }
 
-export type TreeFile = { path: string; content: string } | { path: string; sha: string };
+export type TreeFile = { path: string; content: string } | { path: string; sha: string | null }; // sha null = delete
 
 /** One commit with many files (new content inline, copied files by existing blob sha). */
 export async function commitFiles(env: Env, files: TreeFile[], message: string) {

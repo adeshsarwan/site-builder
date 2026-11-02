@@ -49,9 +49,12 @@ const todo = [];
 for (const f of files) {
   const md = readFileSync(path.join(dir, f), 'utf8');
   const fm = md.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? '';
-  for (const m of fm.matchAll(/pixabay\.com\/(?:photos|illustrations)\/[^"]*?-(\d+)\/?"/g)) used.add(m[1]);
+  for (const m of fm.matchAll(/pixabay\.com\/(?:photos|illustrations)\/\S*?-(\d+)\/?"?\s*$/gm)) used.add(m[1]);
+  // Photos a story asked never to get again (POST /stories/:slug/photo): `avoidImage:` list of Pixabay ids.
+  const avoid = [...(fm.match(/^avoidImage:\s*\n((?:\s+-.*\n?)+)/m)?.[1] ?? '').matchAll(/-\s*"?(\d+)"?/g)].map((m) => m[1]);
+  avoid.forEach((id) => used.add(id));
   const hero = String(field(fm, 'heroImage') ?? '');
-  if (!hero) todo.push({ f, md, title: String(field(fm, 'title')), category: String(field(fm, 'categorySlug')) });
+  if (!hero) todo.push({ f, md, title: String(field(fm, 'title')), category: String(field(fm, 'categorySlug')), query: String(field(fm, 'imageQuery') ?? ''), replace: avoid.length > 0 });
 }
 console.log(`fill-images: ${files.length} articles, ${todo.length} without a photo`);
 mkdirSync(imgDir, { recursive: true });
@@ -60,7 +63,7 @@ let added = 0;
 for (const a of todo) {
   const slug = a.f.replace(/\.md$/, '');
   const words = a.title.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter((w) => w.length > 2 && !STOP.has(w));
-  const terms = [...new Set([words.slice(0, 3).join(' '), words.slice(0, 2).join(' '), CATEGORY_QUERY[a.category], 'people working laptop', 'office work'].filter(Boolean))];
+  const terms = [...new Set([a.query, words.slice(0, 3).join(' '), words.slice(0, 2).join(' '), CATEGORY_QUERY[a.category], 'people working laptop', 'office work'].filter(Boolean))];
   let hit = null;
   for (const t of terms) {
     try { hit = (await search(t)).find((h) => !used.has(String(h.id))); } catch (e) { console.log(`  ${slug} [${t}]: ${e.message}`); }
@@ -70,12 +73,14 @@ for (const a of todo) {
   used.add(String(hit.id));
   const img = await fetch(hit.largeImageURL);
   if (!img.ok) { console.log(`  ${slug}: download failed ${img.status}`); continue; }
-  const file = `${slug}.jpg`;
+  // A replacement photo gets a new file name so browsers and the CDN don't keep showing the old one.
+  const file = a.replace ? `${slug}-${hit.id}.jpg` : `${slug}.jpg`;
   writeFileSync(path.join(imgDir, file), Buffer.from(await img.arrayBuffer()));
   const alt = String(hit.tags ?? '').split(',').map((s) => s.trim()).filter(Boolean).slice(0, 4).join(', ');
   const credit = `\nheroCredit:\n  name: ${q(hit.user)}\n  url: ${q(`https://pixabay.com/users/${hit.user}-${hit.user_id}/`)}\n  source: "Pixabay"\n  sourceUrl: ${q(hit.pageURL)}`;
   let md = /^heroImage:.*$/m.test(a.md) ? a.md.replace(/^heroImage:.*$/m, `heroImage: ${q(`/images/${file}`)}`) : a.md.replace(/^(title:.*)$/m, `$1\nheroImage: ${q(`/images/${file}`)}`);
   md = /^heroAlt:.*$/m.test(md) ? md.replace(/^heroAlt:.*$/m, `heroAlt: ${q(alt)}${credit}`) : md.replace(/^(heroImage:.*)$/m, `$1\nheroAlt: ${q(alt)}${credit}`);
+  md = md.replace(/^imageQuery:.*\n/m, '');
   writeFileSync(path.join(dir, a.f), md);
   added++;
   console.log(`  ${slug}: ✓ ${hit.pageURL}`);

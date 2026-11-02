@@ -26,7 +26,7 @@ async function claude(env: Env, system: string, user: string, maxTokens: number,
 }
 
 /** Structured output via a forced tool call: the API returns schema-shaped, already-parsed JSON. */
-async function claudeJson<T>(env: Env, system: string, user: string, schema: Record<string, unknown>, maxTokens: number, purpose: string): Promise<T> {
+export async function claudeJson<T>(env: Env, system: string, user: string, schema: Record<string, unknown>, maxTokens: number, purpose: string): Promise<T> {
   if (!env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY secret is not set');
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -194,4 +194,25 @@ export function toMarkdown(input: LaunchInput, a: WrittenArticle, dateIso: strin
     '',
   ];
   return { path: `${a.plan.slug}.md`, content: lines.join('\n') + a.body + '\n' };
+}
+
+/** For stories the user titled themselves: pick a category and a one-line reader angle for each (titles are kept as given). */
+export async function classifyTitles(env: Env, input: LaunchInput, titles: string[]): Promise<{ categorySlug: string; angle: string }[]> {
+  if (!titles.length) return [];
+  const out = await claudeJson<{ items: any[] }>(
+    env,
+    'You categorise career-advice article titles.',
+    `Site: ${input.name} (${input.domain}), audience: ${input.niche ?? 'job seekers'} in ${input.country ?? 'US'}.
+For each title, in order, give its category slug (${CATEGORIES.join(', ')}) and angle = one sentence on the reader's specific problem.
+${titles.map((t, i) => `${i + 1}. ${t}`).join('\n')}
+Submit exactly ${titles.length} items.`,
+    { type: 'object', required: ['items'], properties: { items: { type: 'array', items: { type: 'object', required: ['categorySlug', 'angle'],
+      properties: { categorySlug: { type: 'string', enum: CATEGORIES }, angle: { type: 'string' } } } } } },
+    800 + titles.length * 150,
+    `classify ${titles.length} titles`,
+  );
+  return titles.map((t, i) => {
+    const it = out.items?.[i] ?? {};
+    return { categorySlug: CATEGORIES.includes(it.categorySlug) ? it.categorySlug : CATEGORIES[0], angle: String(it.angle || `Practical, specific guidance on: ${t}`) };
+  });
 }
