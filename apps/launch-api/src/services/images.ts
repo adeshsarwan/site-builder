@@ -32,12 +32,15 @@ export function imageQueries(primary: string | undefined, title: string, categor
 }
 
 /** Tries each phrase until one returns an unused photo. */
-export async function pickImageWithFallback(env: Env, queries: string[], slug: string, siteSlug: string, used: Set<string>): Promise<PickedImage | null> {
+export async function pickImageWithFallback(env: Env, queries: string[], slug: string, siteSlug: string, used: Set<string>, errors?: string[]): Promise<PickedImage | null> {
   for (const q of queries) {
     try {
       const r = await pickImage(env, q, slug, siteSlug, used);
       if (r) return r;
-    } catch { /* try the next phrase */ }
+    } catch (e: any) {
+      errors?.push(`${slug} [${q}]: ${e.message}`);
+      if (/subrequest/i.test(e.message)) break; // request budget spent; stop trying
+    }
   }
   return null;
 }

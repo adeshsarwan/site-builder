@@ -6,7 +6,11 @@ import { imageQueries, pickImageWithFallback } from './images';
  * Adds a hero photo to every article of a site that has none, commits the photos + updated
  * frontmatter in one commit, and starts a deploy. Photos already used on the site are not reused.
  */
-export async function backfillImages(env: Env, siteSlug: string, limit = 40) {
+export async function backfillImages(env: Env, siteSlug: string, limit = 2, deploy = true) {
+  if (limit === 0) {
+    if (deploy) await gh.dispatchDeploy(env, siteSlug, `backfill-${Date.now()}`);
+    return { checked: 0, missing: 0, added: 0, stillMissing: [], commit: null, errors: [], deployed: deploy };
+  }
   const files = (await gh.listTree(env, `sites/${siteSlug}/content/articles`)).filter((f) => f.path.endsWith('.md'));
   const used = new Set<string>();
   const missing: { path: string; md: string; title: string; category: string; slug: string }[] = [];
@@ -23,8 +27,9 @@ export async function backfillImages(env: Env, siteSlug: string, limit = 40) {
   const out: gh.TreeFile[] = [];
   const added: string[] = [];
   const still: string[] = [];
+  const errors: string[] = [];
   for (const a of missing.slice(0, limit)) {
-    const picked = await pickImageWithFallback(env, imageQueries(undefined, a.title, a.category), a.slug, siteSlug, used);
+    const picked = await pickImageWithFallback(env, imageQueries(undefined, a.title, a.category), a.slug, siteSlug, used, errors);
     if (!picked) { still.push(a.slug); continue; }
     const q = (v: unknown) => JSON.stringify(v ?? '');
     const c = picked.hero.credit;
@@ -39,7 +44,7 @@ export async function backfillImages(env: Env, siteSlug: string, limit = 40) {
   let commit: string | null = null;
   if (out.length) {
     commit = await gh.commitFiles(env, out, `Add missing article photos for ${siteSlug} [skip ci]`);
-    await gh.dispatchDeploy(env, siteSlug, `backfill-${Date.now()}`);
+    if (deploy) await gh.dispatchDeploy(env, siteSlug, `backfill-${Date.now()}`);
   }
-  return { checked: files.length, missing: missing.length, added: added.length, stillMissing: still, commit };
+  return { checked: files.length, missing: missing.length - added.length, added: added.length, stillMissing: still, commit, errors, deployed: deploy && Boolean(commit) };
 }

@@ -2,7 +2,7 @@ name: Backfill images
 run-name: backfill images ${{ inputs.domain }}
 
 # Adds a Pixabay photo (downloaded and self-hosted, with credit) to every article of a site that has none,
-# then redeploys the site.
+# in small batches (Workers request limits), then redeploys the site once.
 on:
   workflow_dispatch:
     inputs:
@@ -14,9 +14,20 @@ on:
 jobs:
   backfill:
     runs-on: ubuntu-latest
+    env:
+      URL: https://sitebuilder.thebesads.com/api/v1/sites/${{ inputs.domain }}/images
+      KEY: ${{ secrets.LAUNCH_API_KEY }}
     steps:
       - run: |
-          R=$(curl -sS -m 600 -X POST "https://sitebuilder.thebesads.com/api/v1/sites/${{ inputs.domain }}/images" -H "Authorization: Bearer ${{ secrets.LAUNCH_API_KEY }}")
-          echo "$R" | jq .
-          echo "$R" | jq -r '"### Photos for \(.site)\n\nArticles: \(.checked) · missing photos: \(.missing) · added: \(.added) · still missing: \(.stillMissing | length)\n\nA deploy of the site has been started."' >> "$GITHUB_STEP_SUMMARY"
-          echo "$R" | jq -e '.error | not' >/dev/null
+          TOTAL=0
+          for i in $(seq 1 25); do
+            R=$(curl -sS -m 300 -X POST "$URL?limit=2&deploy=0" -H "Authorization: Bearer $KEY")
+            echo "$R" | jq -c '{added, missing, stillMissing, errors}'
+            ADDED=$(echo "$R" | jq -r '.added // 0'); MISSING=$(echo "$R" | jq -r '.missing // 0')
+            TOTAL=$((TOTAL + ADDED))
+            [ "$MISSING" = "0" ] && break
+            [ "$ADDED" = "0" ] && { echo "No progress this round — stopping"; break; }
+          done
+          curl -sS -X POST "$URL?limit=0&deploy=1" -H "Authorization: Bearer $KEY" >/dev/null
+          echo "### Added $TOTAL photos to ${{ inputs.domain }} · still missing: $MISSING · deploy started" >> "$GITHUB_STEP_SUMMARY"
+          echo "Added $TOTAL photos; still missing: $MISSING"

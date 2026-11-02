@@ -111,7 +111,9 @@ api.post('/v1/sites/:id/images', async (c) => {
     : await c.env.DB.prepare('SELECT slug FROM sites WHERE domain = ?').bind(p).first<any>();
   const slug = row?.slug ?? slugFromDomain(p);
   try {
-    return c.json({ site: slug, ...(await backfillImages(c.env, slug)) });
+    const limit = Math.max(0, Math.min(5, Number(c.req.query('limit') ?? 2)));
+    const deploy = c.req.query('deploy') !== '0';
+    return c.json({ site: slug, ...(await backfillImages(c.env, slug, limit, deploy)) });
   } catch (e: any) {
     return c.json({ error: e.message }, 500);
   }
