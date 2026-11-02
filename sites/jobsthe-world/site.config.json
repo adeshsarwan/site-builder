@@ -48,7 +48,9 @@
     "poSite": "jobsthe.world",
     "sdkUrl": "https://serve.thebesads.com/sdk/publisher-sdk.js",
     "runtimeUrl": "https://serve.thebesads.com/runtime/config",
-    "adsTxt": [],
+    "adsTxt": [
+      "google.com, pub-4583550980683244, DIRECT, f08c47fec0942fa0"
+    ],
     "anchor": true
   },
   "analytics": {
@@ -115,7 +117,7 @@
     ],
     "landing": {
       "headline": "Find work that's hiring right now",
-      "subhead": "Search thousands of current openings across the US, Canada, Australia and the UK — remote and on-site. Apply directly on the employer's site.",
+      "subhead": "Search thousands of current openings across the US, Canada, Australia and the UK \u2014 remote and on-site. Apply directly on the employer's site.",
       "defaultCountry": "us",
       "popular": [
         {
@@ -245,7 +247,7 @@
             },
             {
               "value": "mid",
-              "label": "2–5 years"
+              "label": "2\u20135 years"
             },
             {
               "value": "senior",
