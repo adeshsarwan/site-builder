@@ -3,7 +3,7 @@ import { site, type Funnel } from './site';
 export const funnelCookie = (id: string) => `fn_${id.replace(/[^a-z0-9_-]/gi, '')}`;
 
 export function funnelForPath(pathname: string): Funnel | undefined {
-  return site.funnels.find((f) => f.gate.some((g) => pathname === g || pathname.startsWith(g.endsWith('/') ? g : g + '/')));
+  return site.funnels.find((f) => f.enabled !== false && f.trigger !== 'apply' && (f.gate ?? []).some((g) => pathname === g || pathname.startsWith(g.endsWith('/') ? g : g + '/')));
 }
 
 export const getFunnel = (id: string) => site.funnels.find((f) => f.id === id);

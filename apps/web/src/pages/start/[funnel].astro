@@ -13,7 +13,7 @@ import { getFunnel, funnelCookie, sanitizeAnswers, encodeAnswers, safeNext } fro
 
 const f = getFunnel(Astro.params.funnel!);
 if (!f || f.trigger === 'apply' || !f.steps?.length) return new Response('Not found', { status: 404 });
-const next = safeNext(Astro.url.searchParams.get('next'), f.gate[0] ?? '/');
+const next = safeNext(Astro.url.searchParams.get('next'), f.gate?.[0] ?? '/');
 
 if (Astro.url.searchParams.get('reset')) Astro.cookies.delete(funnelCookie(f.id), { path: '/' });
 
