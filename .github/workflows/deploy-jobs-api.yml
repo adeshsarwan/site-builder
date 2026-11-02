@@ -81,20 +81,28 @@ jobs:
             --no-invoker-iam-check --memory 512Mi --cpu 1 --min-instances 0 --max-instances 3 --timeout 600 \
             --set-secrets OPENWEBNINJA_API_KEY=openwebninja-key:latest,JOBS_API_KEY=jobs-api-key:latest,DATABASE_URL=database-url:latest \
             ${SQL_FLAG:-} \
-            --set-env-vars PAGES_PER_BUCKET=3,MONTHLY_CAP=9500,KEEP_DAYS=21 --quiet
+            --set-env-vars PAGES_PER_BUCKET=3,MONTHLY_CAP=9500,KEEP_DAYS=21,REFRESH_CONCURRENCY=4,JSEARCH_TIMEOUT_MS=60000 --quiet
           URL=$(gcloud run services describe "$SERVICE" --region "$REGION" --format 'value(status.url)')
           echo "URL=$URL" >> "$GITHUB_ENV"
           echo "### Jobs API: $URL" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Schedule refresh
+      - name: Schedule refresh (one job per country, staggered)
         env:
           JOBS_API_KEY: ${{ secrets.JOBS_API_KEY }}
         run: |
-          ARGS=(--location "$REGION" --schedule "$SCHEDULE" --uri "$URL/internal/refresh" --http-method POST \
-                --update-headers "x-api-key=$JOBS_API_KEY" --attempt-deadline 600s)
-          if gcloud scheduler jobs describe jobs-refresh --location "$REGION" >/dev/null 2>&1; then
-            gcloud scheduler jobs update http jobs-refresh "${ARGS[@]}"
-          else
-            gcloud scheduler jobs create http jobs-refresh "${ARGS[@]/--update-headers/--headers}"
-            gcloud scheduler jobs run jobs-refresh --location "$REGION" # first fill right away
-          fi
+          set -euo pipefail
+          # Old single job (replaced by per-country jobs)
+          gcloud scheduler jobs delete jobs-refresh --location "$REGION" --quiet >/dev/null 2>&1 || true
+          MIN=0
+          for C in us ca au gb; do
+            NAME="jobs-refresh-$C"
+            ARGS=(--location "$REGION" --schedule "$MIN */8 * * *" --uri "$URL/internal/refresh?country=$C" --http-method POST \
+                  --attempt-deadline 600s --max-retry-attempts 1)
+            if gcloud scheduler jobs describe "$NAME" --location "$REGION" >/dev/null 2>&1; then
+              gcloud scheduler jobs update http "$NAME" "${ARGS[@]}" --update-headers "x-api-key=$JOBS_API_KEY" --quiet
+            else
+              gcloud scheduler jobs create http "$NAME" "${ARGS[@]}" --headers "x-api-key=$JOBS_API_KEY" --quiet
+              gcloud scheduler jobs run "$NAME" --location "$REGION" --quiet # first fill right away
+            fi
+            MIN=$((MIN + 10))
+          done

@@ -1,13 +1,22 @@
 // JSearch via OpenWeb Ninja (api.openwebninja.com, x-api-key) + normalisation to the shape the sites expect.
 const BASE = process.env.JSEARCH_BASE || 'https://api.openwebninja.com/jsearch';
 
-export async function jsearch({ query, country, page = 1, remote = false, datePosted = 'week' }) {
+const TIMEOUT = Number(process.env.JSEARCH_TIMEOUT_MS ?? 60_000);
+
+export async function jsearch({ query, country, page = 1, remote = false, datePosted = 'week' }, attempt = 1) {
   const params = new URLSearchParams({ query, page: String(page), num_pages: '1', country, date_posted: datePosted });
   if (remote) params.set('work_from_home', 'true');
-  const res = await fetch(`${BASE}/search?${params}`, {
-    headers: { 'x-api-key': process.env.OPENWEBNINJA_API_KEY ?? '' },
-    signal: AbortSignal.timeout(25_000),
-  });
+  let res;
+  try {
+    res = await fetch(`${BASE}/search?${params}`, {
+      headers: { 'x-api-key': process.env.OPENWEBNINJA_API_KEY ?? '' },
+      signal: AbortSignal.timeout(TIMEOUT),
+    });
+  } catch (e) {
+    if (attempt < 2) return jsearch({ query, country, page, remote, datePosted }, attempt + 1); // one retry on timeout/network error
+    throw new Error(`JSearch request failed after ${attempt} attempts: ${e.message}`);
+  }
+  if (res.status >= 500 && attempt < 2) return jsearch({ query, country, page, remote, datePosted }, attempt + 1);
   if (res.status === 429) throw Object.assign(new Error('JSearch rate limit / quota reached'), { status: 429 });
   if (!res.ok) throw new Error(`JSearch ${res.status}: ${(await res.text()).slice(0, 200)}`);
   const body = await res.json();

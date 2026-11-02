@@ -72,29 +72,32 @@ app.post('/internal/refresh', async (c) => {
   const report = [];
   let requests = 0;
   let stop = false;
-  for (const country of countries) {
-    for (const cat of cats) {
-      const def = CATEGORIES[cat];
-      const seen = new Set();
-      const jobs = [];
-      try {
-        for (let page = 1; page <= PAGES; page++) {
-          if (!(await useRequests(1))) throw Object.assign(new Error('Monthly request cap reached'), { status: 429 });
-          const res = await jsearch({ query: `${def.query} in ${COUNTRIES[country].name}`, country, page, remote: Boolean(def.remote) });
-          requests++;
-          for (const j of res) if (!seen.has(j.id)) { seen.add(j.id); jobs.push(j); }
-          if (res.length < 10) break;
-          await new Promise((r) => setTimeout(r, 400));
-        }
-        if (jobs.length) await upsertJobs(country, cat, jobs);
-        report.push({ bucket: `${country}_${cat}`, jobs: jobs.length });
-      } catch (e) {
-        report.push({ bucket: `${country}_${cat}`, error: e.message });
-        if (e.status === 429) { stop = true; break; }
+  const CONCURRENCY = Number(process.env.REFRESH_CONCURRENCY ?? 4); // OpenWeb Ninja Pro allows 5 req/s
+  const tasks = countries.flatMap((country) => cats.map((cat) => ({ country, cat })));
+  const runOne = async ({ country, cat }) => {
+    const def = CATEGORIES[cat];
+    const seen = new Set();
+    const jobs = [];
+    try {
+      for (let page = 1; page <= PAGES && !stop; page++) {
+        if (!(await useRequests(1))) { stop = true; throw Object.assign(new Error('Monthly request cap reached'), { status: 429 }); }
+        requests++;
+        const res = await jsearch({ query: `${def.query} in ${COUNTRIES[country].name}`, country, page, remote: Boolean(def.remote) });
+        for (const j of res) if (!seen.has(j.id)) { seen.add(j.id); jobs.push(j); }
+        if (res.length < 10) break;
       }
+      if (jobs.length) await upsertJobs(country, cat, jobs);
+      report.push({ bucket: `${country}_${cat}`, jobs: jobs.length });
+    } catch (e) {
+      if (jobs.length) await upsertJobs(country, cat, jobs); // keep what we got
+      report.push({ bucket: `${country}_${cat}`, jobs: jobs.length, error: e.message });
+      if (e.status === 429) stop = true;
     }
-    if (stop) break;
-  }
+  };
+  const queue = [...tasks];
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, queue.length) }, async () => {
+    while (queue.length && !stop) await runOne(queue.shift());
+  }));
   const pruned = await prune();
   console.log(JSON.stringify({ event: 'refresh', requests, buckets: report.length, pruned }));
   return c.json({ requests, pruned, report });
