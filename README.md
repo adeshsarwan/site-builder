@@ -44,7 +44,7 @@ Implemented exactly as the publisher integration guide says:
    npx wrangler secret put PIXABAY_API_KEY    # and/or UNSPLASH_ACCESS_KEY
    npx wrangler secret put WEBHOOK_SECRET     # optional
    ```
-   Set `GA4_ACCOUNT_ID` (numeric) and `ALLOWED_ORIGINS` in `wrangler.jsonc` vars. The API is served at `https://sitebuilder.thebesads.com/api` (custom domain in `wrangler.jsonc`; needs the thebesads.com zone in the same Cloudflare account).
+   `GA4_ACCOUNT_ID` is set to the Thebesads account (299477311) in `wrangler.jsonc`; each launch creates a new GA4 property + web stream there. Set `ALLOWED_ORIGINS` there too if a browser calls the API. The API is served at `https://sitebuilder.thebesads.com/api` (custom domain in `wrangler.jsonc`; needs the thebesads.com zone in the same Cloudflare account).
 
 ## Launch API
 

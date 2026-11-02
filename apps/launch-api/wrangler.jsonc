@@ -19,7 +19,7 @@
     "GITHUB_BRANCH": "main",
     "CF_ACCOUNT_ID": "", // injected at deploy time from the CLOUDFLARE_ACCOUNT_ID repo secret
     "ALLOWED_ORIGINS": "",
-    "GA4_ACCOUNT_ID": "",
+    "GA4_ACCOUNT_ID": "299477311", // Thebesads — every launch creates its GA4 property here
     "OWNER_EMAILS": "adesh@thebesads.com",
     "CLAUDE_MODEL": "claude-sonnet-5-5",
     "PO_RUNTIME_URL": "https://serve.thebesads.com/runtime/config",
