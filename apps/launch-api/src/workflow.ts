@@ -254,13 +254,6 @@ export class LaunchSiteWorkflow extends WorkflowEntrypoint<Env, LaunchParams> {
       await once('ads', async () => {
         if (dry) return { output: { revision: 0 }, detail: 'dry run' };
         throw new StepSkipped('Ads are stage 2: create the ad units, publish the Price Optimiser config, then run the "Enable ads" workflow with the ads.txt lines');
-        const runtime = env.PO_RUNTIME_URL ?? 'https://serve.thebesads.com/runtime/config';
-        const res = await fetch(`${runtime}?site=${encodeURIComponent(domain)}`, { signal: AbortSignal.timeout(10000) }).catch(() => null);
-        const body: any = res?.ok ? await res.json().catch(() => null) : null;
-        if (!body || body.siteKey !== domain) {
-          throw new StepWarning(`No published Price Optimiser configuration for "${domain}" yet. Publish one; the site already loads the SDK with data-po-site="${domain}".`);
-        }
-        return { output: { revision: body.configurationRevision }, detail: `Price Optimiser config revision ${body.configurationRevision}` };
       });
 
       // 10. Smoke test --------------------------------------------------------------
