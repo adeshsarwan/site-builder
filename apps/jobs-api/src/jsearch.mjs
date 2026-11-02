@@ -1,12 +1,11 @@
-// JSearch (RapidAPI) client + normalisation to the shape the sites expect.
-const BASE = process.env.JSEARCH_BASE || 'https://jsearch.p.rapidapi.com';
-const HOST = 'jsearch.p.rapidapi.com';
+// JSearch via OpenWeb Ninja (api.openwebninja.com, x-api-key) + normalisation to the shape the sites expect.
+const BASE = process.env.JSEARCH_BASE || 'https://api.openwebninja.com/jsearch';
 
 export async function jsearch({ query, country, page = 1, remote = false, datePosted = 'week' }) {
   const params = new URLSearchParams({ query, page: String(page), num_pages: '1', country, date_posted: datePosted });
   if (remote) params.set('work_from_home', 'true');
   const res = await fetch(`${BASE}/search?${params}`, {
-    headers: { 'x-rapidapi-key': process.env.RAPIDAPI_KEY ?? '', 'x-rapidapi-host': HOST },
+    headers: { 'x-api-key': process.env.OPENWEBNINJA_API_KEY ?? '' },
     signal: AbortSignal.timeout(25_000),
   });
   if (res.status === 429) throw Object.assign(new Error('JSearch rate limit / quota reached'), { status: 429 });

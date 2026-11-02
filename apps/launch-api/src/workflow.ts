@@ -205,6 +205,11 @@ export class LaunchSiteWorkflow extends WorkflowEntrypoint<Env, LaunchParams> {
 
       // 7. Custom domain + SSL ----------------------------------------------------
       if (!(await isDone('custom_domain'))) {
+        await step.do('domain:clear-old-dns', { retries: { limit: 3, delay: '20 seconds' } }, async () => {
+          if (dry) return;
+          const removed = await cf.clearWebRecords(env, zone.zoneId, [domain, `www.${domain}`]);
+          await emit('custom_domain', 'running', removed.length ? `Removed old DNS records: ${removed.join('; ')}` : 'No old website DNS records to remove');
+        });
         await step.do('domain:attach', { retries: { limit: 5, delay: '30 seconds', backoff: 'exponential' } }, async () => {
           await emit('custom_domain', 'running', `Attaching ${domain} to ${worker}`);
           if (dry) return;

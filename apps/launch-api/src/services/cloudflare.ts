@@ -46,11 +46,31 @@ export async function upsertDns(env: Env, zoneId: string, rec: { type: string; n
   return cf(env, `/zones/${zoneId}/dns_records`, { method: 'POST', body });
 }
 
+/**
+ * Removes the old website records (A, AAAA, CNAME) for the given hostnames so the new site can take over.
+ * MX, TXT and other records are left alone, so email and verifications keep working.
+ * Returns what was deleted (for the launch log).
+ */
+export async function clearWebRecords(env: Env, zoneId: string, hostnames: string[]) {
+  const deleted: string[] = [];
+  for (const name of hostnames) {
+    for (const type of ['A', 'AAAA', 'CNAME']) {
+      const recs = await cf<any[]>(env, `/zones/${zoneId}/dns_records?type=${type}&name=${encodeURIComponent(name)}`);
+      for (const r of recs) {
+        if (r.meta?.read_only) continue; // managed by another Worker/Pages custom domain; override flag handles it
+        await cf(env, `/zones/${zoneId}/dns_records/${r.id}`, { method: 'DELETE' });
+        deleted.push(`${type} ${name} → ${r.content}`);
+      }
+    }
+  }
+  return deleted;
+}
+
 /** Attach a hostname to a Worker. Cloudflare creates the DNS record and edge certificate. */
 export async function attachWorkerDomain(env: Env, zoneId: string, hostname: string, service: string) {
   return cf(env, `/accounts/${env.CF_ACCOUNT_ID}/workers/domains`, {
     method: 'PUT',
-    body: JSON.stringify({ environment: 'production', hostname, service, zone_id: zoneId }),
+    body: JSON.stringify({ environment: 'production', hostname, service, zone_id: zoneId, override_existing_dns_record: true, override_existing_origin: true }),
   });
 }
 

@@ -2,7 +2,10 @@
 import http from 'node:http';
 
 const fake = http.createServer((req, res) => {
+  calls++;
+  if (req.headers['x-api-key'] !== 'own-key') return res.writeHead(403).end('{}');
   const u = new URL(req.url, 'http://x');
+  if (!u.pathname.endsWith('/search')) return res.writeHead(404).end('{}');
   const country = u.searchParams.get('country');
   const page = Number(u.searchParams.get('page'));
   const remote = u.searchParams.get('work_from_home') === 'true';
@@ -18,7 +21,8 @@ const fake = http.createServer((req, res) => {
   res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ status: 'OK', data }));
 });
 await new Promise((r) => fake.listen(0, r));
-Object.assign(process.env, { JSEARCH_BASE: `http://127.0.0.1:${fake.address().port}`, STORE: 'memory', JOBS_API_KEY: 'test-key', NO_LISTEN: '1', PAGES_PER_BUCKET: '2' });
+Object.assign(process.env, { OPENWEBNINJA_API_KEY: 'own-key', JSEARCH_BASE: `http://127.0.0.1:${fake.address().port}`, STORE: 'memory', JOBS_API_KEY: 'test-key', NO_LISTEN: '1', PAGES_PER_BUCKET: '2', MONTHLY_CAP: '24', KEEP_DAYS: '3650' });
+let calls = 0;
 const { default: app } = await import('../src/server.mjs');
 const call = (path, init = {}) => app.request(path, { ...init, headers: { 'x-api-key': 'test-key', ...(init.headers ?? {}) } });
 const assert = (cond, msg) => { if (!cond) { console.error('FAIL', msg); process.exit(1); } console.log('ok ', msg); };
@@ -33,10 +37,15 @@ assert(remote.jobs.every((j) => j.remote), 'remote filter');
 const tech = await (await call('/jobs?country=usa&category=tech&level=entry')).json();
 assert(tech.category === 'tech' && tech.jobs.every((j) => !j.level || j.level === 'entry'), 'category + level + alias');
 assert(tech.jobs[0].salary === '$50k–$70k/yr' && tech.jobs[0].type === 'Full-time', 'normalised salary/type');
-const live = await (await call('/jobs?country=gb&q=zookeeper')).json();
-assert(live.source === 'live' && live.total > 0, 'live fallback for unmatched query');
-const again = await (await call('/jobs?country=gb&q=zookeeper')).json();
+const before = calls;
+const search = await (await call('/jobs?country=us&q=zookeeper')).json();
+assert(search.source === 'database' && search.total === 0 && calls === before, 'visitor search never calls JSearch');
+const hit = await (await call('/jobs?country=us&q=healthcare')).json();
+assert(hit.total > 0 && calls === before, `search answered from database (${hit.total} matches)`);
+const r2 = await (await call('/internal/refresh?country=us', { method: 'POST' })).json();
 const u = await (await call('/internal/usage')).json();
-assert(again.source === 'live' && u.live === 1, `live result cached (live requests today: ${u.live})`);
+assert(u.requests <= 24 && r2.report.some((b) => /cap/.test(b.error ?? '')), `monthly cap enforced (${u.requests}/24 used)`);
+const merged = await (await call('/jobs?country=us&category=tech&limit=50')).json();
+assert(merged.total === 14, `buckets accumulate without duplicates (${merged.total})`);
 fake.close();
 console.log('all passed');

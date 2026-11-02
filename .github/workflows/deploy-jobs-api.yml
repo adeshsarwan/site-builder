@@ -14,7 +14,7 @@ env:
   REGION: us-central1
   SERVICE: jobs-api
   REPO: jobs-api
-  SCHEDULE: '0 */6 * * *' # refresh every 6 hours
+  SCHEDULE: '0 */8 * * *' # 3x/day: 4 countries x 8 categories x 3 pages x 3 x 30 = ~8,640 requests/month (Pro plan: 10,000)
 
 jobs:
   deploy:
@@ -33,19 +33,22 @@ jobs:
 
       - name: One-time project setup (idempotent)
         env:
-          RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
+          OPENWEBNINJA_API_KEY: ${{ secrets.OPENWEBNINJA_API_KEY || secrets.RAPIDAPI_KEY }}
           JOBS_API_KEY: ${{ secrets.JOBS_API_KEY }}
         run: |
           set -euo pipefail
+          [ -n "$OPENWEBNINJA_API_KEY" ] || { echo "::error::Add the OPENWEBNINJA_API_KEY GitHub secret"; exit 1; }
+          [ -n "$JOBS_API_KEY" ] || { echo "::error::Add the JOBS_API_KEY GitHub secret"; exit 1; }
+          retry() { for i in 1 2 3 4 5 6 7 8; do "$@" && return 0; echo "retry $i in 30s (APIs can take a few minutes to switch on)"; sleep 30; done; return 1; }
           P=$(gcloud config get-value project)
           RT="jobs-api-runtime@${P}.iam.gserviceaccount.com"
           echo "PROJECT=$P" >> "$GITHUB_ENV"; echo "RT=$RT" >> "$GITHUB_ENV"
           gcloud services enable run.googleapis.com artifactregistry.googleapis.com secretmanager.googleapis.com \
             firestore.googleapis.com cloudscheduler.googleapis.com iam.googleapis.com
           gcloud artifacts repositories describe "$REPO" --location "$REGION" >/dev/null 2>&1 || \
-            gcloud artifacts repositories create "$REPO" --repository-format docker --location "$REGION"
+            retry gcloud artifacts repositories create "$REPO" --repository-format docker --location "$REGION" --quiet
           gcloud firestore databases describe --database='(default)' >/dev/null 2>&1 || \
-            gcloud firestore databases create --location=nam5 --type=firestore-native
+            retry gcloud firestore databases create --location=nam5 --type=firestore-native --quiet
           gcloud iam service-accounts describe "$RT" >/dev/null 2>&1 || \
             gcloud iam service-accounts create jobs-api-runtime --display-name "Jobs API runtime"
           gcloud projects add-iam-policy-binding "$P" --member "serviceAccount:$RT" --role roles/datastore.user --condition=None >/dev/null
@@ -55,7 +58,7 @@ jobs:
             [ "$CUR" = "$2" ] || printf %s "$2" | gcloud secrets versions add "$1" --data-file=-
             gcloud secrets add-iam-policy-binding "$1" --member "serviceAccount:$RT" --role roles/secretmanager.secretAccessor >/dev/null
           }
-          put_secret rapidapi-key "$RAPIDAPI_KEY"
+          put_secret openwebninja-key "$OPENWEBNINJA_API_KEY"
           put_secret jobs-api-key "$JOBS_API_KEY"
 
       - name: Build and push image
@@ -70,8 +73,8 @@ jobs:
         run: |
           gcloud run deploy "$SERVICE" --image "$IMAGE" --region "$REGION" --service-account "$RT" \
             --allow-unauthenticated --memory 512Mi --cpu 1 --min-instances 0 --max-instances 3 --timeout 600 \
-            --set-secrets RAPIDAPI_KEY=rapidapi-key:latest,JOBS_API_KEY=jobs-api-key:latest \
-            --set-env-vars PAGES_PER_BUCKET=2,LIVE_DAILY_CAP=100 --quiet
+            --set-secrets OPENWEBNINJA_API_KEY=openwebninja-key:latest,JOBS_API_KEY=jobs-api-key:latest \
+            --set-env-vars PAGES_PER_BUCKET=3,MONTHLY_CAP=9500,KEEP_DAYS=21 --quiet
           URL=$(gcloud run services describe "$SERVICE" --region "$REGION" --format 'value(status.url)')
           echo "URL=$URL" >> "$GITHUB_ENV"
           echo "### Jobs API: $URL" >> "$GITHUB_STEP_SUMMARY"

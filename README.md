@@ -76,7 +76,7 @@ POST /api/v1/sites
 }
 ```
 
-Steps, in order: `zone` → `nameservers` (waits until Cloudflare reports the zone active) → `analytics` (GA4) → `content` (new articles + photos, written fresh for this site) → `repo` (one commit) → `deploy` (GitHub Actions) → `custom_domain` (Worker custom domain, SSL, www→apex) → `search_console` (DNS verification, property, sitemap) → `ads` (Price Optimiser runtime check) → `smoke_test`.
+Steps, in order: `zone` → `nameservers` (waits until Cloudflare reports the zone active) → `analytics` (GA4) → `content` (new articles + photos, written fresh for this site) → `repo` (one commit) → `deploy` (GitHub Actions) → `custom_domain` (removes old A/AAAA/CNAME records for the apex and www — MX/TXT untouched — then attaches the Worker custom domain, SSL, www→apex) → `search_console` (DNS verification, property, sitemap) → `ads` (Price Optimiser runtime check) → `smoke_test`.
 
 Step statuses: `pending | running | waiting | done | warning | skipped | failed`.
 Site statuses: `queued | running | waiting | live | live_with_warnings | failed`.
@@ -102,12 +102,13 @@ es.addEventListener('status', (e) => render(JSON.parse(e.data))); // { status, p
 - Bylines are "<Site> Editorial Team"; Claude is told not to invent statistics or people. Review generated articles before relying on them.
 - Cost and time scale with article count. Use `libraryLimit` to cap topics (e.g. 20 for a first launch).
 
-## Jobs API (Cloud Run + JSearch)
+## Jobs API (Cloud Run + JSearch via OpenWeb Ninja)
 
-- A Cloud Scheduler job calls `POST /internal/refresh` every 6 hours. It fetches 4 countries (US, CA, AU, UK) × 8 categories (remote, healthcare, tech, sales, office, trades, finance, education) × `PAGES_PER_BUCKET` pages from JSearch and stores each bucket in Firestore. Requests per refresh = 4 × 8 × 2 = 64.
-- Sites call `GET /jobs?country=&category=&remote=yes&level=&q=&location=&limit=&offset=` (header `Authorization: Bearer <JOBS_API_KEY>`), answered from the stored buckets. A free-text search with fewer than 5 matches makes one live JSearch call (cached 6h, max `LIVE_DAILY_CAP` per day).
-- Usage today: `GET /internal/usage`. Edit countries/categories in `apps/jobs-api/src/catalog.mjs`.
-- GitHub secrets needed: `GCP_DEPLOY_SA_JSON`, `RAPIDAPI_KEY`, `JOBS_API_KEY`. After the first deploy, set `JOBS_API_BASE` to the Cloud Run URL (shown in the run summary) and re-run "Deploy sites".
+- Cloud Scheduler calls `POST /internal/refresh` every 8 hours. It fetches 4 countries (US, CA, AU, UK) × 8 categories (remote, healthcare, tech, sales, office, trades, finance, education) × 3 pages from OpenWeb Ninja's JSearch API (`api.openwebninja.com/jsearch/search`, `x-api-key`). ≈ 96 requests per refresh, ≈ 8,640/month — inside the Pro plan's 10,000.
+- New jobs are merged into each stored bucket (deduped, newest first, kept for 21 days, max 200 per bucket), so the database grows between refreshes.
+- Visitor searches (`GET /jobs?country=&category=&remote=yes&level=&q=&location=&limit=&offset=`) are answered **only from the database**; they never call JSearch.
+- `MONTHLY_CAP` (9,500) stops refreshes before the plan allowance is exceeded. Usage: `GET /internal/usage`.
+- GitHub secrets: `GCP_DEPLOY_SA_JSON`, `OPENWEBNINJA_API_KEY`, `JOBS_API_KEY`. After the first deploy, set `JOBS_API_BASE` to the Cloud Run URL (shown in the run summary) and re-run "Deploy sites".
 
 ## Local development
 

@@ -1,5 +1,4 @@
 // Firestore in production; in-memory for local dev/tests (STORE=memory).
-import { createHash } from 'node:crypto';
 
 const mem = new Map();
 let db = null;
@@ -32,26 +31,31 @@ export async function getBucket(country, category) {
   hot.set(id, { at: Date.now(), data });
   return data;
 }
-export async function saveBucket(country, category, jobs) {
+const KEEP_DAYS = Number(process.env.KEEP_DAYS ?? 21);
+const MAX_PER_BUCKET = Number(process.env.MAX_PER_BUCKET ?? 200);
+
+/** Merges fresh jobs into the stored bucket: newest first, deduped, drops jobs older than KEEP_DAYS. */
+export async function saveBucket(country, category, fresh) {
+  const prev = (await get('buckets', `${country}_${category}`))?.jobs ?? [];
+  const cutoff = Date.now() - KEEP_DAYS * 86400_000;
+  const byId = new Map();
+  for (const j of [...fresh, ...prev]) if (!byId.has(j.id)) byId.set(j.id, j);
+  const jobs = [...byId.values()]
+    .filter((j) => !j.postedAt || Date.parse(j.postedAt) >= cutoff)
+    .sort((a, b) => (b.postedAt ?? '').localeCompare(a.postedAt ?? ''))
+    .slice(0, MAX_PER_BUCKET);
   const data = { country, category, jobs, fetchedAt: new Date().toISOString() };
   await set('buckets', `${country}_${category}`, data);
   hot.set(`${country}_${category}`, { at: Date.now(), data });
 }
 
-const hash = (s) => createHash('sha256').update(s).digest('hex').slice(0, 32);
-export async function getLive(key) {
-  const d = await get('live', hash(key));
-  return d && Date.now() - Date.parse(d.at) < 6 * 3600_000 ? d.jobs : null;
-}
-export const saveLive = (key, jobs) => set('live', hash(key), { key, jobs, at: new Date().toISOString() });
-
-/** Counts JSearch requests per day and month; returns false if the daily live budget is spent. */
-export async function useRequests(n, kind) {
-  const day = new Date().toISOString().slice(0, 10);
-  const u = (await get('usage', day)) ?? { day, refresh: 0, live: 0 };
-  if (kind === 'live' && u.live + n > Number(process.env.LIVE_DAILY_CAP ?? 100)) return false;
-  u[kind] = (u[kind] ?? 0) + n;
-  await set('usage', day, u);
+/** Monthly JSearch request counter. Returns false (and counts nothing) if `n` more would exceed MONTHLY_CAP. */
+export async function useRequests(n) {
+  const month = new Date().toISOString().slice(0, 7);
+  const u = (await get('usage', month)) ?? { month, requests: 0 };
+  if (u.requests + n > Number(process.env.MONTHLY_CAP ?? 9500)) return false;
+  u.requests += n;
+  await set('usage', month, u);
   return true;
 }
-export const usage = async (day) => get('usage', day);
+export const usage = async (month) => get('usage', month);
