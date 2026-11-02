@@ -30,7 +30,7 @@ on:
         default: '3'
         type: string
       retry:
-        description: 'Retry a failed launch of this domain instead of starting a new one'
+        description: 'Resume a FAILED launch of this domain (leave unticked for a first launch)'
         required: false
         default: false
         type: boolean
@@ -48,13 +48,18 @@ jobs:
         run: |
           set -euo pipefail
           [ -n "$KEY" ] || { echo "::error::Add the LAUNCH_API_KEY repo secret (same value as API_KEY on the launch-api Worker)"; exit 1; }
-          if [ "${{ inputs.retry }}" = "true" ]; then
-            curl -sS -X POST "$API/sites/$DOMAIN/retry" -H "Authorization: Bearer $KEY" | tee /tmp/start.json
-          else
+          start_new() {
             BODY=$(jq -n --arg d "$DOMAIN" --arg n "${{ inputs.name }}" --arg ni "${{ inputs.niche }}" \
               --argjson lib "${{ inputs.library_topics }}" --argjson extra "${{ inputs.extra_articles }}" \
               '{domain:$d, name:$n, niche:$ni, libraryLimit:$lib, generateArticles:$extra}')
             curl -sS -X POST "$API/sites" -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" -d "$BODY" | tee /tmp/start.json
+          }
+          if [ "${{ inputs.retry }}" = "true" ]; then
+            CODE=$(curl -sS -o /tmp/start.json -w '%{http_code}' -X POST "$API/sites/$DOMAIN/retry" -H "Authorization: Bearer $KEY")
+            cat /tmp/start.json
+            if [ "$CODE" = "404" ]; then echo; echo "No earlier launch of $DOMAIN to retry — starting a new launch."; start_new; fi
+          else
+            start_new
           fi
           echo
           if jq -e '.error and (.siteId|not)' /tmp/start.json >/dev/null; then echo "::error::$(jq -r .error /tmp/start.json)"; exit 1; fi
