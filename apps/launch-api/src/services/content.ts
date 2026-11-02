@@ -10,7 +10,7 @@ export interface Topic { title: string; summary: string; categorySlug: string }
 
 export const CATEGORIES = ['job-search-strategy', 'resume-cover-letters', 'interview-prep', 'salary-negotiation', 'workplace-success', 'career-change-growth'];
 
-async function claude(env: Env, system: string, user: string, maxTokens: number): Promise<string> {
+async function claude(env: Env, system: string, user: string, maxTokens: number, purpose = 'request'): Promise<string> {
   if (!env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY secret is not set');
   const res = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
@@ -18,8 +18,32 @@ async function claude(env: Env, system: string, user: string, maxTokens: number)
     body: JSON.stringify({ model: env.CLAUDE_MODEL || 'claude-sonnet-5-5', max_tokens: maxTokens, system, messages: [{ role: 'user', content: user }] }),
   });
   const body: any = await res.json();
-  if (!res.ok) throw new Error(`Claude API ${res.status}: ${body.error?.message ?? ''}`);
-  return body.content.map((c: any) => c.text ?? '').join('');
+  if (!res.ok) throw new Error(`Claude API ${res.status} (${purpose}): ${body.error?.message ?? ''}`);
+  const text = (body.content ?? []).filter((c: any) => c.type === 'text').map((c: any) => c.text ?? '').join('');
+  if (body.stop_reason === 'max_tokens') throw new Error(`Claude reply cut off at ${maxTokens} tokens (${purpose}, model ${body.model})`);
+  if (!text.trim()) throw new Error(`Claude returned no text (${purpose}, stop_reason ${body.stop_reason})`);
+  return text;
+}
+
+/** Structured output via a forced tool call: the API returns schema-shaped, already-parsed JSON. */
+async function claudeJson<T>(env: Env, system: string, user: string, schema: Record<string, unknown>, maxTokens: number, purpose: string): Promise<T> {
+  if (!env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY secret is not set');
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify({
+      model: env.CLAUDE_MODEL || 'claude-sonnet-5-5', max_tokens: maxTokens, system,
+      tools: [{ name: 'submit', description: 'Submit the result.', input_schema: schema }],
+      tool_choice: { type: 'tool', name: 'submit' },
+      messages: [{ role: 'user', content: user }],
+    }),
+  });
+  const body: any = await res.json();
+  if (!res.ok) throw new Error(`Claude API ${res.status} (${purpose}): ${body.error?.message ?? ''}`);
+  if (body.stop_reason === 'max_tokens') throw new Error(`Claude reply cut off at ${maxTokens} tokens (${purpose})`);
+  const call = (body.content ?? []).find((c: any) => c.type === 'tool_use');
+  if (!call?.input) throw new Error(`Claude returned no structured result (${purpose}, stop_reason ${body.stop_reason})`);
+  return call.input as T;
 }
 
 /** Extracts the first complete JSON value from a model reply (string-aware bracket matching). */
@@ -68,16 +92,19 @@ export async function planArticles(env: Env, input: LaunchInput, topics: Topic[]
   for (const g of groups) {
     const avoid = [...existingTitles, ...plans.map((p) => p.title)];
     const n = g.topics.length + g.extra;
-    const text = await claude(
+    const out = await claudeJson<{ items: any[] }>(
       env,
-      'You plan editorial calendars for career-advice websites. Every title you write is new and specific to the site\'s audience. Reply with JSON only.',
+      'You plan editorial calendars for career-advice websites. Every title you write is new and specific to the site\'s audience.',
       `Site: ${input.name} (${input.domain}). Audience/niche: ${input.niche ?? 'job seekers'} in ${input.country ?? 'US'}.
 ${g.topics.length ? `For each of these ${g.topics.length} subject areas, propose ONE new article for this audience. Use a different title and angle — never reuse the wording below:\n${g.topics.map((t, i) => `${i + 1}. [${t.categorySlug}] ${t.title} — ${t.summary}`).join('\n')}\n` : ''}${g.extra ? `Propose ${g.extra} article ideas on other search-driven topics for this audience.\n` : ''}${avoid.length ? `Do not duplicate or closely overlap these existing titles:\n${avoid.slice(-150).map((t) => `- ${t}`).join('\n')}\n` : ''}
 Category slugs: ${CATEGORIES.join(', ')}.
-Return a JSON array of exactly ${n} items: {"title","categorySlug","angle"} where angle is one sentence on the reader's specific problem.`,
-      400 + n * 220,
+Submit exactly ${n} items. angle = one sentence on the reader's specific problem.`,
+      { type: 'object', required: ['items'], properties: { items: { type: 'array', items: { type: 'object', required: ['title', 'categorySlug', 'angle'],
+        properties: { title: { type: 'string' }, categorySlug: { type: 'string', enum: CATEGORIES }, angle: { type: 'string' } } } } } },
+      1500 + n * 400,
+      `plan ${n} articles`,
     );
-    for (const p of json<any[]>(text).slice(0, n)) {
+    for (const p of (out.items ?? []).slice(0, n)) {
       const plan = { title: String(p.title), slug: slugify(p.title), categorySlug: CATEGORIES.includes(p.categorySlug) ? p.categorySlug : CATEGORIES[0], angle: String(p.angle ?? '') };
       if (plan.slug && !seen.has(plan.slug)) { seen.add(plan.slug); plans.push(plan); }
     }
@@ -99,17 +126,23 @@ export interface WrittenArticle {
 }
 
 export async function writeArticle(env: Env, input: LaunchInput, plan: ArticlePlan): Promise<WrittenArticle> {
-  const text = await claude(
+  const a = await claudeJson<any>(
     env,
     `You are a careful career-advice editor writing for ${input.name} (${input.domain}). Write practical, specific, original guidance in your own words.
 Rules: never mention or link to other career-advice websites. No invented statistics, studies, quotes or people. Only cite figures from official sources (e.g. U.S. Bureau of Labor Statistics, CareerOneStop, government sites) when you are confident they are accurate, and name the source; otherwise give advice without numbers.
-Markdown with ## and ### headings, short paragraphs, lists, and one table where it genuinely helps. 1,200–1,800 words. Reply with JSON only.`,
+The body is Markdown with ## and ### headings, short paragraphs, lists, and one table where it genuinely helps. 1,200–1,800 words.`,
     `Write "${plan.title}" for ${input.niche ?? 'job seekers'} in ${input.country ?? 'US'}. Reader problem: ${plan.angle}
-Return JSON:
-{"description":"1–2 sentence dek","seoTitle":"≤60 chars, includes the main keyword","metaDescription":"140–155 chars, specific benefit","keywords":["primary keyword","3–5 secondary"],"readTime":number,"body":"markdown body, no H1","faq":[{"q","a"}] (3 items, answers 40–80 words),"sources":["official source URLs actually referenced, or empty"],"imageQuery":"2–4 word stock-photo search for a relevant, people-at-work style hero photo"}`,
-    8000,
+Submit: description (1–2 sentence dek), seoTitle (≤60 chars, includes the main keyword), metaDescription (140–155 chars, specific benefit), keywords (primary + 3–5 secondary), readTime (minutes), body (Markdown, no H1), faq (3 items, answers 40–80 words), sources (official URLs actually referenced, may be empty), imageQuery (2–4 word stock-photo search for a relevant people-at-work hero photo).`,
+    { type: 'object', required: ['description', 'seoTitle', 'metaDescription', 'keywords', 'readTime', 'body', 'faq', 'sources', 'imageQuery'],
+      properties: {
+        description: { type: 'string' }, seoTitle: { type: 'string' }, metaDescription: { type: 'string' },
+        keywords: { type: 'array', items: { type: 'string' } }, readTime: { type: 'number' }, body: { type: 'string' },
+        faq: { type: 'array', items: { type: 'object', required: ['q', 'a'], properties: { q: { type: 'string' }, a: { type: 'string' } } } },
+        sources: { type: 'array', items: { type: 'string' } }, imageQuery: { type: 'string' },
+      } },
+    16000,
+    `write "${plan.title.slice(0, 50)}"`,
   );
-  const a = json<any>(text);
   return {
     plan,
     description: String(a.description ?? ''),
