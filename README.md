@@ -8,7 +8,7 @@ apps/web/          Shared Astro 7 app (articles, categories, live jobs, funnels,
 apps/launch-api/   Cloudflare Worker + Workflows + D1 — the Launch API
 sites/<slug>/      One folder per site: site.config.json + content/articles/*.md
 sites/_template/   Config template used for new launches
-sites/_library/    Starting article library copied into new sites (canonical → original)
+sites/_library/    Topic list for new sites (titles/summaries only — never published or copied)
 .github/workflows/ deploy.yml (sites) · deploy-launch-api.yml (API)
 ```
 
@@ -41,6 +41,7 @@ Implemented exactly as the publisher integration guide says:
    npx wrangler secret put GITHUB_TOKEN
    npx wrangler secret put GCP_SA_JSON        # paste the JSON key
    npx wrangler secret put ANTHROPIC_API_KEY
+   npx wrangler secret put PIXABAY_API_KEY    # and/or UNSPLASH_ACCESS_KEY
    npx wrangler secret put WEBHOOK_SECRET     # optional
    ```
    Set `GA4_ACCOUNT_ID` (numeric) and `ALLOWED_ORIGINS` in `wrangler.jsonc` vars. Optionally add a custom domain (e.g. `launch.thebesads.com`) to the `launch-api` Worker.
@@ -66,14 +67,15 @@ POST /v1/sites
   "niche": "job seekers worldwide",
   "country": "US",
   "primaryColor": "#1d4ed8",
-  "generateArticles": 12,
-  "copyLibrary": true,
+  "useLibraryTopics": true,
+  "generateArticles": 5,
+  "imageProvider": "pixabay",
   "adsTxt": ["google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0"],
   "webhookUrl": "https://your-frontend.example/api/launch-webhook"
 }
 ```
 
-Steps, in order: `zone` → `nameservers` (waits until Cloudflare reports the zone active) → `analytics` (GA4) → `content` (library copy + Claude-written originals) → `repo` (one commit) → `deploy` (GitHub Actions) → `custom_domain` (Worker custom domain, SSL, www→apex) → `search_console` (DNS verification, property, sitemap) → `ads` (Price Optimiser runtime check) → `smoke_test`.
+Steps, in order: `zone` → `nameservers` (waits until Cloudflare reports the zone active) → `analytics` (GA4) → `content` (new articles + photos, written fresh for this site) → `repo` (one commit) → `deploy` (GitHub Actions) → `custom_domain` (Worker custom domain, SSL, www→apex) → `search_console` (DNS verification, property, sitemap) → `ads` (Price Optimiser runtime check) → `smoke_test`.
 
 Step statuses: `pending | running | waiting | done | warning | skipped | failed`.
 Site statuses: `queued | running | waiting | live | live_with_warnings | failed`.
@@ -94,8 +96,10 @@ es.addEventListener('status', (e) => render(JSON.parse(e.data))); // { status, p
 
 ### Content notes
 
-- Library articles are copied with their original canonical URL, so search engines credit the original site and the copy doesn't compete as duplicate content. They're excluded from the new site's sitemap. Generated articles are original and self-canonical.
-- Generated articles are bylined "<Site> Editorial Team" and instructed not to invent statistics or people — still review them before relying on them.
+- Every launched site gets its own articles. The library supplies only topic titles and one-line summaries; Claude plans a new title and angle for the site's audience and writes each article from scratch (new structure, wording, examples, SEO title, meta description, keywords, FAQ). No source text is reused and nothing links or canonicalises to another site.
+- Hero photos: `pixabay` (default) downloads the photo and commits it to `sites/<slug>/public/images/`, served from the site's own domain, as Pixabay's API terms require. `unsplash` hotlinks `images.unsplash.com`, triggers download tracking and shows the photographer credit with UTM links, as Unsplash's API guidelines require. Both show a credit line under the photo.
+- Bylines are "<Site> Editorial Team"; Claude is told not to invent statistics or people. Review generated articles before relying on them.
+- Cost and time scale with article count. Use `libraryLimit` to cap topics (e.g. 20 for a first launch).
 
 ## Local development
 

@@ -4,7 +4,8 @@ import { type Env, type LaunchInput, type LaunchParams, type StepKey, StepSkippe
 import * as cf from './services/cloudflare';
 import * as gh from './services/github';
 import * as google from './services/google';
-import { planArticles, writeArticle } from './services/content';
+import { planArticles, writeArticle, toMarkdown, topicFromMarkdown, type ArticlePlan, type Topic } from './services/content';
+import { pickImage } from './services/images';
 
 type Out = Record<string, any>;
 const FINISHED = ['done', 'warning', 'skipped'];
@@ -103,29 +104,47 @@ export class LaunchSiteWorkflow extends WorkflowEntrypoint<Env, LaunchParams> {
         return { output: r, detail: r.measurementId };
       });
 
-      // 4. Content ---------------------------------------------------------------
+      // 4. Content: new articles + photos, written fresh for this site ---------------
       const content = await (async () => {
         if (await isDone('content')) return step.do('content:stored', async () => JSON.parse((await getStepRow(env, siteId, 'content'))?.output_json ?? '{}'));
-        await step.do('content:start', () => emit('content', 'running', 'Collecting library'));
-        const library = input.copyLibrary === false || dry ? [] : await step.do('content:library', () => gh.listTree(env, 'sites/_library/articles'));
-        const n = Math.max(0, Math.min(40, input.generateArticles ?? 10));
+        await step.do('content:start', () => emit('content', 'running', 'Planning topics'));
+        const useLib = input.useLibraryTopics !== false;
+        const topics: Topic[] = useLib && !dry
+          ? await step.do('content:topics', async () => {
+              const files = await gh.listTree(env, 'sites/_library/articles');
+              const limit = input.libraryLimit ?? files.length;
+              const out: Topic[] = [];
+              for (const f of files.slice(0, limit)) { const t = topicFromMarkdown(await gh.readBlob(env, f.sha)); if (t) out.push(t); }
+              return out;
+            })
+          : [];
+        const extra = Math.max(0, Math.min(40, input.generateArticles ?? 0));
+        const total = (dry ? Math.min(input.libraryLimit ?? 3, 3) : topics.length) + extra;
+        if (total === 0) throw new Error('No articles requested (useLibraryTopics=false and generateArticles=0)');
+        const plans: ArticlePlan[] = dry
+          ? Array.from({ length: total }, (_, i) => ({ title: `Dry run article ${i + 1}`, slug: `dry-run-article-${i + 1}`, categorySlug: 'interview-prep', angle: 'test' }))
+          : await step.do('content:plan', { retries: { limit: 3, delay: '30 seconds', backoff: 'exponential' }, timeout: '10 minutes' }, () => planArticles(env, input, topics, extra));
+        const today = new Date(event.timestamp).toISOString().slice(0, 10);
+        const imgEnv = input.imageProvider ? { ...env, IMAGE_PROVIDER: input.imageProvider } : env;
         const generated: { path: string; content: string }[] = [];
-        if (n > 0) {
-          const avoid = library.map((f) => f.path.split('/').pop()!.replace(/\.md$/, '').replace(/-/g, ' '));
-          const plans = dry
-            ? Array.from({ length: n }, (_, i) => ({ title: `Dry run article ${i + 1}`, slug: `dry-run-article-${i + 1}`, categorySlug: 'interview-prep', angle: 'test' }))
-            : await step.do('content:plan', { retries: { limit: 3, delay: '30 seconds', backoff: 'exponential' }, timeout: '5 minutes' }, () => planArticles(env, input, n, avoid));
-          const today = new Date(event.timestamp).toISOString().slice(0, 10);
-          for (let i = 0; i < plans.length; i++) {
-            await step.do(`content:progress-${i}`, () => emit('content', 'running', `Writing article ${i + 1} of ${plans.length}: ${plans[i].title}`));
-            const art = dry
-              ? { path: `${plans[i].slug}.md`, content: `---\ntitle: "${plans[i].title}"\ndescription: "Dry run"\nslug: "${plans[i].slug}"\ncategory: "interview-prep"\ncategorySlug: "interview-prep"\nauthor: "Editorial Team"\norigin: "generated"\n---\n\n## Section\n\nDry run body.\n` }
-              : await step.do(`content:article-${i}`, { retries: { limit: 3, delay: '30 seconds', backoff: 'exponential' }, timeout: '6 minutes' }, () => writeArticle(env, input, plans[i], today));
-            generated.push(art);
-          }
+        const images: { path: string; sha: string }[] = [];
+        const used = new Set<string>();
+        const BATCH = 4; // a few articles in parallel; each is its own retryable step
+        for (let i = 0; i < plans.length; i += BATCH) {
+          await step.do(`content:progress-${i}`, () => emit('content', 'running', `Writing articles ${i + 1}–${Math.min(i + BATCH, plans.length)} of ${plans.length}`));
+          const batch = await Promise.all(plans.slice(i, i + BATCH).map((plan, k) =>
+            step.do(`content:article-${i + k}`, { retries: { limit: 3, delay: '30 seconds', backoff: 'exponential' }, timeout: '8 minutes' }, async () => {
+              if (dry) return { md: toMarkdown(input, { plan, description: 'Dry run', metaDescription: 'Dry run', seoTitle: plan.title, readTime: 3, body: '## Section\n\nDry run body.', faq: [], sources: [], imageQuery: 'office', keywords: [] }, today, null), image: null };
+              const art = await writeArticle(env, input, plan);
+              let picked = null;
+              try { picked = imgEnv.IMAGE_PROVIDER === 'none' ? null : await pickImage(imgEnv, art.imageQuery, plan.slug, slug, used); } catch { picked = null; }
+              return { md: toMarkdown(input, art, today, picked?.hero ?? null), image: picked?.blob ?? null };
+            }),
+          ));
+          for (const b of batch) { generated.push(b.md); if (b.image) images.push(b.image); }
         }
-        const out = { library, generated };
-        await step.do('content:done', () => emit('content', 'done', `${library.length} library + ${generated.length} original articles`, out));
+        const out = { generated, images };
+        await step.do('content:done', () => emit('content', 'done', `${generated.length} new articles · ${images.length} photos`, out));
         return out;
       })();
 
@@ -149,7 +168,7 @@ export class LaunchSiteWorkflow extends WorkflowEntrypoint<Env, LaunchParams> {
           if (input.jobsDefaultQuery) cfg.jobs.defaultQuery = input.jobsDefaultQuery;
           files.push({ path: `${base}/site.config.json`, content: JSON.stringify(cfg, null, 2) + '\n' });
         }
-        for (const f of content.library ?? []) files.push({ path: `${base}/content/articles/${f.path.split('/').pop()}`, sha: f.sha });
+        for (const img of content.images ?? []) files.push({ path: img.path, sha: img.sha });
         for (const f of content.generated ?? []) files.push({ path: `${base}/content/articles/${f.path}`, content: f.content });
         if (!files.length) return { output: { commit: null }, detail: 'Nothing new to commit' };
         // [skip ci] stops the push trigger; the launch dispatches its own deploy run below.

@@ -36,6 +36,16 @@ export async function listTree(env: Env, dir: string): Promise<{ path: string; s
   return tree.tree.filter((t: any) => t.type === 'blob' && t.path.startsWith(prefix)).map((t: any) => ({ path: t.path, sha: t.sha }));
 }
 
+export async function createBlob(env: Env, base64: string): Promise<string> {
+  const b = await gh<any>(env, '/git/blobs', { method: 'POST', body: JSON.stringify({ content: base64, encoding: 'base64' }) });
+  return b.sha;
+}
+
+export async function readBlob(env: Env, sha: string): Promise<string> {
+  const b = await gh<any>(env, `/git/blobs/${sha}`);
+  return decodeURIComponent(escape(atob(String(b.content).replace(/\n/g, ''))));
+}
+
 export type TreeFile = { path: string; content: string } | { path: string; sha: string };
 
 /** One commit with many files (new content inline, copied files by existing blob sha). */

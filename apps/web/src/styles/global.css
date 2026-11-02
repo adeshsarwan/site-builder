@@ -20,6 +20,7 @@ a { color: var(--primary); }
 .wrap { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
 .wrap-narrow { max-width: 760px; margin: 0 auto; padding: 0 20px; }
 .wrap-hero { max-width: 1000px; margin: 24px auto; padding: 0 20px; }
+.credit { font-size: 12px; color: var(--muted); margin-top: 6px; text-align: right; } .credit a { color: var(--muted); }
 .wrap-hero img { border-radius: var(--radius); aspect-ratio: 16/9; object-fit: cover; width: 100%; }
 
 /* Header / footer */

@@ -21,6 +21,7 @@
     "OWNER_EMAILS": "adesh@thebesads.com",
     "CLAUDE_MODEL": "claude-sonnet-5-5",
     "PO_RUNTIME_URL": "https://serve.thebesads.com/runtime/config",
+    "IMAGE_PROVIDER": "pixabay",
     "DRY_RUN": "false"
   }
   // Secrets (wrangler secret put …):

@@ -20,6 +20,7 @@ const articles = defineCollection({
     wordCount: z.number().optional(),
     heroImage: z.string().optional().default(''),
     heroAlt: z.string().optional().default(''),
+    heroCredit: z.object({ name: z.string(), url: z.string(), source: z.string(), sourceUrl: z.string() }).optional(),
     draft: z.boolean().optional().default(false),
     // "generated" = written by the Launch API with Claude; "library" = copied from another site (canonical points to the original)
     origin: z.enum(['original', 'library', 'generated']).optional().default('original'),
@@ -34,6 +35,7 @@ const articles = defineCollection({
         ogImage: z.string().optional(),
         twitterCard: z.string().optional(),
         noindex: z.boolean().optional(),
+        keywords: z.array(z.string()).optional(),
       })
       .optional()
       .default({}),

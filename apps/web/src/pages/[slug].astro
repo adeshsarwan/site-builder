@@ -28,7 +28,12 @@ const seo = articleSeo(a, cat);
       <p class="meta">By {d.author}{d.pubDate && <> · <time datetime={d.pubDate.toISOString()}>{fmtDate(d.pubDate)}</time></>}{d.readTime && ` · ${d.readTime} min read`}</p>
     </header>
     {d.heroImage && (
-      <div class="wrap-hero"><img src={d.heroImage} alt={d.heroAlt} width="1280" height="720" fetchpriority="high" /></div>
+      <figure class="wrap-hero">
+        <img src={d.heroImage} alt={d.heroAlt} width="1280" height="720" fetchpriority="high" />
+        {d.heroCredit && (
+          <figcaption class="credit">Photo by <a href={d.heroCredit.url} rel="nofollow noopener" target="_blank">{d.heroCredit.name}</a> on <a href={d.heroCredit.sourceUrl} rel="nofollow noopener" target="_blank">{d.heroCredit.source}</a></figcaption>
+        )}
+      </figure>
     )}
     <div class="wrap with-sidebar">
       <div class="prose"><Content /></div>

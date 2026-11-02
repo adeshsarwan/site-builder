@@ -15,6 +15,9 @@ export interface Env {
   CLAUDE_MODEL?: string;
   WEBHOOK_SECRET?: string;
   PO_RUNTIME_URL?: string;
+  IMAGE_PROVIDER?: string;
+  PIXABAY_API_KEY?: string;
+  UNSPLASH_ACCESS_KEY?: string;
   DRY_RUN?: string;
 }
 
@@ -26,10 +29,14 @@ export interface LaunchInput {
   niche?: string;
   country?: string;
   primaryColor?: string;
-  /** Number of original articles to generate with Claude (0–40). */
+  /** Write one NEW article per starting-library topic (topics only; no text is reused). Default true. */
+  useLibraryTopics?: boolean;
+  /** Cap on library topics used (default: all). */
+  libraryLimit?: number;
+  /** Extra brand-new topics beyond the library (0–40). Default 0. */
   generateArticles?: number;
-  /** Copy the starting library (with canonical tags pointing to the originals). */
-  copyLibrary?: boolean;
+  /** "pixabay" (download + self-host), "unsplash" (hotlink + credit) or "none". Default from IMAGE_PROVIDER. */
+  imageProvider?: 'pixabay' | 'unsplash' | 'none';
   adsTxt?: string[];
   jobsDefaultQuery?: Record<string, string>;
   webhookUrl?: string;
@@ -44,7 +51,7 @@ export const STEPS = [
   { key: 'zone', label: 'Domain on Cloudflare' },
   { key: 'nameservers', label: 'Waiting for nameservers' },
   { key: 'analytics', label: 'Create GA4 property' },
-  { key: 'content', label: 'Prepare articles' },
+  { key: 'content', label: 'Write articles + photos' },
   { key: 'repo', label: 'Commit site to GitHub' },
   { key: 'deploy', label: 'Build & deploy' },
   { key: 'custom_domain', label: 'Attach domain + SSL' },

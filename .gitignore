@@ -7,3 +7,4 @@ dist/
 apps/web/wrangler.jsonc
 *.log
 .DS_Store
+apps/web/public/images/
