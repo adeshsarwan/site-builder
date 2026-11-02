@@ -44,7 +44,7 @@
     }
   ],
   "ads": {
-    "enabled": true,
+    "enabled": false,
     "poSite": "{{domain}}",
     "sdkUrl": "https://serve.thebesads.com/sdk/publisher-sdk.js",
     "runtimeUrl": "https://serve.thebesads.com/runtime/config",

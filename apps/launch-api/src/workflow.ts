@@ -253,6 +253,7 @@ export class LaunchSiteWorkflow extends WorkflowEntrypoint<Env, LaunchParams> {
       // 9. Ads ---------------------------------------------------------------------
       await once('ads', async () => {
         if (dry) return { output: { revision: 0 }, detail: 'dry run' };
+        throw new StepSkipped('Ads are stage 2: create the ad units, publish the Price Optimiser config, then run the "Enable ads" workflow with the ads.txt lines');
         const runtime = env.PO_RUNTIME_URL ?? 'https://serve.thebesads.com/runtime/config';
         const res = await fetch(`${runtime}?site=${encodeURIComponent(domain)}`, { signal: AbortSignal.timeout(10000) }).catch(() => null);
         const body: any = res?.ok ? await res.json().catch(() => null) : null;
@@ -273,7 +274,6 @@ export class LaunchSiteWorkflow extends WorkflowEntrypoint<Env, LaunchParams> {
           if (!r || r.status !== 200) failures.push(`${p} → ${r?.status ?? 'unreachable'}`);
           else if (p === '/') home = await r.text();
         }
-        if (home && !home.includes(`data-po-site="${domain}"`)) failures.push('homepage missing Price Optimiser SDK tag');
         if (failures.length) throw new Error(`Smoke test failed: ${failures.join(', ')}`);
         return { output: { checked: paths.length }, detail: `${paths.length} URLs OK` };
       }, { retries: { limit: 4, delay: '1 minute', backoff: 'exponential' }, timeout: '5 minutes' });

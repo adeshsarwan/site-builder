@@ -84,6 +84,13 @@ Site statuses: `queued | running | waiting | live | live_with_warnings | failed`
 
 Webhooks: each change POSTs `{ "type": "site.status", "data": <status> }` with `X-Launch-Signature: sha256=<hmac of body with WEBHOOK_SECRET>`.
 
+### Two-stage launch
+
+1. **Stage 1 — Launch site** (Actions): zone, GA4, fresh articles + photos + SEO, deploy, domain/SSL, Search Console. Ads are off.
+2. **Stage 2 — Enable ads** (Actions): after the ad units exist and the Price Optimiser configuration for the domain is published, run it with the domain and the ads.txt lines (separate lines with `;`). It checks the runtime serves that site key, turns ads on (`data-po-site` = domain), writes `/ads.txt`, and redeploys. Then apply for site verification in Ad Manager.
+
+**Site status** (Actions) shows a site's launch steps, the runtime config for the domain, and live checks (/, /ads.txt, SDK tag).
+
 ### One-click launch from GitHub
 
 Actions → **Launch site** → Run workflow → enter the domain and name. It calls the Launch API and follows progress until the site is live (the run summary shows the nameservers and a step table). Needs the repo secret `LAUNCH_API_KEY` = the Launch API's `API_KEY`. Tick **retry** to resume a failed launch.

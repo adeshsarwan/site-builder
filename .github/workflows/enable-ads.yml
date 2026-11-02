@@ -1,0 +1,81 @@
+name: Enable ads
+run-name: enable ads ${{ inputs.domain }}
+
+# Stage 2 of a launch: after the ad units exist and the Price Optimiser configuration for the domain is
+# published, switch ads on for the site, write ads.txt, and redeploy.
+on:
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: 'Domain, e.g. jobsthe.world'
+        required: true
+        type: string
+      ads_txt:
+        description: 'ads.txt lines — separate multiple lines with ;  (leave empty to keep the current ads.txt)'
+        required: false
+        default: ''
+        type: string
+      require_runtime:
+        description: 'Stop if the Price Optimiser runtime is not serving this site key yet'
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  enable:
+    runs-on: ubuntu-latest
+    env:
+      DOMAIN: ${{ inputs.domain }}
+      ADS_TXT: ${{ inputs.ads_txt }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Find the site folder
+        run: |
+          SLUG=$(grep -l "\"domain\": \"$DOMAIN\"" sites/*/site.config.json | head -1 | cut -d/ -f2)
+          [ -n "$SLUG" ] || { echo "::error::No site with domain $DOMAIN in /sites (launch it first)"; exit 1; }
+          echo "SLUG=$SLUG" >> "$GITHUB_ENV"; echo "Site folder: sites/$SLUG"
+
+      - name: Check the Price Optimiser runtime
+        run: |
+          R=$(curl -sS -m 20 "https://serve.thebesads.com/runtime/config?site=$DOMAIN" || true)
+          KEY=$(echo "$R" | jq -r '.siteKey // empty' 2>/dev/null || true)
+          REV=$(echo "$R" | jq -r '.configurationRevision // empty' 2>/dev/null || true)
+          echo "runtime siteKey=$KEY revision=$REV"
+          if [ "$KEY" = "$DOMAIN" ]; then
+            echo "### ✅ Runtime serves $DOMAIN (revision $REV)" >> "$GITHUB_STEP_SUMMARY"
+          elif [ "${{ inputs.require_runtime }}" = "true" ]; then
+            echo "::error::The runtime is not serving siteKey=$DOMAIN yet (got '${KEY:-nothing}'). Publish the configuration, or re-run with require_runtime unticked."; exit 1
+          else
+            echo "::warning::Runtime not serving $DOMAIN yet — enabling anyway"
+          fi
+
+      - name: Update site config
+        run: |
+          node -e '
+            const fs = require("fs");
+            const p = `sites/${process.env.SLUG}/site.config.json`;
+            const c = JSON.parse(fs.readFileSync(p, "utf8"));
+            c.ads = { ...c.ads,
+              enabled: true,
+              poSite: process.env.DOMAIN,
+              sdkUrl: "https://serve.thebesads.com/sdk/publisher-sdk.js",
+              runtimeUrl: "https://serve.thebesads.com/runtime/config" };
+            const lines = (process.env.ADS_TXT || "").split(/;|\n/).map(s => s.trim()).filter(Boolean);
+            if (lines.length) c.ads.adsTxt = [...new Set(lines)];
+            fs.writeFileSync(p, JSON.stringify(c, null, 2) + "\n");
+            console.log("ads:", JSON.stringify(c.ads, null, 2));
+          '
+
+      - name: Commit and deploy
+        run: |
+          git config user.name "site-builder bot"; git config user.email "actions@users.noreply.github.com"
+          git add "sites/$SLUG/site.config.json"
+          if git diff --cached --quiet; then echo "No config change"; else git commit -m "Enable ads for $DOMAIN [skip ci]" && git push; fi
+          gh workflow run deploy.yml -f site="$SLUG" -f run_key="enable-ads-${{ github.run_id }}"
+          echo "Deploy started for $SLUG. When it finishes, $DOMAIN loads the SDK with data-po-site=\"$DOMAIN\" and serves /ads.txt." >> "$GITHUB_STEP_SUMMARY"

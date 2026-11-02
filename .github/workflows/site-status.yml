@@ -1,0 +1,35 @@
+name: Site status
+run-name: status ${{ inputs.domain }}
+
+# Shows a site's launch steps (from the Launch API) and what the Price Optimiser runtime serves for it.
+on:
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: 'Domain, e.g. jobsthe.world'
+        required: true
+        type: string
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    env:
+      DOMAIN: ${{ inputs.domain }}
+      KEY: ${{ secrets.LAUNCH_API_KEY }}
+    steps:
+      - name: Launch status
+        run: |
+          S=$(curl -sS "https://sitebuilder.thebesads.com/api/v1/sites/$DOMAIN" -H "Authorization: Bearer $KEY")
+          echo "$S" | jq -r '"status: \(.status)  live: \(.liveUrl)  error: \(.error)"'
+          echo "$S" | jq -r '.steps[]? | "\(.status | ascii_upcase)\t\(.label)\t\(.detail // "")"'
+          echo "$S" | jq -r '"### \(.domain) — \(.status)\n\n| Step | Status | Detail |\n|---|---|---|\n" + ([.steps[]? | "| \(.label) | \(.status) | \(.detail // "" | gsub("\\|";"/")) |"] | join("\n"))' >> "$GITHUB_STEP_SUMMARY"
+      - name: Price Optimiser runtime
+        run: |
+          R=$(curl -sS -m 20 "https://serve.thebesads.com/runtime/config?site=$DOMAIN")
+          echo "$R" | head -c 3000; echo
+          echo "$R" | jq -r '"siteKey: \(.siteKey // "n/a")  configurationRevision: \(.configurationRevision // "n/a")"' 2>/dev/null || true
+      - name: Live site checks
+        run: |
+          for p in / /ads.txt /robots.txt /sitemap.xml /find-jobs; do printf "%-14s %s\n" "$p" "$(curl -s -o /dev/null -w '%{http_code}' "https://$DOMAIN$p")"; done
+          echo "SDK tags on homepage:"; curl -s "https://$DOMAIN/" | grep -o '<script[^>]*publisher-sdk[^>]*>' || echo "(none — ads not enabled)"
+          echo "ads.txt:"; curl -s "https://$DOMAIN/ads.txt"
