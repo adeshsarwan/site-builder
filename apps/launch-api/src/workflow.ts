@@ -155,6 +155,13 @@ export class LaunchSiteWorkflow extends WorkflowEntrypoint<Env, LaunchParams> {
         const base = `sites/${slug}`;
         const files: gh.TreeFile[] = [];
         const existing = await gh.readFile(env, `${base}/site.config.json`);
+        if (existing && ga.measurementId) {
+          const cfg = JSON.parse(existing);
+          if (!cfg.analytics?.ga4MeasurementId) {
+            cfg.analytics = { ...(cfg.analytics ?? {}), ga4MeasurementId: ga.measurementId };
+            files.push({ path: `${base}/site.config.json`, content: JSON.stringify(cfg, null, 2) + '\n' });
+          }
+        }
         if (!existing) {
           const tpl = await gh.readFile(env, 'sites/_template/site.config.json');
           if (!tpl) throw new Error('sites/_template/site.config.json missing in repo');

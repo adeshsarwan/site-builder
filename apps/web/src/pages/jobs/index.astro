@@ -16,6 +16,9 @@ const query: JobQuery = {
   q: sp.get('q') ?? undefined,
   location: sp.get('location') ?? answers.location ?? undefined,
   remote: sp.get('remote') ?? answers.remote ?? undefined,
+  country: sp.get('country') ?? answers.country ?? undefined,
+  category: sp.get('category') ?? answers.category ?? undefined,
+  level: sp.get('level') ?? answers.level ?? undefined,
   page: Math.max(1, Number(sp.get('page') ?? 1) || 1),
 };
 let result: JobResult | null = null;
@@ -37,10 +40,21 @@ const pageHref = (p: number) => { const u = new URLSearchParams(sp); u.set('page
 ---
 <Base seo={seo}>
   <section class="wrap page-head">
-    <h1>{query.q ? `${query.q} jobs` : 'Jobs for you'}</h1>
+    <h1>{query.q ? `${query.q} jobs` : query.remote === 'yes' ? 'Remote jobs for you' : 'Jobs for you'}</h1>
     <form class="hero-search" method="get">
       <input name="q" value={query.q ?? ''} placeholder="Job title or keyword" aria-label="Keyword" />
       <input name="location" value={query.location ?? ''} placeholder="City, state or remote" aria-label="Location" />
+      {site.jobs.countries && (
+        <select name="country" aria-label="Country">
+          {site.jobs.countries.map((o) => <option value={o.value} selected={query.country === o.value}>{o.label}</option>)}
+        </select>
+      )}
+      {site.jobs.categories && (
+        <select name="category" aria-label="Category">
+          <option value="any">All categories</option>
+          {site.jobs.categories.map((o) => <option value={o.value} selected={query.category === o.value}>{o.label}</option>)}
+        </select>
+      )}
       <label class="check"><input type="checkbox" name="remote" value="yes" checked={query.remote === 'yes'} /> Remote only</label>
       <button class="btn" type="submit">Search</button>
     </form>

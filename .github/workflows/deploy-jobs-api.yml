@@ -1,0 +1,90 @@
+name: Deploy Jobs API (Cloud Run)
+
+on:
+  push:
+    branches: [main]
+    paths: ['apps/jobs-api/**', '.github/workflows/deploy-jobs-api.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-jobs-api
+  cancel-in-progress: false
+
+env:
+  REGION: us-central1
+  SERVICE: jobs-api
+  REPO: jobs-api
+  SCHEDULE: '0 */6 * * *' # refresh every 6 hours
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test
+        working-directory: apps/jobs-api
+        run: npm ci && npm test
+
+      - uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_DEPLOY_SA_JSON }}
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: One-time project setup (idempotent)
+        env:
+          RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
+          JOBS_API_KEY: ${{ secrets.JOBS_API_KEY }}
+        run: |
+          set -euo pipefail
+          P=$(gcloud config get-value project)
+          RT="jobs-api-runtime@${P}.iam.gserviceaccount.com"
+          echo "PROJECT=$P" >> "$GITHUB_ENV"; echo "RT=$RT" >> "$GITHUB_ENV"
+          gcloud services enable run.googleapis.com artifactregistry.googleapis.com secretmanager.googleapis.com \
+            firestore.googleapis.com cloudscheduler.googleapis.com iam.googleapis.com
+          gcloud artifacts repositories describe "$REPO" --location "$REGION" >/dev/null 2>&1 || \
+            gcloud artifacts repositories create "$REPO" --repository-format docker --location "$REGION"
+          gcloud firestore databases describe --database='(default)' >/dev/null 2>&1 || \
+            gcloud firestore databases create --location=nam5 --type=firestore-native
+          gcloud iam service-accounts describe "$RT" >/dev/null 2>&1 || \
+            gcloud iam service-accounts create jobs-api-runtime --display-name "Jobs API runtime"
+          gcloud projects add-iam-policy-binding "$P" --member "serviceAccount:$RT" --role roles/datastore.user --condition=None >/dev/null
+          put_secret() { # name value — adds a version only when the value changed
+            gcloud secrets describe "$1" >/dev/null 2>&1 || gcloud secrets create "$1" --replication-policy automatic
+            CUR=$(gcloud secrets versions access latest --secret "$1" 2>/dev/null || true)
+            [ "$CUR" = "$2" ] || printf %s "$2" | gcloud secrets versions add "$1" --data-file=-
+            gcloud secrets add-iam-policy-binding "$1" --member "serviceAccount:$RT" --role roles/secretmanager.secretAccessor >/dev/null
+          }
+          put_secret rapidapi-key "$RAPIDAPI_KEY"
+          put_secret jobs-api-key "$JOBS_API_KEY"
+
+      - name: Build and push image
+        run: |
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT}/${REPO}/${SERVICE}:${GITHUB_SHA::12}"
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+          gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+          docker build -t "$IMAGE" apps/jobs-api
+          docker push "$IMAGE"
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy "$SERVICE" --image "$IMAGE" --region "$REGION" --service-account "$RT" \
+            --allow-unauthenticated --memory 512Mi --cpu 1 --min-instances 0 --max-instances 3 --timeout 600 \
+            --set-secrets RAPIDAPI_KEY=rapidapi-key:latest,JOBS_API_KEY=jobs-api-key:latest \
+            --set-env-vars PAGES_PER_BUCKET=2,LIVE_DAILY_CAP=100 --quiet
+          URL=$(gcloud run services describe "$SERVICE" --region "$REGION" --format 'value(status.url)')
+          echo "URL=$URL" >> "$GITHUB_ENV"
+          echo "### Jobs API: $URL" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Schedule refresh
+        env:
+          JOBS_API_KEY: ${{ secrets.JOBS_API_KEY }}
+        run: |
+          ARGS=(--location "$REGION" --schedule "$SCHEDULE" --uri "$URL/internal/refresh" --http-method POST \
+                --update-headers "x-api-key=$JOBS_API_KEY" --attempt-deadline 600s)
+          if gcloud scheduler jobs describe jobs-refresh --location "$REGION" >/dev/null 2>&1; then
+            gcloud scheduler jobs update http jobs-refresh "${ARGS[@]}"
+          else
+            gcloud scheduler jobs create http jobs-refresh "${ARGS[@]/--update-headers/--headers}"
+            gcloud scheduler jobs run jobs-refresh --location "$REGION" # first fill right away
+          fi

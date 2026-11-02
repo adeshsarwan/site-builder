@@ -16,6 +16,8 @@ export interface Job {
   postedAt?: string;
   url: string;
   snippet?: string;
+  logo?: string;
+  publisher?: string;
 }
 
 export interface JobQuery {
@@ -54,6 +56,8 @@ function mapJob(r: any): Job {
     postedAt: r.posted_at ?? r.postedAt ?? r.created_at ?? undefined,
     url: r.apply_url ?? r.url ?? r.link ?? '#',
     snippet: r.snippet ?? r.summary ?? undefined,
+    logo: r.logo ?? undefined,
+    publisher: r.publisher ?? undefined,
   };
 }
 
@@ -63,7 +67,7 @@ export async function searchJobs(q: JobQuery): Promise<JobResult> {
   const base = (env as any).JOBS_API_BASE as string | undefined;
   if (!base) return demoJobs(q, pageSize, page);
 
-  const url = `${base.replace(/\/$/, '')}/jobs?${toQuery(q, pageSize)}`;
+  const url = `${base.replace(/\/$/, '')}/jobs?${toQuery(q, pageSize)}`; // contract: apps/jobs-api GET /jobs
   const cacheKey = new Request(`https://jobs-cache.internal/${site.slug}?${toQuery(q, pageSize)}`);
   const cache = (globalThis as any).caches?.default as Cache | undefined;
   const hit = await cache?.match(cacheKey);

@@ -40,7 +40,7 @@ export interface SiteConfig {
   };
   analytics: { ga4MeasurementId?: string };
   searchConsole?: { googleSiteVerification?: string };
-  jobs: { enabled: boolean; pageSize: number; defaultQuery: Record<string, string> };
+  jobs: { enabled: boolean; pageSize: number; defaultQuery: Record<string, string>; countries?: FunnelOption[]; categories?: FunnelOption[] };
   funnels: Funnel[];
   legal: { companyName: string; contactEmail: string };
   social?: { defaultImage?: string };

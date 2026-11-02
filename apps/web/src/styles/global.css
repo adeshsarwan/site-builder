@@ -45,6 +45,7 @@ a { color: var(--primary); }
 .hero p { color: var(--muted); font-size: 18px; max-width: 680px; }
 .hero-search { display: flex; flex-wrap: wrap; gap: 10px; margin: 18px 0; }
 .hero-search input:not([type=checkbox]) { flex: 1 1 220px; border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 14px; font: inherit; }
+.hero-search select { border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 10px; font: inherit; background: #fff; }
 .check { display: flex; align-items: center; gap: 6px; font-size: 14px; }
 .btn { display: inline-flex; align-items: center; justify-content: center; background: var(--primary); color: #fff; border: 0; border-radius: var(--radius); padding: 12px 20px; font: 600 15px var(--font); cursor: pointer; text-decoration: none; }
 .btn:hover { filter: brightness(1.08); }

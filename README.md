@@ -5,7 +5,8 @@ One Astro codebase, many job sites. Push to `main` and changed sites deploy to C
 
 ```
 apps/web/          Shared Astro 7 app (articles, categories, live jobs, funnels, Price Optimiser ads)
-apps/launch-api/   Cloudflare Worker + Workflows + D1 — the Launch API
+apps/launch-api/   Cloudflare Worker + Workflows + D1 — the Launch API (sitebuilder.thebesads.com/api)
+apps/jobs-api/     Cloud Run service wrapping JSearch (RapidAPI) — what /jobs on every site calls
 sites/<slug>/      One folder per site: site.config.json + content/articles/*.md
 sites/_template/   Config template used for new launches
 sites/_library/    Topic list for new sites (titles/summaries only — never published or copied)
@@ -100,6 +101,13 @@ es.addEventListener('status', (e) => render(JSON.parse(e.data))); // { status, p
 - Hero photos: `pixabay` (default) downloads the photo and commits it to `sites/<slug>/public/images/`, served from the site's own domain, as Pixabay's API terms require. `unsplash` hotlinks `images.unsplash.com`, triggers download tracking and shows the photographer credit with UTM links, as Unsplash's API guidelines require. Both show a credit line under the photo.
 - Bylines are "<Site> Editorial Team"; Claude is told not to invent statistics or people. Review generated articles before relying on them.
 - Cost and time scale with article count. Use `libraryLimit` to cap topics (e.g. 20 for a first launch).
+
+## Jobs API (Cloud Run + JSearch)
+
+- A Cloud Scheduler job calls `POST /internal/refresh` every 6 hours. It fetches 4 countries (US, CA, AU, UK) × 8 categories (remote, healthcare, tech, sales, office, trades, finance, education) × `PAGES_PER_BUCKET` pages from JSearch and stores each bucket in Firestore. Requests per refresh = 4 × 8 × 2 = 64.
+- Sites call `GET /jobs?country=&category=&remote=yes&level=&q=&location=&limit=&offset=` (header `Authorization: Bearer <JOBS_API_KEY>`), answered from the stored buckets. A free-text search with fewer than 5 matches makes one live JSearch call (cached 6h, max `LIVE_DAILY_CAP` per day).
+- Usage today: `GET /internal/usage`. Edit countries/categories in `apps/jobs-api/src/catalog.mjs`.
+- GitHub secrets needed: `GCP_DEPLOY_SA_JSON`, `RAPIDAPI_KEY`, `JOBS_API_KEY`. After the first deploy, set `JOBS_API_BASE` to the Cloud Run URL (shown in the run summary) and re-run "Deploy sites".
 
 ## Local development
 
