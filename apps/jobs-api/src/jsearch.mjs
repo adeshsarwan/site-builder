@@ -48,6 +48,7 @@ export function normalize(r, country) {
     title: r.job_title ?? '',
     company: r.employer_name ?? '',
     logo: r.employer_logo ?? undefined,
+    website: r.employer_website ?? undefined,
     location: r.job_is_remote ? (place ? `Remote · ${place}` : 'Remote') : place || (r.job_country ?? '').toUpperCase(),
     country: (r.job_country ?? country ?? '').toLowerCase(),
     remote: Boolean(r.job_is_remote),

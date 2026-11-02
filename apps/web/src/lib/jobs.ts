@@ -106,7 +106,7 @@ function demoJobs(q: JobQuery, pageSize: number, page: number): JobResult {
   return { jobs: jobs.slice((page - 1) * pageSize, page * pageSize), total: jobs.length, page, pageSize, source: 'demo' };
 }
 
-export interface Company { company: string; jobs: number; remoteJobs: number; titles: string[]; salary?: string; topLocation?: string; logo?: string }
+export interface Company { slug?: string; hasLogo?: boolean; industry?: string; summary?: string; company: string; jobs: number; remoteJobs: number; titles: string[]; salary?: string; topLocation?: string; logo?: string }
 
 /** Employers with the most open roles in the shared jobs database. */
 export async function topCompanies(country: string, limit = 12): Promise<Company[]> {
@@ -127,3 +127,28 @@ export async function topCompanies(country: string, limit = 12): Promise<Company
   await cache?.put(cacheKey, new Response(JSON.stringify(list), { headers: { 'Cache-Control': 'max-age=900', 'Content-Type': 'application/json' } }));
   return list;
 }
+
+export interface CompanyProfile {
+  company: { slug: string; name: string; website?: string; industry?: string; description?: string; hasLogo: boolean; jobs: number; remoteJobs: number; countries: string[] };
+  jobs: Job[];
+  total: number;
+}
+
+/** Employer profile + open roles from the shared jobs database (null if unknown). */
+export async function getCompanyProfile(slug: string): Promise<CompanyProfile | null> {
+  const base = (env as any).JOBS_API_BASE as string | undefined;
+  if (!base) return null;
+  const cacheKey = new Request(`https://jobs-cache.internal/company/${slug}`);
+  const cache = (globalThis as any).caches?.default as Cache | undefined;
+  const hit = await cache?.match(cacheKey);
+  if (hit) return hit.json();
+  const res = await fetch(`${base.replace(/\/$/, '')}/companies/${encodeURIComponent(slug)}`, { headers: { Authorization: `Bearer ${(env as any).JOBS_API_KEY ?? ''}` } });
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`Jobs API ${res.status}`);
+  const body: any = await res.json();
+  const profile: CompanyProfile = { company: body.company, jobs: (body.jobs ?? []).map(mapJob), total: body.total ?? 0 };
+  await cache?.put(cacheKey, new Response(JSON.stringify(profile), { headers: { 'Cache-Control': 'max-age=900', 'Content-Type': 'application/json' } }));
+  return profile;
+}
+
+export const companySlug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');

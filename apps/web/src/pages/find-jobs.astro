@@ -6,7 +6,7 @@ import Base from '@/layouts/Base.astro';
 import AdSlot from '@/components/AdSlot.astro';
 import ArticleCard from '@/components/ArticleCard.astro';
 import { site, abs } from '@/lib/site';
-import { topCompanies, type Company } from '@/lib/jobs';
+import { topCompanies, companySlug, type Company } from '@/lib/jobs';
 import { allArticles } from '@/lib/articles';
 
 const landing = site.jobs.landing;
@@ -69,12 +69,16 @@ const seo = {
     {companies.length === 0 && <p class="notice">Employer listings are updating — try a search above.</p>}
     <div class="grid grid--3 fj-companies">
       {companies.map((co) => (
-        <a class="fj-company" href={`/jobs?q=${encodeURIComponent(co.company)}&country=${country}`}>
-          <span class="fj-mono" style={`--h:${hue(co.company)}`} aria-hidden="true">{initials(co.company)}</span>
+        <a class="fj-company" href={`/companies/${co.slug ?? companySlug(co.company)}`}>
+          {co.hasLogo
+            ? <img class="fj-logo" src={`/logos/${co.slug}`} alt={`${co.company} logo`} width="56" height="56" loading="lazy" />
+            : <span class="fj-mono" style={`--h:${hue(co.company)}`} aria-hidden="true">{initials(co.company)}</span>}
           <span class="fj-co-body">
             <strong>{co.company}</strong>
             <span class="meta">{co.jobs} open {co.jobs === 1 ? 'role' : 'roles'}{co.remoteJobs ? ` · ${co.remoteJobs} remote` : ''}{co.topLocation ? ` · ${co.topLocation}` : ''}</span>
-            {co.titles.length > 0 && <span class="fj-titles">{co.titles.slice(0, 2).join(' · ')}</span>}
+            {co.summary
+              ? <span class="fj-titles fj-summary">{co.summary}</span>
+              : co.titles.length > 0 && <span class="fj-titles">{co.titles.slice(0, 2).join(' · ')}</span>}
             <span class="fj-co-foot">
               {co.salary && <span class="pill">{co.salary}</span>}
               <span class="fj-view">View openings →</span>

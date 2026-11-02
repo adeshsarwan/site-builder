@@ -3,8 +3,10 @@ import http from 'node:http';
 
 const fake = http.createServer((req, res) => {
   calls++;
-  if (req.headers['x-api-key'] !== 'own-key') return res.writeHead(403).end('{}');
+  if (!req.url.startsWith('/logo') && !req.url.startsWith('/v1/messages') && req.headers['x-api-key'] !== 'own-key') return res.writeHead(403).end('{}');
   const u = new URL(req.url, 'http://x');
+  if (u.pathname === '/logo.png') return res.writeHead(200, { 'content-type': 'image/png' }).end(Buffer.from([0x89, 0x50, 0x4e, 0x47]));
+  if (u.pathname === '/v1/messages') return res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ content: [{ type: 'text', text: '{"industry":"Software","summary":"Acme builds tools. It is hiring across many roles in the US."}' }] }));
   if (!u.pathname.endsWith('/search')) return res.writeHead(404).end('{}');
   const country = u.searchParams.get('country');
   const page = Number(u.searchParams.get('page'));
@@ -14,14 +16,14 @@ const fake = http.createServer((req, res) => {
     job_id: `${country}-${q}-${page}-${i}`, job_title: `${q.split(' ')[0]} role ${page}.${i}`, employer_name: 'Acme',
     job_city: 'Austin', job_state: 'TX', job_country: country.toUpperCase(), job_is_remote: remote || i % 3 === 0,
     job_min_salary: 50000, job_max_salary: 70000, job_salary_period: 'YEAR', job_salary_currency: 'USD',
-    job_employment_type: 'FULLTIME', job_apply_link: 'https://example.com/apply',
+    job_employment_type: 'FULLTIME', job_apply_link: 'https://example.com/apply', employer_logo: `http://127.0.0.1:${fake.address().port}/logo.png`, employer_website: 'https://acme.example',
     job_posted_at_datetime_utc: new Date(Date.UTC(2026, 10, 1, i)).toISOString(), job_description: 'Great job '.repeat(40),
     job_required_experience: { no_experience_required: i % 2 === 0, required_experience_in_months: i % 2 ? 36 : null },
   }));
   res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ status: 'OK', data }));
 });
 await new Promise((r) => fake.listen(0, r));
-Object.assign(process.env, { OPENWEBNINJA_API_KEY: 'own-key', DATABASE_URL: 'pglite:memory', JSEARCH_BASE: `http://127.0.0.1:${fake.address().port}`, JOBS_API_KEY: 'test-key', NO_LISTEN: '1', PAGES_PER_BUCKET: '2', MONTHLY_CAP: '24', KEEP_DAYS: '3650' });
+Object.assign(process.env, { ANTHROPIC_API_KEY: 'k', ANTHROPIC_BASE: `http://127.0.0.1:${fake.address().port}`, OPENWEBNINJA_API_KEY: 'own-key', DATABASE_URL: 'pglite:memory', JSEARCH_BASE: `http://127.0.0.1:${fake.address().port}`, JOBS_API_KEY: 'test-key', NO_LISTEN: '1', PAGES_PER_BUCKET: '2', MONTHLY_CAP: '24', KEEP_DAYS: '3650' });
 let calls = 0;
 const { default: app } = await import('../src/server.mjs');
 const call = (path, init = {}) => app.request(path, { ...init, headers: { 'x-api-key': 'test-key', ...(init.headers ?? {}) } });
@@ -49,5 +51,15 @@ const merged = await (await call('/jobs?country=us&category=tech&limit=50')).jso
 assert(merged.total === 14, `buckets accumulate without duplicates (${merged.total})`);
 const comp = await (await call('/companies?country=us&limit=3')).json();
 assert(comp.companies.length === 1 && comp.companies[0].company === 'Acme' && comp.companies[0].jobs > 50 && comp.companies[0].titles.length === 3, `top companies (${comp.companies[0]?.company}: ${comp.companies[0]?.jobs} jobs)`);
+const en = await (await call('/internal/enrich', { method: 'POST' })).json();
+assert(en.enriched === 1 && en.report[0].logo && en.report[0].summary, `enrichment stored logo + writeup (${JSON.stringify(en.report[0])})`);
+const prof = await (await call('/companies/acme')).json();
+assert(prof.company.description.startsWith('Acme builds') && prof.company.hasLogo && prof.company.website === 'https://acme.example' && prof.jobs.length === 30 && prof.total > 50, `company profile (${prof.total} roles, industry ${prof.company.industry})`);
+const logo = await call('/logos/acme');
+assert(logo.status === 200 && logo.headers.get('content-type') === 'image/png', 'logo served from database');
+const top = await (await call('/companies?country=us&limit=1')).json();
+assert(top.companies[0].slug === 'acme' && top.companies[0].hasLogo && top.companies[0].summary, 'top companies include slug, logo flag, summary');
+const again = await (await call('/internal/enrich', { method: 'POST' })).json();
+assert(again.enriched === 0, 'enriched companies are not redone');
 fake.close();
 console.log('all passed');

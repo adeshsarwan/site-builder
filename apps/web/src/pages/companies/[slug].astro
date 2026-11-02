@@ -1,0 +1,77 @@
+---
+// Employer page: logo, original summary, open roles from the shared jobs database.
+export const prerender = false;
+import Base from '@/layouts/Base.astro';
+import AdSlot from '@/components/AdSlot.astro';
+import JobCard from '@/components/JobCard.astro';
+import { site, abs } from '@/lib/site';
+import { getCompanyProfile } from '@/lib/jobs';
+import { breadcrumbLd } from '@/lib/seo';
+
+const slug = String(Astro.params.slug ?? '').toLowerCase().replace(/[^a-z0-9-]/g, '');
+let profile = null;
+try { profile = await getCompanyProfile(slug); } catch { profile = null; }
+if (!profile) return Astro.redirect(`/jobs?q=${encodeURIComponent(slug.replace(/-/g, ' '))}`, 302);
+
+const { company, jobs, total } = profile;
+const initials = company.name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+const hue = [...company.name].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) % 360, 7);
+const countryNames = (site.jobs.countries ?? []).filter((c) => company.countries.includes(c.value)).map((c) => c.label);
+const paragraphs = (company.description ?? '').split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+const path = `/companies/${slug}`;
+Astro.response.headers.set('Cache-Control', 'public, max-age=900');
+const seo = {
+  title: `${company.name} jobs — ${total} open ${total === 1 ? 'role' : 'roles'} | ${site.name}`,
+  description: (paragraphs[0] ?? `Current openings at ${company.name}${countryNames.length ? ` in ${countryNames.join(', ')}` : ''}.`).slice(0, 155),
+  path,
+  noindex: total === 0,
+  image: company.hasLogo ? `/logos/${slug}` : undefined,
+  jsonLd: [
+    breadcrumbLd([{ name: 'Home', path: '/' }, { name: 'Find jobs', path: '/find-jobs' }, { name: company.name, path }]),
+    { '@context': 'https://schema.org', '@type': 'Organization', name: company.name, ...(company.website ? { url: company.website, sameAs: [company.website] } : {}), ...(company.hasLogo ? { logo: abs(`/logos/${slug}`) } : {}) },
+  ],
+};
+---
+<Base seo={seo}>
+  <section class="wrap co-head">
+    <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Home</a> › <a href="/find-jobs">Find jobs</a> › {company.name}</nav>
+    <div class="co-title">
+      {company.hasLogo
+        ? <img class="co-logo" src={`/logos/${slug}`} alt={`${company.name} logo`} width="88" height="88" />
+        : <span class="fj-mono co-logo" style={`--h:${hue}`} aria-hidden="true">{initials}</span>}
+      <div>
+        <h1>{company.name} jobs</h1>
+        <p class="meta">
+          {total} open {total === 1 ? 'role' : 'roles'}{company.remoteJobs ? ` · ${company.remoteJobs} remote` : ''}
+          {countryNames.length > 0 && ` · ${countryNames.join(', ')}`}
+          {company.industry && ` · ${company.industry}`}
+        </p>
+      </div>
+    </div>
+  </section>
+  <div class="wrap with-sidebar">
+    <section>
+      {paragraphs.length > 0 && (
+        <div class="co-about">
+          <h2>About {company.name}</h2>
+          {paragraphs.map((p) => <p>{p}</p>)}
+          {company.website && <p class="meta"><a href={company.website} rel="nofollow noopener" target="_blank">Visit {company.name}'s website ↗</a></p>}
+        </div>
+      )}
+      <h2 class="section-title">Open roles at {company.name}</h2>
+      {jobs.slice(0, 4).map((j) => <JobCard job={j} />)}
+      {jobs.length > 0 && <AdSlot id="ad-incontent" />}
+      {jobs.slice(4).map((j) => <JobCard job={j} />)}
+      {jobs.length === 0 && <p>No open roles right now — <a href="/find-jobs">browse other employers</a>.</p>}
+      <p class="meta">Listings are refreshed several times a day. You apply on the employer's or job board's own site.</p>
+    </section>
+    <aside class="sidebar">
+      <AdSlot id="ad-sidebar" class="sticky" />
+      <div class="side-cta">
+        <h4>Not quite right?</h4>
+        <p>Search all openings by title, skill or location.</p>
+        <a class="btn" href="/find-jobs">Find jobs</a>
+      </div>
+    </aside>
+  </div>
+</Base>

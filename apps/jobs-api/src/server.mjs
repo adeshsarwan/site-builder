@@ -4,7 +4,8 @@ import { serve } from '@hono/node-server';
 import { timingSafeEqual } from 'node:crypto';
 import { COUNTRIES, CATEGORIES, ALIASES } from './catalog.mjs';
 import { jsearch } from './jsearch.mjs';
-import { upsertJobs, prune, searchJobs, topCompanies, useRequests, usage, ping } from './store.mjs';
+import { upsertJobs, prune, searchJobs, topCompanies, getCompany, getLogo, useRequests, usage, ping } from './store.mjs';
+import { enrichCompanies } from './enrich.mjs';
 
 const app = new Hono();
 const PAGES = Number(process.env.PAGES_PER_BUCKET ?? 3);
@@ -61,6 +62,31 @@ app.get('/companies', async (c) => {
   });
   c.header('Cache-Control', 'public, max-age=900');
   return c.json({ country, companies });
+});
+
+// GET /companies/:slug — employer profile + open roles (database only)
+app.get('/companies/:slug', async (c) => {
+  const slug = c.req.param('slug').toLowerCase().replace(/[^a-z0-9-]/g, '');
+  const company = await getCompany(slug);
+  if (!company) return c.json({ error: 'not found' }, 404);
+  const limit = Math.min(50, Math.max(1, Number(c.req.query('limit') ?? 30) || 30));
+  const { jobs, total } = await searchJobs({ country: null, companySlug: slug, limit, offset: 0 });
+  c.header('Cache-Control', 'public, max-age=900');
+  return c.json({ company, jobs, total });
+});
+
+// GET /logos/:slug — cached employer logo bytes
+app.get('/logos/:slug', async (c) => {
+  const logo = await getLogo(c.req.param('slug').toLowerCase().replace(/[^a-z0-9-]/g, ''));
+  if (!logo) return c.body(null, 404);
+  return c.body(logo.bytes, 200, { 'Content-Type': logo.type, 'Cache-Control': 'public, max-age=2592000, immutable' });
+});
+
+// POST /internal/enrich[?limit=15] — logos + writeups for top employers missing them
+app.post('/internal/enrich', async (c) => {
+  const report = await enrichCompanies(Number(c.req.query('limit') ?? process.env.ENRICH_PER_RUN ?? 15));
+  console.log(JSON.stringify({ event: 'enrich', companies: report.length }));
+  return c.json({ enriched: report.length, report });
 });
 
 // POST /internal/refresh[?country=us&category=tech] — fetch fresh buckets from JSearch.
