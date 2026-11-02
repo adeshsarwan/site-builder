@@ -62,7 +62,7 @@ const seo = { title: f.title, description: f.intro ?? f.title, path: `/start/${f
       <div class="fn-ready-icon" aria-hidden="true">✓</div>
       <h2>{f.rewarded?.title ?? 'Your job matches are ready'}</h2>
       <p class="meta" id="fn-count">We found openings that match your answers.</p>
-      {rewarded && <button type="button" class="btn btn--wide" id="fn-watch">{f.rewarded?.cta ?? 'Watch a short video to see your jobs'}</button>}
+      {rewarded && <button type="button" class="btn btn--wide" id="fn-watch">{f.rewarded?.cta ?? 'View a short ad to see your jobs'}</button>}
       <button type="button" class={rewarded ? 'btn btn--ghost btn--wide' : 'btn btn--wide'} id="fn-skip">{rewarded ? (f.rewarded?.skip ?? 'No thanks, show my jobs') : 'Show my jobs'}</button>
     </div>
   </section>

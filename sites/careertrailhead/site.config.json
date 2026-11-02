@@ -275,7 +275,7 @@
       "rewarded": {
         "enabled": true,
         "title": "Your job matches are ready",
-        "cta": "Watch a short video to see your jobs",
+        "cta": "View a short ad to see your jobs",
         "skip": "No thanks, show my jobs"
       }
     }

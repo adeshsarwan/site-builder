@@ -1,9 +1,9 @@
 ---
 // On-page funnel gate. On a gated URL the visitor first answers the questions, then (opt-in) watches
-// the rewarded video, then sees the page they came for. Following the Price Optimiser guide:
+// the rewarded ad, then sees the page they came for. Following the Price Optimiser guide:
 //  - while the visitor answers, the rewarded ad is preloaded (preloadRewarded);
 //  - the page's own ad slots stay hidden (not requested) until the page is shown;
-//  - while the video plays, those slots are preloaded (preloadSlots); after it closes the page is
+//  - while the rewarded ad is showing, those slots are preloaded (preloadSlots); after it closes the page is
 //    shown and the slots are revealed (revealSlots). No-fill, skip or SDK failure → page shown anyway.
 // A small inline script in <head> (see Base.astro) decides before first paint whether to gate this
 // visit (already answered? query rules?). Without JavaScript the page is shown normally.
@@ -33,7 +33,7 @@ const allowSkip = f.rewarded?.allowSkip !== false;
   <div class="fn-ready" id="fn-gate-ready" hidden>
     <div class="fn-ready-icon" aria-hidden="true">✓</div>
     <h2>{f.rewarded?.title ?? 'Your page is ready'}</h2>
-    {rewarded && <button type="button" class="btn btn--wide" id="fn-gate-watch">{f.rewarded?.cta ?? 'Watch a short video to continue'}</button>}
+    {rewarded && <button type="button" class="btn btn--wide" id="fn-gate-watch">{f.rewarded?.cta ?? 'View a short ad to continue'}</button>}
     {(!rewarded || allowSkip) && <button type="button" class={rewarded ? 'btn btn--ghost btn--wide' : 'btn btn--wide'} id="fn-gate-skip">{rewarded ? (f.rewarded?.skip ?? 'No thanks, continue') : 'Continue'}</button>}
   </div>
 </section>
@@ -112,7 +112,7 @@ const allowSkip = f.rewarded?.allowSkip !== false;
       watch.disabled = true;
       const a = await whenAds();
       if (!a) return reveal('no-sdk');
-      // 3. While the video plays, preload the page's display slots.
+      // 3. While the rewarded ad is showing, preload the page's display slots.
       a.preloadNextViewAds?.(pageSlots())?.catch?.(() => {});
       let how = 'closed';
       await a.showRewardAfterOptIn({

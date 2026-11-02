@@ -143,7 +143,7 @@ PUT /v1/sites/jobsthe.world/funnels/apply-unlock
 {
   "trigger": "apply",
   "title": "One quick step",
-  "message": "To access the direct application page at {company}, please support us by watching a short sponsor video.",
+  "message": "To access the direct application page at {company}, please support us by viewing a short ad from our sponsor.",
   "rewarded": { "cta": "Watch Ad & Reveal Link", "allowSkip": false, "skip": "No thanks, continue" },
   "applyFrequency": "job",
   "pages": []

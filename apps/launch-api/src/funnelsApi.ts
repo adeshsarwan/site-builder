@@ -60,7 +60,7 @@ function buildFunnel(id: string, input: any, prev: any | null, p: Problem) {
   const apply = b.trigger === 'apply';
   if (apply) {
     f.trigger = 'apply';
-    f.message = String(b.message ?? 'To access the direct application page at {company}, please support us by watching a short sponsor video.').slice(0, 400);
+    f.message = String(b.message ?? 'To access the direct application page at {company}, please support us by viewing a short ad from our sponsor.').slice(0, 400);
     f.applyFrequency = ['job', 'session', 'always'].includes(b.applyFrequency) ? b.applyFrequency : 'job';
   }
   const steps = Array.isArray(b.steps) ? b.steps : [];
@@ -108,8 +108,8 @@ function buildFunnel(id: string, input: any, prev: any | null, p: Problem) {
 
 /** Warnings about URLs: never-gated pages, stories that don't exist, overlaps with earlier funnels. */
 async function urlWarnings(env: Env, site: any, list: any[], f: any, p: Problem) {
-  if (!site.config.ads?.enabled && f.rewarded?.enabled) p.warnings.push('Ads are not enabled on this site yet: visitors get the questions, then the page, with no video until stage 2.');
-  if (f.rewarded?.enabled && !f.rewarded.allowSkip) p.warnings.push(f.trigger === 'apply' ? 'No skip button: visitors watch the video to reveal the link. If no ad fills, the link opens anyway.' : 'allowSkip=false: visitors must choose the video. If no ad fills, the page is still shown.');
+  if (!site.config.ads?.enabled && f.rewarded?.enabled) p.warnings.push('Ads are not enabled on this site yet: visitors get the questions, then the page, with no rewarded ad until stage 2.');
+  if (f.rewarded?.enabled && !f.rewarded.allowSkip) p.warnings.push(f.trigger === 'apply' ? 'No skip button: visitors complete the rewarded ad to reveal the link. If no ad fills, the link opens anyway.' : 'allowSkip=false: visitors must choose the video. If no ad fills, the page is still shown.');
   if (f.trigger === 'apply') {
     if (list.some((x) => x.id !== f.id && x.trigger === 'apply' && x.enabled !== false) && f.enabled !== false) p.warnings.push('Another apply funnel is enabled; on each page the first one in the list is used.');
     return;

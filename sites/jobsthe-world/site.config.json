@@ -277,7 +277,7 @@
       "rewarded": {
         "enabled": true,
         "title": "Your job matches are ready",
-        "cta": "Watch a short video to see your jobs",
+        "cta": "View a short ad to see your jobs",
         "skip": "No thanks, show my jobs"
       }
     },
@@ -285,7 +285,7 @@
       "id": "apply-unlock",
       "trigger": "apply",
       "title": "One quick step",
-      "message": "To access the direct application page at {company}, please support us by watching a short sponsor video.",
+      "message": "To access the direct application page at {company}, please support us by viewing a short ad from our sponsor.",
       "applyFrequency": "job",
       "steps": [],
       "pages": [],

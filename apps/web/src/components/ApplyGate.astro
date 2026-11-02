@@ -1,17 +1,17 @@
 ---
 // Rewarded "reveal link" before an external job application.
 // Any link with data-apply (Apply buttons and job titles, including ones added later by script) is
-// intercepted: an overlay asks the visitor to watch a short sponsor video; after the reward is granted
+// intercepted: an overlay asks the visitor to view a rewarded ad (rendered by GPT); after the reward is granted
 // the job opens in a new tab. Rules from the Price Optimiser guide:
 //  - rewarded is shown only after the visitor opts in (the "Watch" button) and is preloaded beforehand;
-//  - the link is unlocked only from onGranted (not from closing the video);
+//  - the link is unlocked only from onGranted (not from closing the ad);
 //  - no fill / error / timeout → the visitor still gets the link (never trapped).
-// Browsers block tabs opened long after a click, so after the video we try to open the tab and always
+// Browsers block tabs opened long after a click, so after the ad we try to open the tab and always
 // show a one-tap "Open application" button as well.
 import type { Funnel } from '@/lib/site';
 interface Props { funnel: Funnel }
 const { funnel: f } = Astro.props;
-const message = f.message ?? 'To access the direct application page at {company}, please support us by watching a short sponsor video.';
+const message = f.message ?? 'To access the direct application page at {company}, please support us by viewing a short ad from our sponsor.';
 const allowSkip = f.rewarded?.allowSkip === true; // apply funnels: no skip unless asked for
 ---
 <dialog class="apply-gate" id="apply-gate" data-funnel={f.id} data-message={message} data-frequency={f.applyFrequency ?? 'job'} aria-labelledby="ag-title">
@@ -25,10 +25,6 @@ const allowSkip = f.rewarded?.allowSkip === true; // apply funnels: no skip unle
     {allowSkip && <a class="btn btn--ghost btn--wide" data-ag-skip target="_blank" rel="nofollow sponsored noopener">{f.rewarded?.skip ?? 'No thanks, continue'}</a>}
     <p class="ag-note meta">The application opens in a new tab, so you can keep browsing here.</p>
   </div>
-  <div class="ag-view" data-view="loading" hidden>
-    <div class="ag-spinner" aria-hidden="true"></div>
-    <p>Loading the sponsor video…</p>
-  </div>
   <div class="ag-view" data-view="ready" hidden>
     <div class="fn-ready-icon" aria-hidden="true">✓</div>
     <h2>Thanks for your support!</h2>
@@ -36,9 +32,9 @@ const allowSkip = f.rewarded?.allowSkip === true; // apply funnels: no skip unle
     <a class="btn btn--wide" data-ag-open target="_blank" rel="nofollow sponsored noopener">Open application</a>
   </div>
   <div class="ag-view" data-view="incomplete" hidden>
-    <h2>The video was closed early</h2>
-    <p>Watch it to the end to reveal the application link.</p>
-    <button type="button" class="btn btn--wide" data-ag-watch>Watch again</button>
+    <h2>The ad was closed early</h2>
+    <p>Complete the ad to reveal the application link.</p>
+    <button type="button" class="btn btn--wide" data-ag-watch>Try again</button>
     {allowSkip && <a class="btn btn--ghost btn--wide" data-ag-skip target="_blank" rel="nofollow sponsored noopener">{f.rewarded?.skip ?? 'No thanks, continue'}</a>}
   </div>
 </dialog>
@@ -63,7 +59,7 @@ const allowSkip = f.rewarded?.allowSkip === true; // apply funnels: no skip unle
     const remember = (url: string) => { if (!store) return; store.setItem(unlockedKey, freq === 'session' ? '1' : [...(store.getItem(unlockedKey) || '').split('\n').filter(Boolean), url].slice(-50).join('\n')); };
     const slug = (s: string) => s.toLowerCase().replace(/['’]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
-    // Preload once the page shows job links (also covers lists rendered later), so the video starts fast.
+    // Preload once the page shows job links (also covers lists rendered later), so the rewarded ad shows fast.
     let preloaded = false;
     const preload = () => { if (preloaded) return; preloaded = true; ads()?.preloadReward?.()?.catch?.(() => { preloaded = false; }); };
     const maybePreload = () => { if (document.querySelector('a[data-apply]')) (ads() ? preload() : document.addEventListener('siteads:ready', preload, { once: true })); };
@@ -81,7 +77,7 @@ const allowSkip = f.rewarded?.allowSkip === true; // apply funnels: no skip unle
       msg.textContent = w ? `The application at ${current.company} opened in a new tab.` : `Your application link at ${current.company} is ready.`;
       (dlg.querySelector('[data-ag-open]') as HTMLAnchorElement).textContent = w ? 'Open it again' : `Open application at ${current.company}`;
       view('ready');
-      preloaded = false; preload(); // next click gets a fresh video
+      preloaded = false; preload(); // next click gets a fresh rewarded ad
     };
 
     document.addEventListener('click', (e) => {
@@ -108,15 +104,18 @@ const allowSkip = f.rewarded?.allowSkip === true; // apply funnels: no skip unle
 
     dlg.querySelectorAll<HTMLButtonElement>('[data-ag-watch]').forEach((btn) => btn.addEventListener('click', async () => {
       btn.disabled = true;
-      view('loading');
+      // GPT shows the rewarded ad in its own full-screen overlay. A modal <dialog> sits in the browser's
+      // top layer above everything, so close ours while the ad is up and reopen it for the result.
+      dlg.close();
       let granted = false, closed = false, fallback: string | null = null;
       const a = ads();
-      if (!a) return openJob('no-sdk');
+      if (!a) { dlg.showModal(); return openJob('no-sdk'); }
       const res = await a.showRewardAfterOptIn({
         onGranted() { granted = true; },
         onClosed() { closed = true; },
         onFallback(r: any) { fallback = String(r?.status ?? 'unavailable'); },
       });
+      dlg.showModal();
       if (granted) { track('apply_gate_granted'); return openJob('granted'); }
       // The visitor chose to stop (declined / closed early) → offer to watch again.
       // No ad could be shown (no fill, error, timeout, busy) → don't trap them: reveal the link.
