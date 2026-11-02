@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1877
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/the-career-pivot-introduction-answering-walk-me-through-your-backgroun.jpg"
+heroAlt: "irrigation, sprinklers, agriculture, drought"
+heroCredit:
+  name: "OrnaW"
+  url: "https://pixabay.com/users/OrnaW-8155178/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/irrigation-sprinklers-agriculture-6986021/"
 seo:
   title: "Walk Me Through Your Background: Career Pivot Answer"
   metaDescription: "Build a 90-second \"walk me through your background\" answer that makes a career pivot sound deliberate, with scripts, a template and remote-interview tips."

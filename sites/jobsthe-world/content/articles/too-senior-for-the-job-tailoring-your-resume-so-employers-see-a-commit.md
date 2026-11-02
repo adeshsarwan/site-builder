@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1907
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/too-senior-for-the-job-tailoring-your-resume-so-employers-see-a-commit.jpg"
+heroAlt: "toyo, nature, bird, snipe"
+heroCredit:
+  name: "ChungHyeon"
+  url: "https://pixabay.com/users/ChungHyeon-30562990/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/toyo-bird-snipe-blacktail-too-7769329/"
 seo:
   title: "Too Senior for the Job? Resume Tips to Look Committed"
   metaDescription: "Applying below your level? Learn how to reframe titles, trim your resume and address retention fears so remote employers see a committed hire."

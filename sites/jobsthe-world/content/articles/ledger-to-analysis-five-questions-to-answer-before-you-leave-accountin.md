@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1607
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/ledger-to-analysis-five-questions-to-answer-before-you-leave-accountin.jpg"
+heroAlt: "bitcoin, cryptocurrency, digital, money"
+heroCredit:
+  name: "MichaelWuensch"
+  url: "https://pixabay.com/users/MichaelWuensch-4163668/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/bitcoin-cryptocurrency-digital-2007769/"
 seo:
   title: "Accountant to Financial Analyst: 5 Questions First"
   metaDescription: "Weigh CPA vs CFA, pay, hours and the entry-level reset before you quit accounting for a financial analyst role. Includes a remote-ready checklist."

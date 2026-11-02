@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1666
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/screening-call-video-round-onsite-loop-adjusting-your-habits-for-each.jpg"
+heroAlt: "social distancing, corona, virus, smartphone"
+heroCredit:
+  name: "geralt"
+  url: "https://pixabay.com/users/geralt-9301/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/social-distancing-corona-virus-4621687/"
 seo:
   title: "Interview Formats: Adjust Habits for Phone, Video, Onsite"
   metaDescription: "Phone, video and onsite interviews each judge pacing, notes, body language and thank-yous differently. Learn how to adapt your prep for every round."

@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1638
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/your-first-resume-with-no-work-history-turning-classes-volunteering-an.jpg"
+heroAlt: "application, write to, curriculum vitae, motivation"
+heroCredit:
+  name: "loufre"
+  url: "https://pixabay.com/users/loufre-2697555/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/application-write-to-1756282/"
 seo:
   title: "First Resume With No Work Experience: Scannable Bullets"
   metaDescription: "Build a first resume with no work history. Turn classes, volunteering and side projects into skimmable bullets for remote jobs in the US, UK, CA and AU."

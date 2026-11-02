@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1685
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/the-four-paragraph-career-switch-letter-connecting-your-old-field-to-y.jpg"
+heroAlt: "a book, paper, document, poetry"
+heroCredit:
+  name: "felix_w"
+  url: "https://pixabay.com/users/felix_w-6547745/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/a-book-paper-document-poetry-side-3101151/"
 seo:
   title: "Career Change Cover Letter: A 4-Paragraph Format That Works"
   metaDescription: "Switching fields? Use this four-paragraph career change cover letter to connect your old experience to a new remote role, with a full sample and edits."

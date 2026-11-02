@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1614
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/making-your-work-visible-when-youre-the-new-remote-hire-a-daily-and-we.jpg"
+heroAlt: "student, typing, keyboard, text"
+heroCredit:
+  name: "StartupStockPhotos"
+  url: "https://pixabay.com/users/StartupStockPhotos-690514/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/student-typing-keyboard-text-woman-849828/"
 seo:
   title: "Make Your Work Visible as a New Remote Hire: Habit Stack"
   metaDescription: "Copy-ready scripts and a 10-minute daily, 30-minute weekly routine to help new remote hires get noticed for good work without bragging or nagging."

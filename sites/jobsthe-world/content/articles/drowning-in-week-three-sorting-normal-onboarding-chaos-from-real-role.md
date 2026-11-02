@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1971
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/drowning-in-week-three-sorting-normal-onboarding-chaos-from-real-role.jpg"
+heroAlt: "cross, sunset, sunrise, nature"
+heroCredit:
+  name: "geralt"
+  url: "https://pixabay.com/users/geralt-9301/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/cross-sunset-sunrise-hill-heaven-66700/"
 seo:
   title: "Overwhelmed at a New Job: Onboarding Chaos or Real Problem?"
   metaDescription: "Feeling buried in week three of a remote job? Learn to tell normal onboarding chaos from a real role or manager problem, and what to say about each."

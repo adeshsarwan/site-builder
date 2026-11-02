@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1764
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/the-counteroffer-playbook-choosing-between-base-pay-sign-on-bonus-equi.jpg"
+heroAlt: "blue shirt, pointing gesture, looking at camera, man"
+heroCredit:
+  name: "Picsbix"
+  url: "https://pixabay.com/users/Picsbix-49284130/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/blue-shirt-pointing-gesture-10476553/"
 seo:
   title: "Counteroffer Playbook: Base Pay, Bonus, Equity or Leave"
   metaDescription: "Not sure what to push on in a job offer? Learn when to negotiate base pay, sign-on bonus, equity or leave, with word-for-word scripts for remote roles."

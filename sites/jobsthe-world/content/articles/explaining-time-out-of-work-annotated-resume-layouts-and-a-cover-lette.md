@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1784
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/explaining-time-out-of-work-annotated-resume-layouts-and-a-cover-lette.jpg"
+heroAlt: "clock, historical, angel, time"
+heroCredit:
+  name: "Eleatell"
+  url: "https://pixabay.com/users/Eleatell-15115856/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/clock-historical-angel-time-hours-7245448/"
 seo:
   title: "Explaining Time Out of Work: Resume Layouts for Gaps"
   metaDescription: "Choose between a skills-first and a trimmed chronological resume for a work gap, with annotated templates and a cover letter opener for remote roles."

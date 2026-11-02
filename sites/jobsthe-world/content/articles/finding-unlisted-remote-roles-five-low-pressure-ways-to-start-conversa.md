@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1881
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/finding-unlisted-remote-roles-five-low-pressure-ways-to-start-conversa.jpg"
+heroAlt: "nepal, sunrise, mountains, mountainous"
+heroCredit:
+  name: "12019"
+  url: "https://pixabay.com/users/12019-12019/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/nepal-sunrise-mountains-mountainous-2184940/"
 seo:
   title: "Find Unlisted Remote Jobs: 5 Low-Pressure Outreach Ways"
   metaDescription: "Learn who to contact and what to say to find unlisted remote jobs, with five low-pressure outreach methods and copy-ready message templates you can use."

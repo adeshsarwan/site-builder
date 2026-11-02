@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1674
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/bedside-to-boardroom-a-realistic-timeline-for-nurses-moving-into-healt.jpg"
+heroAlt: "office, sitting room, executive, business"
+heroCredit:
+  name: "MagicDesk"
+  url: "https://pixabay.com/users/MagicDesk-930274/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/office-sitting-room-executive-730681/"
 seo:
   title: "Nurse to Healthcare Administration: A Realistic Timeline"
   metaDescription: "Which degrees, certifications and leadership experience hiring managers want when an RN moves into healthcare administration, and how long it takes."

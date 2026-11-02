@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1643
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/the-weekly-networking-routine-who-to-message-what-to-say-and-when-to-f.jpg"
+heroAlt: "hand washing, soap, wash, nature"
+heroCredit:
+  name: "slavoljubovski"
+  url: "https://pixabay.com/users/slavoljubovski-14965075/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/hand-washing-soap-wash-hygiene-4818792/"
 seo:
   title: "Weekly Networking Routine for Remote Job Seekers"
   metaDescription: "A simple weekly networking routine for remote job seekers: who to message, first-message scripts and follow-up timing that fits around applications."

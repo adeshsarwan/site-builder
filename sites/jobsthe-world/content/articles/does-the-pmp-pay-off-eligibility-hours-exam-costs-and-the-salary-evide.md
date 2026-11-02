@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1671
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/does-the-pmp-pay-off-eligibility-hours-exam-costs-and-the-salary-evide.jpg"
+heroAlt: "sunset, rally, car, race"
+heroCredit:
+  name: "akositim"
+  url: "https://pixabay.com/users/akositim-56590830/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/sunset-rally-car-race-sport-wrc-10415017/"
 seo:
   title: "Does the PMP Pay Off? Hours, Costs and Salary Facts"
   metaDescription: "Check PMP eligibility hours, budget exam and study costs, and test whether the reported salary premium fits your remote role before you pay a cent."

@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1845
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/moving-up-where-you-already-work-rewriting-your-resume-and-pitch-for-a.jpg"
+heroAlt: "escalator, stairs, metal segments, architecture"
+heroCredit:
+  name: "cocoparisienne"
+  url: "https://pixabay.com/users/cocoparisienne-127419/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/escalator-stairs-metal-segments-283448/"
 seo:
   title: "Internal Promotion Resume: How to Pitch Your Case"
   metaDescription: "Applying for a bigger role at your current company? Learn how to turn familiar work into proof of readiness on your resume and in your pitch."

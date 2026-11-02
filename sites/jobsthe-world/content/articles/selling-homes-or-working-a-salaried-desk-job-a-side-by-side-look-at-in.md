@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1616
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/selling-homes-or-working-a-salaried-desk-job-a-side-by-side-look-at-in.jpg"
+heroAlt: "entrepreneur, startup, woman, macbook"
+heroCredit:
+  name: "StartupStockPhotos"
+  url: "https://pixabay.com/users/StartupStockPhotos-690514/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/entrepreneur-startup-woman-macbook-593357/"
 seo:
   title: "Real Estate Agent vs Salaried Job: Income, Costs, Growth"
   metaDescription: "Compare real estate agent income risk, startup costs and long-term growth with a salaried desk job, plus a simple runway test before you switch."

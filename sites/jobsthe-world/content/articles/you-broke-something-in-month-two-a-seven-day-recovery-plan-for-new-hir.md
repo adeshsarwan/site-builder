@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1816
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/you-broke-something-in-month-two-a-seven-day-recovery-plan-for-new-hir.jpg"
+heroAlt: "broke, poor, empty, pockets"
+heroCredit:
+  name: "Tumisu"
+  url: "https://pixabay.com/users/Tumisu-148124/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/broke-poor-empty-pockets-money-4765739/"
 seo:
   title: "Made a Mistake at a New Job? 7-Day Remote Recovery Plan"
   metaDescription: "Broke something in your first months of a remote job? Use this seven-day plan with word-for-word scripts to tell your manager first and fix it."

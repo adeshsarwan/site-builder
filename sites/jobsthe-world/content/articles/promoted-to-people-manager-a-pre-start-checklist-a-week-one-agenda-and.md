@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1834
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/promoted-to-people-manager-a-pre-start-checklist-a-week-one-agenda-and.jpg"
+heroAlt: "company, boss, woman, office"
+heroCredit:
+  name: "phmaxiestevez"
+  url: "https://pixabay.com/users/phmaxiestevez-16108050/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/company-boss-woman-office-work-5064997/"
 seo:
   title: "New People Manager Checklist: Week One and First Quarter"
   metaDescription: "Promoted to people manager? Use this pre-start checklist, a day-by-day week-one agenda and measurable first-quarter goals for your remote team."

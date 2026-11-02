@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1955
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/the-home-studio-rehearsal-a-48-hour-tech-and-room-check-before-a-remot.jpg"
+heroAlt: "microphone, piano, music, wallpaper hd"
+heroCredit:
+  name: "Ri_Ya"
+  url: "https://pixabay.com/users/Ri_Ya-12911237/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/microphone-piano-music-instrument-4666623/"
 seo:
   title: "Remote Interview Tech Check: A 48-Hour Home Studio Plan"
   metaDescription: "Use this 48-hour checklist to test your internet, lighting, audio and room before a remote interview, with backup plans if something fails on the day."

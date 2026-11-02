@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1558
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/from-close-cycle-to-capital-markets-a-month-by-month-timeline-for-acco.jpg"
+heroAlt: "bike, trail, bicycle, sport"
+heroCredit:
+  name: "Pamjpat"
+  url: "https://pixabay.com/users/Pamjpat-6320763/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/bike-trail-bicycle-sport-ride-2769021/"
 seo:
   title: "Accountant to Corporate Finance: 12-Month Timeline"
   metaDescription: "A month-by-month plan for accountants moving into corporate finance and investing: which skills transfer, what to learn, and how long each stage takes."

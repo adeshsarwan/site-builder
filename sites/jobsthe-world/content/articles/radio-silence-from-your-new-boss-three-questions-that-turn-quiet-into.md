@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1746
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/radio-silence-from-your-new-boss-three-questions-that-turn-quiet-into.jpg"
+heroAlt: "wireless microphone, radio, microphone, sound"
+heroCredit:
+  name: "AlLes"
+  url: "https://pixabay.com/users/AlLes-2597842/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/wireless-microphone-radio-microphone-2907453/"
 seo:
   title: "New Boss Not Giving Feedback? 3 Questions to Ask Remotely"
   metaDescription: "Remote manager says nothing about your work? Use three scripted questions and a 10-minute weekly update to get clear, useful feedback quickly."

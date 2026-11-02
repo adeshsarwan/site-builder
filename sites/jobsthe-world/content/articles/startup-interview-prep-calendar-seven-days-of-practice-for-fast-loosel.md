@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1708
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/startup-interview-prep-calendar-seven-days-of-practice-for-fast-loosel.jpg"
+heroAlt: "avocado, chopping board, ingredients, produce"
+heroCredit:
+  name: "Pexels"
+  url: "https://pixabay.com/users/Pexels-2286921/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/avocado-chopping-board-ingredients-1838785/"
 seo:
   title: "Startup Interview Prep: 7-Day Practice Calendar"
   metaDescription: "Follow a seven-day startup interview prep plan to research the company, practice thinking aloud, and handle loose founder rounds with daily drills."

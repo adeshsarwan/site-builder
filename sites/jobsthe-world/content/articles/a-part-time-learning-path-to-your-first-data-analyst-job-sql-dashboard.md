@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1684
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/a-part-time-learning-path-to-your-first-data-analyst-job-sql-dashboard.jpg"
+heroAlt: "macro, cogwheel, gear, engine"
+heroCredit:
+  name: "Pavlofox"
+  url: "https://pixabay.com/users/Pavlofox-514753/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/macro-cogwheel-gear-engine-vintage-1452987/"
 seo:
   title: "Part-Time Data Analyst Learning Path: SQL First"
   metaDescription: "Learn SQL, dashboards and statistics in the right order while working full time, plus how to decide if you need a degree or certificate for remote work."

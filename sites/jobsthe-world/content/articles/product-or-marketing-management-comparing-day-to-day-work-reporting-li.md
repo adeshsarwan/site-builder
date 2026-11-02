@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1710
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/product-or-marketing-management-comparing-day-to-day-work-reporting-li.jpg"
+heroAlt: "businessman, write, marker, text"
+heroCredit:
+  name: "geralt"
+  url: "https://pixabay.com/users/geralt-9301/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/businessman-write-marker-text-562572/"
 seo:
   title: "Product vs Marketing Management: Work, Reporting, Pay"
   metaDescription: "Compare product management and marketing management: daily tasks, who you report to, and how salary, bonus and equity differ, with remote-hiring tips."

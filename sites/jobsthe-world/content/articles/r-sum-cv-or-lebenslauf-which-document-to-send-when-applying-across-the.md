@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1646
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/r-sum-cv-or-lebenslauf-which-document-to-send-when-applying-across-the.jpg"
+heroAlt: "dumplings, chinese, food, appetizer"
+heroCredit:
+  name: "igorovsyannykov"
+  url: "https://pixabay.com/users/igorovsyannykov-6222956/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/dumplings-chinese-food-appetizer-3315963/"
 seo:
   title: "Résumé vs CV vs Lebenslauf: Which to Send by Country"
   metaDescription: "Learn what résumé, CV or Lebenslauf means in the US, Canada, UK and Australia, plus length, photo and format rules for each remote application."

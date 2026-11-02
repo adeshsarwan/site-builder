@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1895
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/returning-to-work-after-a-career-break-drafting-a-resume-that-handles.jpg"
+heroAlt: "rainbow, cloud, evening sun, rain"
+heroCredit:
+  name: "fietzfotos"
+  url: "https://pixabay.com/users/fietzfotos-6795508/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/rainbow-cloud-evening-sun-rain-4047523/"
 seo:
   title: "Resume After a Career Break: Handle the Gap Honestly"
   metaDescription: "Returning to work after a career break? Learn how to list dates, explain the gap in one line, and lead with strengths on a resume built for remote roles."

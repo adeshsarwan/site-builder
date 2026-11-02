@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1855
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/from-classroom-to-learning-and-development-the-portfolio-projects-and.jpg"
+heroAlt: "never stop learning, continuing education, personal development, education"
+heroCredit:
+  name: "geralt"
+  url: "https://pixabay.com/users/geralt-9301/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/never-stop-learning-3258944/"
 seo:
   title: "Teacher to L&D: Portfolio Projects and Tools to Master"
   metaDescription: "Teacher moving into L&D? Learn which portfolio projects, e-learning tools and business metrics to tackle first so your applications land interviews."

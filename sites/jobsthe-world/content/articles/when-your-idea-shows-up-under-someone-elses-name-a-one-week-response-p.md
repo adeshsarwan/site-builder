@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1785
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/when-your-idea-shows-up-under-someone-elses-name-a-one-week-response-p.jpg"
+heroAlt: "finnish lapphund, dog, puppy, lapphund"
+heroCredit:
+  name: "SSidde"
+  url: "https://pixabay.com/users/SSidde-19562401/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/finnish-lapphund-dog-puppy-lapphund-8355620/"
 seo:
   title: "Coworker Took Credit for Your Work? One-Week Remote Plan"
   metaDescription: "Someone presented your work as theirs in Slack, a meeting or a doc? Use this seven-day plan, with scripts, to correct the record without drama."

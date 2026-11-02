@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1621
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/writing-a-teacher-cover-letter-for-a-principal-or-district-portal-two.jpg"
+heroAlt: "notebook, book, leather, leather cover"
+heroCredit:
+  name: "qiye"
+  url: "https://pixabay.com/users/qiye-116/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/notebook-book-leather-leather-cover-420011/"
 seo:
   title: "Teacher Cover Letter: Principal & District Templates"
   metaDescription: "Copy two teacher cover letter templates, one for principals and one for district portals, with matching resume bullets and the lines to customize."

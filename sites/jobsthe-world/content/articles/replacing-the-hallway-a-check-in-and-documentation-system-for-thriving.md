@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1808
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/replacing-the-hallway-a-check-in-and-documentation-system-for-thriving.jpg"
+heroAlt: "receptionists, phone call, hotel, reception"
+heroCredit:
+  name: "Rodrigo_SalomonHC"
+  url: "https://pixabay.com/users/Rodrigo_SalomonHC-20127871/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/receptionists-phone-call-hotel-5975962/"
 seo:
   title: "Remote Job First 90 Days: Check-In System That Works"
   metaDescription: "Missing office cues in a remote or hybrid job? Use this check-in schedule, question bank and written benchmarks to learn your team's real norms fast."

@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1805
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/searching-in-stealth-how-to-keep-your-employer-colleagues-and-linkedin.jpg"
+heroAlt: "leopard, wildcat, wildlife, safari"
+heroCredit:
+  name: "IanZA"
+  url: "https://pixabay.com/users/IanZA-2026973/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/leopard-wildcat-wildlife-safari-2895448/"
 seo:
   title: "Job Search in Stealth: Hide It From Your Employer"
   metaDescription: "Search for a new job without your manager knowing. Lock down LinkedIn, separate devices, time references and schedule remote interviews discreetly."

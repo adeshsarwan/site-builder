@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1977
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/stop-applying-twice-building-a-job-application-log-with-status-columns.jpg"
+heroAlt: "stop, sign, traffic sign, road sign"
+heroCredit:
+  name: "knerri61"
+  url: "https://pixabay.com/users/knerri61-772758/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/stop-sign-traffic-sign-road-sign-634941/"
 seo:
   title: "Job Application Log: Track Applications & Follow-Ups"
   metaDescription: "Build a simple job application log with status columns, follow-up reminders and resume notes so you never apply twice or send the wrong resume."
