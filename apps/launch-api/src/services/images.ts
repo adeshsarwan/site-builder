@@ -13,6 +13,35 @@ export interface PickedImage { hero: HeroImage; blob?: { path: string; sha: stri
 
 const UTM = 'utm_source=site_builder&utm_medium=referral';
 
+const CATEGORY_QUERY: Record<string, string> = {
+  'interview-prep': 'job interview',
+  'resume-cover-letters': 'resume writing desk',
+  'job-search-strategy': 'job search laptop',
+  'salary-negotiation': 'business meeting handshake',
+  'workplace-success': 'office teamwork',
+  'career-change-growth': 'career planning notebook',
+};
+const STOP = new Set('a an and the to of for in on with without from your you how what when why is are do does it its this that vs into at by as be can should'.split(' '));
+
+/** Search phrases from most to least specific: article query → title keywords → category → generic. */
+export function imageQueries(primary: string | undefined, title: string, categorySlug: string): string[] {
+  const words = title.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter((w) => w.length > 2 && !STOP.has(w));
+  const q = [primary, words.slice(0, 3).join(' '), words.slice(0, 2).join(' '), CATEGORY_QUERY[categorySlug], 'people working laptop', 'office work']
+    .map((x) => (x ?? '').trim()).filter(Boolean);
+  return [...new Set(q)];
+}
+
+/** Tries each phrase until one returns an unused photo. */
+export async function pickImageWithFallback(env: Env, queries: string[], slug: string, siteSlug: string, used: Set<string>): Promise<PickedImage | null> {
+  for (const q of queries) {
+    try {
+      const r = await pickImage(env, q, slug, siteSlug, used);
+      if (r) return r;
+    } catch { /* try the next phrase */ }
+  }
+  return null;
+}
+
 export async function pickImage(env: Env, query: string, slug: string, siteSlug: string, used: Set<string>): Promise<PickedImage | null> {
   const provider = (env.IMAGE_PROVIDER ?? 'pixabay').toLowerCase();
   if (provider === 'unsplash' && env.UNSPLASH_ACCESS_KEY) return unsplash(env, query, used);

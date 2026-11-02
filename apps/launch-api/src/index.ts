@@ -3,6 +3,7 @@ import { cors } from 'hono/cors';
 import { streamSSE } from 'hono/streaming';
 import { createSite, events, getSiteRow, siteStatus, updateSite } from './db';
 import { ensureZone } from './services/cloudflare';
+import { backfillImages } from './services/backfill';
 import { slugFromDomain, type Env, type LaunchInput } from './types';
 
 export { LaunchSiteWorkflow } from './workflow';
@@ -100,6 +101,20 @@ api.get('/v1/sites/:id/events', async (c) => {
       await stream.sleep(2000);
     }
   });
+});
+
+// Add photos to articles that have none, then redeploy the site.
+api.post('/v1/sites/:id/images', async (c) => {
+  const p = c.req.param('id').toLowerCase();
+  const row = p.startsWith('site_')
+    ? await c.env.DB.prepare('SELECT slug FROM sites WHERE id = ?').bind(p).first<any>()
+    : await c.env.DB.prepare('SELECT slug FROM sites WHERE domain = ?').bind(p).first<any>();
+  const slug = row?.slug ?? slugFromDomain(p);
+  try {
+    return c.json({ site: slug, ...(await backfillImages(c.env, slug)) });
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500);
+  }
 });
 
 // Resume a failed launch: finished steps are skipped, the failed step runs again.

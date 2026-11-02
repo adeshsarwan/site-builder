@@ -5,7 +5,7 @@ import * as cf from './services/cloudflare';
 import * as gh from './services/github';
 import * as google from './services/google';
 import { planArticles, writeArticle, toMarkdown, topicFromMarkdown, type ArticlePlan, type Topic } from './services/content';
-import { pickImage } from './services/images';
+import { pickImageWithFallback, imageQueries } from './services/images';
 
 type Out = Record<string, any>;
 const FINISHED = ['done', 'warning', 'skipped'];
@@ -138,7 +138,7 @@ export class LaunchSiteWorkflow extends WorkflowEntrypoint<Env, LaunchParams> {
               if (dry) return { md: toMarkdown(input, { plan, description: 'Dry run', metaDescription: 'Dry run', seoTitle: plan.title, readTime: 3, body: '## Section\n\nDry run body.', faq: [], sources: [], imageQuery: 'office', keywords: [] }, today, null), image: null };
               const art = await writeArticle(env, input, plan);
               let picked = null;
-              try { picked = imgEnv.IMAGE_PROVIDER === 'none' ? null : await pickImage(imgEnv, art.imageQuery, plan.slug, slug, used); } catch { picked = null; }
+              try { picked = imgEnv.IMAGE_PROVIDER === 'none' ? null : await pickImageWithFallback(imgEnv, imageQueries(art.imageQuery, plan.title, plan.categorySlug), plan.slug, slug, used); } catch { picked = null; }
               return { md: toMarkdown(input, art, today, picked?.hero ?? null), image: picked?.blob ?? null };
             }),
           ));

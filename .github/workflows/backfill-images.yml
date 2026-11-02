@@ -1,0 +1,22 @@
+name: Backfill images
+run-name: backfill images ${{ inputs.domain }}
+
+# Adds a Pixabay photo (downloaded and self-hosted, with credit) to every article of a site that has none,
+# then redeploys the site.
+on:
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: 'Domain, e.g. jobsthe.world'
+        required: true
+        type: string
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          R=$(curl -sS -m 600 -X POST "https://sitebuilder.thebesads.com/api/v1/sites/${{ inputs.domain }}/images" -H "Authorization: Bearer ${{ secrets.LAUNCH_API_KEY }}")
+          echo "$R" | jq .
+          echo "$R" | jq -r '"### Photos for \(.site)\n\nArticles: \(.checked) · missing photos: \(.missing) · added: \(.added) · still missing: \(.stillMissing | length)\n\nA deploy of the site has been started."' >> "$GITHUB_STEP_SUMMARY"
+          echo "$R" | jq -e '.error | not' >/dev/null
