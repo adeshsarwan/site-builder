@@ -1,9 +1,14 @@
 ---
-// Question funnel shown before gated pages. One question per screen, answers saved in a cookie,
-// then the visitor continues to `next`. Works without JS (all steps in one form) and is enhanced with JS.
+// Question funnel with an opt-in rewarded video, following the Price Optimiser integration guide:
+//  1. While the visitor answers, the rewarded ad is preloaded (preloadRewarded).
+//  2. After the last answer the visitor chooses: watch a short video, or continue without it.
+//  3. While the video plays, the results view's display slots are preloaded (preloadSlots).
+//  4. After the video closes (or on "no thanks" / no-fill), the results view is shown in this same
+//     document and its slots are revealed (revealSlots). Works without JS as a plain form.
 export const prerender = false;
 import Base from '@/layouts/Base.astro';
 import AdSlot from '@/components/AdSlot.astro';
+import { site } from '@/lib/site';
 import { getFunnel, funnelCookie, sanitizeAnswers, encodeAnswers, safeNext } from '@/lib/funnels';
 
 const f = getFunnel(Astro.params.funnel!);
@@ -15,21 +20,26 @@ if (Astro.url.searchParams.get('reset')) Astro.cookies.delete(funnelCookie(f.id)
 if (Astro.request.method === 'POST') {
   const form = await Astro.request.formData();
   const answers = sanitizeAnswers(f, Object.fromEntries(form));
+  const ajax = Astro.request.headers.get('x-funnel') === '1';
   if (Object.keys(answers).length === f.steps.length) {
     Astro.cookies.set(funnelCookie(f.id), encodeAnswers(answers), {
       path: '/', httpOnly: true, secure: true, sameSite: 'lax', maxAge: 60 * 60 * 24 * (f.rememberDays ?? 30),
     });
+    if (ajax) return new Response(null, { status: 204 });
     return Astro.redirect(safeNext(String(form.get('next') ?? next)), 303);
   }
+  if (ajax) return new Response(JSON.stringify({ error: 'incomplete' }), { status: 400 });
 }
+const rewarded = site.ads.enabled && f.rewarded?.enabled;
 const seo = { title: f.title, description: f.intro ?? f.title, path: `/start/${f.id}`, noindex: true };
 ---
-<Base seo={seo} leaderboard={false}>
-  <section class="wrap-narrow funnel" data-funnel={f.id} data-interstitial-after={f.interstitialAfterStep ?? ''}>
+<Base seo={seo} leaderboard={false} anchor={false}>
+  <section class="wrap-narrow funnel" id="fn-questions" data-funnel={f.id} data-next={next}
+    data-rewarded={rewarded ? '1' : ''} data-interstitial-after={!rewarded && f.interstitialAfterStep !== undefined ? f.interstitialAfterStep : ''}>
     <h1>{f.title}</h1>
     {f.intro && <p class="dek">{f.intro}</p>}
     <div class="progress" aria-hidden="true"><span style="width:0%"></span></div>
-    <form method="post">
+    <form method="post" id="fn-form">
       <input type="hidden" name="next" value={next} />
       {f.steps.map((s, i) => (
         <fieldset class="step" data-step={i}>
@@ -44,37 +54,144 @@ const seo = { title: f.title, description: f.intro ?? f.title, path: `/start/${f
       ))}
       <div class="funnel-actions">
         <button type="button" class="btn btn--ghost" data-back hidden>Back</button>
-        <button type="submit" class="btn">See my jobs</button>
+        <button type="submit" class="btn" data-submit>See my jobs</button>
       </div>
     </form>
-    <AdSlot id="ad-incontent" />
+
+    <div class="fn-ready" id="fn-ready" hidden>
+      <div class="fn-ready-icon" aria-hidden="true">✓</div>
+      <h2>{f.rewarded?.title ?? 'Your job matches are ready'}</h2>
+      <p class="meta" id="fn-count">We found openings that match your answers.</p>
+      {rewarded && <button type="button" class="btn btn--wide" id="fn-watch">{f.rewarded?.cta ?? 'Watch a short video to see your jobs'}</button>}
+      <button type="button" class={rewarded ? 'btn btn--ghost btn--wide' : 'btn btn--wide'} id="fn-skip">{rewarded ? (f.rewarded?.skip ?? 'No thanks, show my jobs') : 'Show my jobs'}</button>
+    </div>
   </section>
+
+  <!-- Results view: in the document from the start (hidden) so its slots can be preloaded, then revealed. -->
+  <section class="wrap fn-results" id="fn-results" hidden>
+    <div class="page-head">
+      <h1 id="fn-results-title">Jobs for you</h1>
+      <p class="meta"><a href={`/start/${f.id}?next=${encodeURIComponent(next)}&reset=1`}>Change my answers</a> · <a href={next} id="fn-all">All results & filters</a></p>
+    </div>
+    <div class="with-sidebar">
+      <section aria-live="polite">
+        <div id="fn-list-a"></div>
+        <AdSlot id="ad-results" />
+        <div id="fn-list-b"></div>
+        <AdSlot id="ad-incontent" />
+        <div id="fn-list-c"></div>
+        <p><a class="btn" href={next} id="fn-more">See more jobs</a></p>
+      </section>
+      <aside class="sidebar"><AdSlot id="ad-sidebar" class="sticky" /></aside>
+    </div>
+    <AdSlot id="ad-anchor" />
+  </section>
+
   <script>
-    // Progressive enhancement: one step at a time, auto-advance on answer.
-    const root = document.querySelector<HTMLElement>('.funnel')!;
-    const steps = [...root.querySelectorAll<HTMLFieldSetElement>('.step')];
-    const bar = root.querySelector<HTMLSpanElement>('.progress span')!;
-    const back = root.querySelector<HTMLButtonElement>('[data-back]')!;
-    const submit = root.querySelector<HTMLButtonElement>('button[type=submit]')!;
-    const interstitialAfter = root.dataset.interstitialAfter === '' ? -1 : Number(root.dataset.interstitialAfter);
+    type Job = { id: string; title: string; company: string; location: string; remote?: boolean; salary?: string; type?: string; postedAt?: string; url: string; snippet?: string };
+    const RESULT_SLOTS = ['ad-results', 'ad-incontent', 'ad-sidebar', 'ad-anchor'];
+    const q = document.getElementById('fn-questions')!;
+    const form = document.getElementById('fn-form') as HTMLFormElement;
+    const steps = [...q.querySelectorAll<HTMLFieldSetElement>('.step')];
+    const bar = q.querySelector<HTMLSpanElement>('.progress span')!;
+    const back = q.querySelector<HTMLButtonElement>('[data-back]')!;
+    const submit = q.querySelector<HTMLButtonElement>('[data-submit]')!;
+    const ready = document.getElementById('fn-ready')!;
+    const results = document.getElementById('fn-results')!;
+    const next = q.dataset.next || '/jobs';
+    const useRewarded = q.dataset.rewarded === '1';
+    const interstitialAfter = q.dataset.interstitialAfter === '' ? -1 : Number(q.dataset.interstitialAfter);
+    const ads = () => (window as any).siteAds as any | undefined;
+    const whenAds = () => new Promise<any>((resolve) => {
+      if (ads()) return resolve(ads());
+      document.addEventListener('siteads:ready', () => resolve(ads()), { once: true });
+      setTimeout(() => resolve(ads()), 8000); // continue without ads if the SDK never loads
+    });
+
+    // 1. Preload the rewarded ad while the visitor answers.
+    if (useRewarded) whenAds().then((a) => a?.preloadReward?.()).catch(() => {});
+
+    // Progressive enhancement: one step at a time.
     let i = 0;
-    root.classList.add('js');
+    q.classList.add('js');
     const show = (n: number) => {
       i = n;
       steps.forEach((s, k) => (s.hidden = k !== n));
       bar.style.width = `${(n / steps.length) * 100}%`;
       back.hidden = n === 0;
-      submit.hidden = n !== steps.length - 1 || !steps[n].querySelector('input:checked');
+      submit.hidden = true;
+    };
+    let jobsPromise: Promise<{ jobs: Job[]; total: number }> | null = null;
+    const finish = async () => {
+      bar.style.width = '100%';
+      form.hidden = true;
+      ready.hidden = false;
+      // Save answers (cookie) and fetch matching jobs in the background.
+      const data = new FormData(form);
+      jobsPromise = fetch(location.pathname, { method: 'POST', body: data, headers: { 'x-funnel': '1' }, credentials: 'same-origin' })
+        .then(() => fetch(`/api/jobs.json${new URL(next, location.origin).search}`, { credentials: 'same-origin' }))
+        .then((r) => r.json())
+        .catch(() => ({ jobs: [], total: 0 }));
+      const r = await jobsPromise;
+      const c = document.getElementById('fn-count');
+      if (c && r.total) c.textContent = `We found ${r.total.toLocaleString()} ${r.total === 1 ? "opening" : "openings"} that match your answers.`;
     };
     steps.forEach((s, k) =>
       s.addEventListener('change', async () => {
-        if (k === steps.length - 1) { submit.hidden = false; bar.style.width = '100%'; return; }
-        // Publisher-chosen transition for an interstitial opportunity; the flow continues regardless of the result.
-        if (k === interstitialAfter) await (window as any).siteAds?.requestInterstitialOpportunity?.();
+        if (k === steps.length - 1) return finish();
+        if (k === interstitialAfter) await ads()?.requestInterstitialOpportunity?.(); // only when rewarded is off
         show(k + 1);
       }),
     );
     back.addEventListener('click', () => show(Math.max(0, i - 1)));
     show(0);
+
+    const esc = (s = '') => s.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]!);
+    const card = (j: Job) => `
+      <article class="job"><div>
+        <h3><a href="${esc(j.url)}" rel="nofollow sponsored noopener" target="_blank">${esc(j.title)}</a></h3>
+        <p class="job-co">${esc(j.company)} · ${esc(j.location)}</p>
+        ${j.snippet ? `<p class="job-snippet">${esc(j.snippet)}</p>` : ''}
+      </div><div class="job-side">
+        ${j.salary ? `<span class="pill">${esc(j.salary)}</span>` : ''}${j.type ? `<span class="pill pill--muted">${esc(j.type)}</span>` : ''}
+        <a class="btn btn--sm" href="${esc(j.url)}" rel="nofollow sponsored noopener" target="_blank">Apply</a>
+      </div></article>`;
+
+    // 4. Show the results view in this document, then reveal its (preloaded) slots.
+    let shown = false;
+    const showResults = async () => {
+      if (shown) return;
+      shown = true;
+      const r = (await jobsPromise) ?? { jobs: [], total: 0 };
+      const list = r.jobs ?? [];
+      document.getElementById('fn-list-a')!.innerHTML = list.slice(0, 3).map(card).join('') || '<p>No exact matches yet — try <a href="' + esc(next) + '">all jobs</a>.</p>';
+      document.getElementById('fn-list-b')!.innerHTML = list.slice(3, 8).map(card).join('');
+      document.getElementById('fn-list-c')!.innerHTML = list.slice(8).map(card).join('');
+      q.hidden = true;
+      results.hidden = false;
+      history.replaceState(null, '', next);
+      window.scrollTo({ top: 0 });
+      ads()?.revealNextViewAds?.(RESULT_SLOTS).catch?.(() => {});
+    };
+
+    document.getElementById('fn-skip')!.addEventListener('click', () => {
+      ads()?.preloadNextViewAds?.(RESULT_SLOTS)?.catch?.(() => {});
+      showResults();
+    });
+
+    const watch = document.getElementById('fn-watch') as HTMLButtonElement | null;
+    watch?.addEventListener('click', async () => {
+      watch.disabled = true;
+      const a = await whenAds();
+      if (!a) return showResults();
+      // 3. While the rewarded video plays, preload the results view's display slots.
+      a.preloadNextViewAds?.(RESULT_SLOTS)?.catch?.(() => {});
+      await a.showRewardAfterOptIn({
+        onGranted() { /* reward = results view; shown after close */ },
+        onClosed() {},
+        onFallback() { /* no-fill, decline, timeout or error: continue without a reward */ },
+      });
+      showResults();
+    });
   </script>
 </Base>

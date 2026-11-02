@@ -15,6 +15,8 @@ export interface Funnel {
   interstitialAfterStep?: number;
   /** Cookie lifetime in days */
   rememberDays?: number;
+  /** Offer an opt-in rewarded video before showing results (preloaded while the visitor answers). */
+  rewarded?: { enabled: boolean; title?: string; cta?: string; skip?: string };
 }
 export interface Category { slug: string; name: string; description: string }
 

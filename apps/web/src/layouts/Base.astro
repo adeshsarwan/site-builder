@@ -4,8 +4,8 @@ import { site, abs } from '@/lib/site';
 import { websiteLd, type PageSeo } from '@/lib/seo';
 import AdSlot from '@/components/AdSlot.astro';
 
-interface Props { seo: PageSeo; leaderboard?: boolean }
-const { seo, leaderboard = true } = Astro.props;
+interface Props { seo: PageSeo; leaderboard?: boolean; anchor?: boolean }
+const { seo, leaderboard = true, anchor = true } = Astro.props;
 const canonical = seo.canonical ?? abs(seo.path);
 const image = seo.image ? abs(seo.image) : site.social?.defaultImage ? abs(site.social.defaultImage) : undefined;
 const ld = [websiteLd(), ...(seo.jsonLd ?? [])];
@@ -97,6 +97,6 @@ const path = Astro.url.pathname;
       </div>
       <div class="wrap copyright">© {new Date().getFullYear()} {site.legal.companyName}. All rights reserved.</div>
     </footer>
-    {site.ads.enabled && site.ads.anchor !== false && <AdSlot id="ad-anchor" />}
+    {anchor && site.ads.enabled && site.ads.anchor !== false && <AdSlot id="ad-anchor" />}
   </body>
 </html>
