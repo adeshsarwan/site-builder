@@ -1,0 +1,290 @@
+{
+  "slug": "jobsthe-world",
+  "domain": "jobsthe.world",
+  "name": "Jobs The World",
+  "tagline": "Find work that fits your life",
+  "description": "Job search guides, interview prep and current openings from Jobs The World.",
+  "locale": "en-US",
+  "country": "US",
+  "theme": {
+    "primary": "#1d4ed8",
+    "accent": "#f59e0b",
+    "logoText": "Jobs The World"
+  },
+  "categories": [
+    {
+      "slug": "job-search-strategy",
+      "name": "Job Search Strategy",
+      "description": "How to find openings, organise your search and get more interviews."
+    },
+    {
+      "slug": "resume-cover-letters",
+      "name": "Resume & Cover Letters",
+      "description": "Templates, examples and fixes for resumes and cover letters."
+    },
+    {
+      "slug": "interview-prep",
+      "name": "Interview Prep",
+      "description": "Question-by-question preparation for every interview format."
+    },
+    {
+      "slug": "salary-negotiation",
+      "name": "Salary & Negotiation",
+      "description": "What to ask for, when, and the words to use."
+    },
+    {
+      "slug": "workplace-success",
+      "name": "Workplace Success",
+      "description": "Habits and scripts for your first months in a new role."
+    },
+    {
+      "slug": "career-change-growth",
+      "name": "Career Change & Growth",
+      "description": "Realistic routes, costs and timelines for changing fields."
+    }
+  ],
+  "ads": {
+    "enabled": true,
+    "poSite": "jobsthe.world",
+    "sdkUrl": "https://serve.thebesads.com/sdk/publisher-sdk.js",
+    "runtimeUrl": "https://serve.thebesads.com/runtime/config",
+    "adsTxt": [],
+    "anchor": true
+  },
+  "analytics": {
+    "ga4MeasurementId": "G-H6H3P8EN7K"
+  },
+  "searchConsole": {
+    "googleSiteVerification": ""
+  },
+  "jobs": {
+    "enabled": true,
+    "pageSize": 20,
+    "defaultQuery": {},
+    "countries": [
+      {
+        "value": "us",
+        "label": "United States"
+      },
+      {
+        "value": "ca",
+        "label": "Canada"
+      },
+      {
+        "value": "au",
+        "label": "Australia"
+      },
+      {
+        "value": "gb",
+        "label": "United Kingdom"
+      }
+    ],
+    "categories": [
+      {
+        "value": "remote",
+        "label": "Remote jobs"
+      },
+      {
+        "value": "healthcare",
+        "label": "Healthcare"
+      },
+      {
+        "value": "tech",
+        "label": "Tech & IT"
+      },
+      {
+        "value": "sales",
+        "label": "Sales & customer service"
+      },
+      {
+        "value": "office",
+        "label": "Office & admin"
+      },
+      {
+        "value": "trades",
+        "label": "Warehouse, driving & trades"
+      },
+      {
+        "value": "finance",
+        "label": "Finance & accounting"
+      },
+      {
+        "value": "education",
+        "label": "Education"
+      }
+    ],
+    "landing": {
+      "headline": "Find work that's hiring right now",
+      "subhead": "Search thousands of current openings across the US, Canada, Australia and the UK — remote and on-site. Apply directly on the employer's site.",
+      "defaultCountry": "us",
+      "popular": [
+        {
+          "label": "Remote jobs",
+          "href": "/jobs?category=remote&remote=yes"
+        },
+        {
+          "label": "US jobs hiring now",
+          "href": "/jobs?country=us"
+        },
+        {
+          "label": "Canada jobs",
+          "href": "/jobs?country=ca"
+        },
+        {
+          "label": "UK jobs",
+          "href": "/jobs?country=gb"
+        },
+        {
+          "label": "Australia jobs",
+          "href": "/jobs?country=au"
+        },
+        {
+          "label": "Entry level",
+          "href": "/jobs?level=entry"
+        },
+        {
+          "label": "Healthcare",
+          "href": "/jobs?category=healthcare"
+        },
+        {
+          "label": "Tech & IT",
+          "href": "/jobs?category=tech"
+        },
+        {
+          "label": "Warehouse & driving",
+          "href": "/jobs?category=trades"
+        },
+        {
+          "label": "Customer service",
+          "href": "/jobs?category=sales"
+        }
+      ]
+    }
+  },
+  "funnels": [
+    {
+      "id": "job-match",
+      "title": "Let's find jobs that fit you",
+      "intro": "Four quick questions so we can show you the most relevant openings.",
+      "gate": [
+        "/jobs"
+      ],
+      "rememberDays": 30,
+      "steps": [
+        {
+          "key": "country",
+          "question": "Where are you looking for work?",
+          "options": [
+            {
+              "value": "us",
+              "label": "United States"
+            },
+            {
+              "value": "ca",
+              "label": "Canada"
+            },
+            {
+              "value": "au",
+              "label": "Australia"
+            },
+            {
+              "value": "gb",
+              "label": "United Kingdom"
+            }
+          ]
+        },
+        {
+          "key": "category",
+          "question": "What kind of work are you looking for?",
+          "options": [
+            {
+              "value": "remote",
+              "label": "Remote jobs"
+            },
+            {
+              "value": "healthcare",
+              "label": "Healthcare"
+            },
+            {
+              "value": "tech",
+              "label": "Tech & IT"
+            },
+            {
+              "value": "sales",
+              "label": "Sales & customer service"
+            },
+            {
+              "value": "office",
+              "label": "Office & admin"
+            },
+            {
+              "value": "trades",
+              "label": "Warehouse, driving & trades"
+            },
+            {
+              "value": "finance",
+              "label": "Finance & accounting"
+            },
+            {
+              "value": "education",
+              "label": "Education"
+            },
+            {
+              "value": "any",
+              "label": "Open to anything"
+            }
+          ]
+        },
+        {
+          "key": "level",
+          "question": "How much experience do you have?",
+          "options": [
+            {
+              "value": "entry",
+              "label": "Just starting out"
+            },
+            {
+              "value": "mid",
+              "label": "2–5 years"
+            },
+            {
+              "value": "senior",
+              "label": "5+ years"
+            }
+          ]
+        },
+        {
+          "key": "remote",
+          "question": "Do you want to work remotely?",
+          "options": [
+            {
+              "value": "yes",
+              "label": "Remote only"
+            },
+            {
+              "value": "hybrid",
+              "label": "Remote or hybrid"
+            },
+            {
+              "value": "no",
+              "label": "On-site is fine"
+            }
+          ]
+        }
+      ],
+      "rewarded": {
+        "enabled": true,
+        "title": "Your job matches are ready",
+        "cta": "Watch a short video to see your jobs",
+        "skip": "No thanks, show my jobs"
+      }
+    }
+  ],
+  "legal": {
+    "companyName": "Jobs The World",
+    "contactEmail": "hello@jobsthe.world"
+  },
+  "social": {
+    "defaultImage": ""
+  }
+}
