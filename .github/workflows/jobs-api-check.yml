@@ -1,0 +1,38 @@
+name: Jobs API check
+run-name: jobs-api check ${{ inputs.refresh_country }} ${{ inputs.refresh_category }}
+
+# Health, usage and (optionally) a small manual refresh, run from GitHub with the JOBS_API_KEY secret.
+on:
+  workflow_dispatch:
+    inputs:
+      refresh_country:
+        description: 'Run a refresh for this country now (us, ca, au, gb) — leave empty to skip'
+        required: false
+        default: ''
+        type: string
+      refresh_category:
+        description: 'Limit the refresh to one category (e.g. remote) — empty = all 8'
+        required: false
+        default: ''
+        type: string
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      BASE: ${{ secrets.JOBS_API_BASE }}
+      KEY: ${{ secrets.JOBS_API_KEY }}
+    steps:
+      - name: Health and usage
+        run: |
+          echo "health:";   curl -sS "$BASE/health"; echo
+          echo "usage:";    curl -sS "$BASE/internal/usage" -H "x-api-key: $KEY"; echo
+          echo "sample:";   curl -sS "$BASE/jobs?country=us&limit=3" -H "x-api-key: $KEY" | head -c 1500; echo
+      - name: Refresh
+        if: ${{ inputs.refresh_country != '' }}
+        run: |
+          Q="country=${{ inputs.refresh_country }}"
+          [ -n "${{ inputs.refresh_category }}" ] && Q="$Q&category=${{ inputs.refresh_category }}"
+          curl -sS -m 600 -X POST "$BASE/internal/refresh?$Q" -H "x-api-key: $KEY" | tee /tmp/r.json; echo
+          echo "### Refresh $Q" >> "$GITHUB_STEP_SUMMARY"; echo '```json' >> "$GITHUB_STEP_SUMMARY"; cat /tmp/r.json >> "$GITHUB_STEP_SUMMARY"; echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "health after:"; curl -sS "$BASE/health"; echo
