@@ -46,14 +46,14 @@ jobs:
           P=$(gcloud config get-value project)
           RT="jobs-api-runtime@${P}.iam.gserviceaccount.com"
           echo "PROJECT=$P" >> "$GITHUB_ENV"; echo "RT=$RT" >> "$GITHUB_ENV"
-          gcloud services enable run.googleapis.com artifactregistry.googleapis.com secretmanager.googleapis.com \
-            cloudscheduler.googleapis.com iam.googleapis.com sqladmin.googleapis.com
+          gcloud services enable cloudresourcemanager.googleapis.com run.googleapis.com artifactregistry.googleapis.com \
+            secretmanager.googleapis.com cloudscheduler.googleapis.com iam.googleapis.com sqladmin.googleapis.com
           gcloud artifacts repositories describe "$REPO" --location "$REGION" >/dev/null 2>&1 || \
             retry gcloud artifacts repositories create "$REPO" --repository-format docker --location "$REGION" --quiet
           gcloud iam service-accounts describe "$RT" >/dev/null 2>&1 || \
-            gcloud iam service-accounts create jobs-api-runtime --display-name "Jobs API runtime"
+            retry gcloud iam service-accounts create jobs-api-runtime --display-name "Jobs API runtime"
           if [ -n "$CLOUDSQL_INSTANCE" ]; then
-            gcloud projects add-iam-policy-binding "$P" --member "serviceAccount:$RT" --role roles/cloudsql.client --condition=None >/dev/null
+            retry gcloud projects add-iam-policy-binding "$P" --member "serviceAccount:$RT" --role roles/cloudsql.client --condition=None --quiet >/dev/null
             echo "SQL_FLAG=--add-cloudsql-instances=$CLOUDSQL_INSTANCE" >> "$GITHUB_ENV"
           fi
           put_secret() { # name value — adds a version only when the value changed
