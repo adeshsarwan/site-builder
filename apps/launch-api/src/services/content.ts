@@ -58,21 +58,31 @@ export function topicFromMarkdown(md: string): Topic | null {
  * a fresh title and angle for its niche and audience, so no two sites share headlines.
  */
 export async function planArticles(env: Env, input: LaunchInput, topics: Topic[], extra: number, existingTitles: string[] = []): Promise<ArticlePlan[]> {
-  const text = await claude(
-    env,
-    'You plan editorial calendars for career-advice websites. Every title you write is new and specific to the site\'s audience. Reply with JSON only.',
-    `Site: ${input.name} (${input.domain}). Audience/niche: ${input.niche ?? 'job seekers'} in ${input.country ?? 'US'}.
-${topics.length ? `For each of these ${topics.length} subject areas, propose ONE new article for this audience. Use a different title and angle — never reuse the wording below:\n${topics.map((t, i) => `${i + 1}. [${t.categorySlug}] ${t.title} — ${t.summary}`).join('\n')}\n` : ''}
-${extra > 0 ? `Then add ${extra} more article ideas on other search-driven topics not covered above.\n` : ''}${existingTitles.length ? `The site already has these articles — do not duplicate or closely overlap them:\n${existingTitles.slice(0, 120).map((t) => `- ${t}`).join('\n')}\n` : ''}
-Category slugs: ${CATEGORIES.join(', ')}.
-Return a JSON array of {"title","categorySlug","angle"} where angle is one sentence on the reader's specific problem. ${topics.length + extra} items.`,
-    Math.min(16000, 400 + (topics.length + extra) * 120),
-  );
+  // Plan in groups of 10 so each reply stays well inside the output limit; each group sees what is already planned.
+  const CHUNK = 10;
+  const groups: { topics: Topic[]; extra: number }[] = [];
+  for (let i = 0; i < topics.length; i += CHUNK) groups.push({ topics: topics.slice(i, i + CHUNK), extra: 0 });
+  for (let e = extra; e > 0; e -= CHUNK) groups.push({ topics: [], extra: Math.min(CHUNK, e) });
+  const plans: ArticlePlan[] = [];
   const seen = new Set<string>();
-  return json<any[]>(text)
-    .slice(0, topics.length + extra)
-    .map((p) => ({ title: String(p.title), slug: slugify(p.title), categorySlug: CATEGORIES.includes(p.categorySlug) ? p.categorySlug : CATEGORIES[0], angle: String(p.angle ?? '') }))
-    .filter((p) => p.slug && !seen.has(p.slug) && seen.add(p.slug));
+  for (const g of groups) {
+    const avoid = [...existingTitles, ...plans.map((p) => p.title)];
+    const n = g.topics.length + g.extra;
+    const text = await claude(
+      env,
+      'You plan editorial calendars for career-advice websites. Every title you write is new and specific to the site\'s audience. Reply with JSON only.',
+      `Site: ${input.name} (${input.domain}). Audience/niche: ${input.niche ?? 'job seekers'} in ${input.country ?? 'US'}.
+${g.topics.length ? `For each of these ${g.topics.length} subject areas, propose ONE new article for this audience. Use a different title and angle — never reuse the wording below:\n${g.topics.map((t, i) => `${i + 1}. [${t.categorySlug}] ${t.title} — ${t.summary}`).join('\n')}\n` : ''}${g.extra ? `Propose ${g.extra} article ideas on other search-driven topics for this audience.\n` : ''}${avoid.length ? `Do not duplicate or closely overlap these existing titles:\n${avoid.slice(-150).map((t) => `- ${t}`).join('\n')}\n` : ''}
+Category slugs: ${CATEGORIES.join(', ')}.
+Return a JSON array of exactly ${n} items: {"title","categorySlug","angle"} where angle is one sentence on the reader's specific problem.`,
+      400 + n * 220,
+    );
+    for (const p of json<any[]>(text).slice(0, n)) {
+      const plan = { title: String(p.title), slug: slugify(p.title), categorySlug: CATEGORIES.includes(p.categorySlug) ? p.categorySlug : CATEGORIES[0], angle: String(p.angle ?? '') };
+      if (plan.slug && !seen.has(plan.slug)) { seen.add(plan.slug); plans.push(plan); }
+    }
+  }
+  return plans;
 }
 
 export interface WrittenArticle {
