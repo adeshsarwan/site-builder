@@ -47,5 +47,7 @@ const u = await (await call('/internal/usage')).json();
 assert(u.requests <= 24 && r2.report.some((b) => /cap/.test(b.error ?? '')), `monthly cap enforced (${u.requests}/24 used)`);
 const merged = await (await call('/jobs?country=us&category=tech&limit=50')).json();
 assert(merged.total === 14, `buckets accumulate without duplicates (${merged.total})`);
+const comp = await (await call('/companies?country=us&limit=3')).json();
+assert(comp.companies.length === 1 && comp.companies[0].company === 'Acme' && comp.companies[0].jobs > 50 && comp.companies[0].titles.length === 3, `top companies (${comp.companies[0]?.company}: ${comp.companies[0]?.jobs} jobs)`);
 fake.close();
 console.log('all passed');

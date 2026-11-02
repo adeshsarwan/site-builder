@@ -4,7 +4,7 @@ import { serve } from '@hono/node-server';
 import { timingSafeEqual } from 'node:crypto';
 import { COUNTRIES, CATEGORIES, ALIASES } from './catalog.mjs';
 import { jsearch } from './jsearch.mjs';
-import { upsertJobs, prune, searchJobs, useRequests, usage, ping } from './store.mjs';
+import { upsertJobs, prune, searchJobs, topCompanies, useRequests, usage, ping } from './store.mjs';
 
 const app = new Hono();
 const PAGES = Number(process.env.PAGES_PER_BUCKET ?? 3);
@@ -49,6 +49,18 @@ app.get('/jobs', async (c) => {
   const { jobs, total } = await searchJobs({ country, category, remoteOnly, level, q, location: loc, limit, offset });
   c.header('Cache-Control', 'public, max-age=300');
   return c.json({ jobs, total, country, category, source: 'database' });
+});
+
+// GET /companies?country=us&category=&remote=yes&limit=12 — top employers by open roles (database only)
+app.get('/companies', async (c) => {
+  const p = c.req.query();
+  const country = pickCountry(p.country);
+  const companies = await topCompanies({
+    country, category: pickCategory(p.category), remoteOnly: p.remote === 'yes',
+    limit: Math.min(48, Math.max(1, Number(p.limit ?? 12) || 12)),
+  });
+  c.header('Cache-Control', 'public, max-age=900');
+  return c.json({ country, companies });
 });
 
 // POST /internal/refresh[?country=us&category=tech] — fetch fresh buckets from JSearch.

@@ -112,7 +112,54 @@
         "value": "education",
         "label": "Education"
       }
-    ]
+    ],
+    "landing": {
+      "headline": "Find work that's hiring right now",
+      "subhead": "Search thousands of current openings across the US, Canada, Australia and the UK — remote and on-site. Apply directly on the employer's site.",
+      "defaultCountry": "us",
+      "popular": [
+        {
+          "label": "Remote jobs",
+          "href": "/jobs?category=remote&remote=yes"
+        },
+        {
+          "label": "US jobs hiring now",
+          "href": "/jobs?country=us"
+        },
+        {
+          "label": "Canada jobs",
+          "href": "/jobs?country=ca"
+        },
+        {
+          "label": "UK jobs",
+          "href": "/jobs?country=gb"
+        },
+        {
+          "label": "Australia jobs",
+          "href": "/jobs?country=au"
+        },
+        {
+          "label": "Entry level",
+          "href": "/jobs?level=entry"
+        },
+        {
+          "label": "Healthcare",
+          "href": "/jobs?category=healthcare"
+        },
+        {
+          "label": "Tech & IT",
+          "href": "/jobs?category=tech"
+        },
+        {
+          "label": "Warehouse & driving",
+          "href": "/jobs?category=trades"
+        },
+        {
+          "label": "Customer service",
+          "href": "/jobs?category=sales"
+        }
+      ]
+    }
   },
   "funnels": [
     {

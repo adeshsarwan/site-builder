@@ -76,8 +76,9 @@ jobs:
 
       - name: Deploy to Cloud Run
         run: |
+          # Public access without an allUsers IAM binding (blocked by org policy); the app checks its own API key.
           gcloud run deploy "$SERVICE" --image "$IMAGE" --region "$REGION" --service-account "$RT" \
-            --allow-unauthenticated --memory 512Mi --cpu 1 --min-instances 0 --max-instances 3 --timeout 600 \
+            --no-invoker-iam-check --memory 512Mi --cpu 1 --min-instances 0 --max-instances 3 --timeout 600 \
             --set-secrets OPENWEBNINJA_API_KEY=openwebninja-key:latest,JOBS_API_KEY=jobs-api-key:latest,DATABASE_URL=database-url:latest \
             ${SQL_FLAG:-} \
             --set-env-vars PAGES_PER_BUCKET=3,MONTHLY_CAP=9500,KEEP_DAYS=21 --quiet

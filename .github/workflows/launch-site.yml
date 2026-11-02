@@ -1,0 +1,83 @@
+name: Launch site
+run-name: launch ${{ inputs.domain }}
+
+# One-click launch: calls the Launch API (sitebuilder.thebesads.com/api) and follows progress until the site is live.
+# Needs the repo secret LAUNCH_API_KEY (same value as the Launch API's API_KEY secret in Cloudflare).
+on:
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: 'Domain (already in your Cloudflare account), e.g. jobsthe.world'
+        required: true
+        type: string
+      name:
+        description: 'Site name, e.g. Jobs The World'
+        required: true
+        type: string
+      niche:
+        description: 'Audience / niche for articles'
+        required: false
+        default: 'remote-first job seekers in the US, Canada, Australia and the UK'
+        type: string
+      library_topics:
+        description: 'How many starting-library topics to write fresh articles for (0–61)'
+        required: false
+        default: '15'
+        type: string
+      extra_articles:
+        description: 'Extra brand-new topics (0–40)'
+        required: false
+        default: '3'
+        type: string
+      retry:
+        description: 'Retry a failed launch of this domain instead of starting a new one'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  launch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      API: https://sitebuilder.thebesads.com/api/v1
+      KEY: ${{ secrets.LAUNCH_API_KEY }}
+      DOMAIN: ${{ inputs.domain }}
+    steps:
+      - name: Start launch
+        run: |
+          set -euo pipefail
+          [ -n "$KEY" ] || { echo "::error::Add the LAUNCH_API_KEY repo secret (same value as API_KEY on the launch-api Worker)"; exit 1; }
+          if [ "${{ inputs.retry }}" = "true" ]; then
+            curl -sS -X POST "$API/sites/$DOMAIN/retry" -H "Authorization: Bearer $KEY" | tee /tmp/start.json
+          else
+            BODY=$(jq -n --arg d "$DOMAIN" --arg n "${{ inputs.name }}" --arg ni "${{ inputs.niche }}" \
+              --argjson lib "${{ inputs.library_topics }}" --argjson extra "${{ inputs.extra_articles }}" \
+              '{domain:$d, name:$n, niche:$ni, libraryLimit:$lib, generateArticles:$extra}')
+            curl -sS -X POST "$API/sites" -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" -d "$BODY" | tee /tmp/start.json
+          fi
+          echo
+          if jq -e '.error and (.siteId|not)' /tmp/start.json >/dev/null; then echo "::error::$(jq -r .error /tmp/start.json)"; exit 1; fi
+          NS=$(jq -r '(.nameservers // []) | join(", ")' /tmp/start.json)
+          [ -n "$NS" ] && echo "### Nameservers for $DOMAIN: $NS" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Follow progress
+        run: |
+          set -uo pipefail
+          LAST=""
+          for i in $(seq 1 700); do
+            S=$(curl -sS "$API/sites/$DOMAIN" -H "Authorization: Bearer $KEY")
+            LINE=$(echo "$S" | jq -r '"\(.status) \(.progress)% — " + ([.steps[] | select(.status=="running" or .status=="waiting" or .status=="failed") | "\(.label): \(.detail // .status)"] | join(" | "))')
+            [ "$LINE" != "$LAST" ] && echo "$LINE" && LAST="$LINE"
+            STATUS=$(echo "$S" | jq -r .status)
+            case "$STATUS" in
+              live|live_with_warnings)
+                echo "$S" | jq -r '"### ✅ \(.domain) is \(.status)\n\n| Step | Status | Detail |\n|---|---|---|\n" + ([.steps[] | "| \(.label) | \(.status) | \(.detail // "" | gsub("\\|";"/")) |"] | join("\n"))' >> "$GITHUB_STEP_SUMMARY"
+                exit 0;;
+              failed)
+                echo "$S" | jq -r '"### ❌ Launch failed: \(.error)\n\nFix the cause, then run this workflow again with **retry** ticked."' >> "$GITHUB_STEP_SUMMARY"
+                exit 1;;
+            esac
+            sleep 10
+          done
+          echo "Still running — check https://sitebuilder.thebesads.com/api/v1/sites/$DOMAIN"; exit 1

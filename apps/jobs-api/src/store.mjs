@@ -137,6 +137,36 @@ export async function usage(month) {
   return r.rows?.[0] ?? null;
 }
 
+/** Companies with the most open roles in the database (for "top companies" sections). */
+export async function topCompanies({ country, category, remoteOnly, limit }) {
+  const q = await db();
+  const where = ["country = $1", "company <> ''"];
+  const params = [country];
+  if (category) { params.push(category); where.push(`$${params.length} = ANY(categories)`); }
+  if (remoteOnly) where.push('remote');
+  params.push(limit);
+  const r = await q(
+    `SELECT company,
+            count(*)::int AS jobs,
+            count(*) FILTER (WHERE remote)::int AS remote_jobs,
+            max(logo) AS logo,
+            (array_agg(title ORDER BY posted_at DESC NULLS LAST))[1:3] AS titles,
+            (array_agg(salary ORDER BY posted_at DESC NULLS LAST) FILTER (WHERE salary IS NOT NULL))[1] AS salary,
+            mode() WITHIN GROUP (ORDER BY location) AS top_location,
+            max(posted_at) AS latest
+       FROM jobs WHERE ${where.join(' AND ')}
+      GROUP BY company
+      ORDER BY count(*) DESC, max(posted_at) DESC NULLS LAST
+      LIMIT $${params.length}`,
+    params,
+  );
+  return (r.rows ?? []).map((x) => ({
+    company: x.company, jobs: x.jobs, remoteJobs: x.remote_jobs, logo: x.logo ?? undefined,
+    titles: x.titles ?? [], salary: x.salary ?? undefined, topLocation: x.top_location ?? undefined,
+    latest: x.latest ? new Date(x.latest).toISOString() : undefined,
+  }));
+}
+
 export async function ping() {
   const q = await db();
   const r = await q('SELECT count(*)::int AS jobs FROM jobs');

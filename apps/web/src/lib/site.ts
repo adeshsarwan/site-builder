@@ -40,7 +40,11 @@ export interface SiteConfig {
   };
   analytics: { ga4MeasurementId?: string };
   searchConsole?: { googleSiteVerification?: string };
-  jobs: { enabled: boolean; pageSize: number; defaultQuery: Record<string, string>; countries?: FunnelOption[]; categories?: FunnelOption[] };
+  jobs: {
+    enabled: boolean; pageSize: number; defaultQuery: Record<string, string>; countries?: FunnelOption[]; categories?: FunnelOption[];
+    /** Job-search landing page at /find-jobs */
+    landing?: { headline: string; subhead: string; popular: { label: string; href: string }[]; defaultCountry?: string };
+  };
   funnels: Funnel[];
   legal: { companyName: string; contactEmail: string };
   social?: { defaultImage?: string };

@@ -18,6 +18,7 @@ sites/_library/    Topic list for new sites (titles/summaries only — never pub
 - `SITE=<slug>` selects the folder; `apps/web/scripts/prepare-site.mjs` writes `wrangler.jsonc` with Worker name `site-<slug>`.
 - Articles, categories, legal pages, sitemap, robots, ads.txt are prerendered static files (free, cached at the edge).
 - `/jobs` and `/start/<funnel>` are server-rendered in the Worker. `/jobs` calls your jobs API with `JOBS_API_BASE` / `JOBS_API_KEY` (Worker secrets) and caches responses for 5 minutes. Until those are set, demo listings show.
+- `/find-jobs`: job-search landing page — search box, popular-search pills (`jobs.landing.popular` in site.config), top employers by open roles (from the jobs API's `/companies`), categories, and guides. Employer cards use initials, not brand logos.
 - Funnels: any path in a funnel's `gate` redirects to `/start/<id>` until answered; answers go in an httpOnly cookie and become jobs API filters. Configure questions in `site.config.json`.
 
 ### Ads (Price Optimiser)
@@ -82,6 +83,10 @@ Step statuses: `pending | running | waiting | done | warning | skipped | failed`
 Site statuses: `queued | running | waiting | live | live_with_warnings | failed`.
 
 Webhooks: each change POSTs `{ "type": "site.status", "data": <status> }` with `X-Launch-Signature: sha256=<hmac of body with WEBHOOK_SECRET>`.
+
+### One-click launch from GitHub
+
+Actions → **Launch site** → Run workflow → enter the domain and name. It calls the Launch API and follows progress until the site is live (the run summary shows the nameservers and a step table). Needs the repo secret `LAUNCH_API_KEY` = the Launch API's `API_KEY`. Tick **retry** to resume a failed launch.
 
 ### Frontend example
 

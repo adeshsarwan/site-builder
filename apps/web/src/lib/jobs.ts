@@ -105,3 +105,25 @@ function demoJobs(q: JobQuery, pageSize: number, page: number): JobResult {
   if (q.remote === 'yes') jobs = jobs.filter((j) => j.remote);
   return { jobs: jobs.slice((page - 1) * pageSize, page * pageSize), total: jobs.length, page, pageSize, source: 'demo' };
 }
+
+export interface Company { company: string; jobs: number; remoteJobs: number; titles: string[]; salary?: string; topLocation?: string; logo?: string }
+
+/** Employers with the most open roles in the shared jobs database. */
+export async function topCompanies(country: string, limit = 12): Promise<Company[]> {
+  const base = (env as any).JOBS_API_BASE as string | undefined;
+  if (!base) {
+    return ['Northwind', 'Contoso', 'Fabrikam', 'Tailspin', 'Wide World', 'Adventure Works'].map((c, i) => ({
+      company: c, jobs: 40 - i * 5, remoteJobs: 10 - i, titles: ['Customer Support Rep', 'Operations Associate'], salary: `$${16 + i}–$${24 + i}/hr`, topLocation: 'Multiple locations',
+    }));
+  }
+  const qs = new URLSearchParams({ country, limit: String(limit) });
+  const cacheKey = new Request(`https://jobs-cache.internal/${site.slug}/companies?${qs}`);
+  const cache = (globalThis as any).caches?.default as Cache | undefined;
+  const hit = await cache?.match(cacheKey);
+  if (hit) return hit.json();
+  const res = await fetch(`${base.replace(/\/$/, '')}/companies?${qs}`, { headers: { Authorization: `Bearer ${(env as any).JOBS_API_KEY ?? ''}` } });
+  if (!res.ok) throw new Error(`Jobs API ${res.status}`);
+  const list: Company[] = ((await res.json()) as any).companies ?? [];
+  await cache?.put(cacheKey, new Response(JSON.stringify(list), { headers: { 'Cache-Control': 'max-age=900', 'Content-Type': 'application/json' } }));
+  return list;
+}

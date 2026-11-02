@@ -11,7 +11,7 @@ const image = seo.image ? abs(seo.image) : site.social?.defaultImage ? abs(site.
 const ld = [websiteLd(), ...(seo.jsonLd ?? [])];
 const nav = site.nav ?? [
   ...site.categories.slice(0, 5).map((c) => ({ label: c.name, href: `/category/${c.slug}` })),
-  ...(site.jobs.enabled ? [{ label: 'Find Jobs', href: '/jobs' }] : []),
+  ...(site.jobs.enabled ? [{ label: 'Find Jobs', href: site.jobs.landing ? '/find-jobs' : '/jobs' }] : []),
 ];
 const ga = site.analytics?.ga4MeasurementId;
 const path = Astro.url.pathname;
