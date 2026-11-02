@@ -7,12 +7,15 @@
   },
   "scripts": {
     "start": "node src/server.mjs",
-    "dev": "STORE=memory node --watch src/server.mjs",
+    "dev": "DATABASE_URL=pglite:memory node --watch src/server.mjs",
     "test": "node test/smoke.mjs"
   },
   "dependencies": {
-    "@google-cloud/firestore": "^9.4.0",
     "@hono/node-server": "^2.1.5",
-    "hono": "^4.13.16"
+    "hono": "^4.13.16",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.14"
   }
 }

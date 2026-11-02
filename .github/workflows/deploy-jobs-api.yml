@@ -35,23 +35,27 @@ jobs:
         env:
           OPENWEBNINJA_API_KEY: ${{ secrets.OPENWEBNINJA_API_KEY || secrets.RAPIDAPI_KEY }}
           JOBS_API_KEY: ${{ secrets.JOBS_API_KEY }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          CLOUDSQL_INSTANCE: ${{ vars.CLOUDSQL_INSTANCE }}
         run: |
           set -euo pipefail
           [ -n "$OPENWEBNINJA_API_KEY" ] || { echo "::error::Add the OPENWEBNINJA_API_KEY GitHub secret"; exit 1; }
           [ -n "$JOBS_API_KEY" ] || { echo "::error::Add the JOBS_API_KEY GitHub secret"; exit 1; }
+          [ -n "$DATABASE_URL" ] || { echo "::error::Add the DATABASE_URL GitHub secret (Postgres connection string)"; exit 1; }
           retry() { for i in 1 2 3 4 5 6 7 8; do "$@" && return 0; echo "retry $i in 30s (APIs can take a few minutes to switch on)"; sleep 30; done; return 1; }
           P=$(gcloud config get-value project)
           RT="jobs-api-runtime@${P}.iam.gserviceaccount.com"
           echo "PROJECT=$P" >> "$GITHUB_ENV"; echo "RT=$RT" >> "$GITHUB_ENV"
           gcloud services enable run.googleapis.com artifactregistry.googleapis.com secretmanager.googleapis.com \
-            firestore.googleapis.com cloudscheduler.googleapis.com iam.googleapis.com
+            cloudscheduler.googleapis.com iam.googleapis.com sqladmin.googleapis.com
           gcloud artifacts repositories describe "$REPO" --location "$REGION" >/dev/null 2>&1 || \
             retry gcloud artifacts repositories create "$REPO" --repository-format docker --location "$REGION" --quiet
-          gcloud firestore databases describe --database='(default)' >/dev/null 2>&1 || \
-            retry gcloud firestore databases create --location=nam5 --type=firestore-native --quiet
           gcloud iam service-accounts describe "$RT" >/dev/null 2>&1 || \
             gcloud iam service-accounts create jobs-api-runtime --display-name "Jobs API runtime"
-          gcloud projects add-iam-policy-binding "$P" --member "serviceAccount:$RT" --role roles/datastore.user --condition=None >/dev/null
+          if [ -n "$CLOUDSQL_INSTANCE" ]; then
+            gcloud projects add-iam-policy-binding "$P" --member "serviceAccount:$RT" --role roles/cloudsql.client --condition=None >/dev/null
+            echo "SQL_FLAG=--add-cloudsql-instances=$CLOUDSQL_INSTANCE" >> "$GITHUB_ENV"
+          fi
           put_secret() { # name value — adds a version only when the value changed
             gcloud secrets describe "$1" >/dev/null 2>&1 || gcloud secrets create "$1" --replication-policy automatic
             CUR=$(gcloud secrets versions access latest --secret "$1" 2>/dev/null || true)
@@ -60,6 +64,7 @@ jobs:
           }
           put_secret openwebninja-key "$OPENWEBNINJA_API_KEY"
           put_secret jobs-api-key "$JOBS_API_KEY"
+          put_secret database-url "$DATABASE_URL"
 
       - name: Build and push image
         run: |
@@ -73,7 +78,8 @@ jobs:
         run: |
           gcloud run deploy "$SERVICE" --image "$IMAGE" --region "$REGION" --service-account "$RT" \
             --allow-unauthenticated --memory 512Mi --cpu 1 --min-instances 0 --max-instances 3 --timeout 600 \
-            --set-secrets OPENWEBNINJA_API_KEY=openwebninja-key:latest,JOBS_API_KEY=jobs-api-key:latest \
+            --set-secrets OPENWEBNINJA_API_KEY=openwebninja-key:latest,JOBS_API_KEY=jobs-api-key:latest,DATABASE_URL=database-url:latest \
+            ${SQL_FLAG:-} \
             --set-env-vars PAGES_PER_BUCKET=3,MONTHLY_CAP=9500,KEEP_DAYS=21 --quiet
           URL=$(gcloud run services describe "$SERVICE" --region "$REGION" --format 'value(status.url)')
           echo "URL=$URL" >> "$GITHUB_ENV"

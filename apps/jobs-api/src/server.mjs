@@ -4,12 +4,14 @@ import { serve } from '@hono/node-server';
 import { timingSafeEqual } from 'node:crypto';
 import { COUNTRIES, CATEGORIES, ALIASES } from './catalog.mjs';
 import { jsearch } from './jsearch.mjs';
-import { getBucket, saveBucket, useRequests, usage } from './store.mjs';
+import { upsertJobs, prune, searchJobs, useRequests, usage, ping } from './store.mjs';
 
 const app = new Hono();
 const PAGES = Number(process.env.PAGES_PER_BUCKET ?? 3);
 
-app.get('/health', (c) => c.json({ ok: true }));
+app.get('/health', async (c) => {
+  try { return c.json({ ok: true, jobs: await ping() }); } catch (e) { return c.json({ ok: false, error: 'database unavailable' }, 503); }
+});
 
 app.use('*', async (c, next) => {
   if (c.req.path === '/health') return next();
@@ -43,20 +45,10 @@ app.get('/jobs', async (c) => {
   const q = String(p.q ?? '').trim().toLowerCase();
   const loc = String(p.location ?? '').trim().toLowerCase();
 
-  const cats = category ? [category] : remoteOnly ? ['remote', ...Object.keys(CATEGORIES).filter((k) => k !== 'remote')] : Object.keys(CATEGORIES);
-  const buckets = await Promise.all(cats.map((k) => getBucket(country, k)));
-  const seen = new Set();
-  let jobs = buckets.flatMap((b) => b?.jobs ?? []).filter((j) => !seen.has(j.id) && seen.add(j.id));
-
-  if (remoteOnly) jobs = jobs.filter((j) => j.remote);
-  if (p.level && ['entry', 'mid', 'senior'].includes(p.level)) jobs = jobs.filter((j) => !j.level || j.level === p.level);
-  if (loc && loc !== 'remote') jobs = jobs.filter((j) => j.location.toLowerCase().includes(loc));
-  const words = q.split(/\s+/).filter(Boolean);
-  if (words.length) jobs = jobs.filter((j) => words.every((w) => `${j.title} ${j.company} ${j.location} ${j.snippet ?? ''}`.toLowerCase().includes(w)));
-
-  jobs.sort((a, b) => (b.postedAt ?? '').localeCompare(a.postedAt ?? ''));
+  const level = ['entry', 'mid', 'senior'].includes(p.level) ? p.level : null;
+  const { jobs, total } = await searchJobs({ country, category, remoteOnly, level, q, location: loc, limit, offset });
   c.header('Cache-Control', 'public, max-age=300');
-  return c.json({ jobs: jobs.slice(offset, offset + limit), total: jobs.length, country, category, source: 'database' });
+  return c.json({ jobs, total, country, category, source: 'database' });
 });
 
 // POST /internal/refresh[?country=us&category=tech] — fetch fresh buckets from JSearch.
@@ -82,7 +74,7 @@ app.post('/internal/refresh', async (c) => {
           if (res.length < 10) break;
           await new Promise((r) => setTimeout(r, 400));
         }
-        if (jobs.length) await saveBucket(country, cat, jobs);
+        if (jobs.length) await upsertJobs(country, cat, jobs);
         report.push({ bucket: `${country}_${cat}`, jobs: jobs.length });
       } catch (e) {
         report.push({ bucket: `${country}_${cat}`, error: e.message });
@@ -91,8 +83,9 @@ app.post('/internal/refresh', async (c) => {
     }
     if (stop) break;
   }
-  console.log(JSON.stringify({ event: 'refresh', requests, buckets: report.length }));
-  return c.json({ requests, report });
+  const pruned = await prune();
+  console.log(JSON.stringify({ event: 'refresh', requests, buckets: report.length, pruned }));
+  return c.json({ requests, pruned, report });
 });
 
 app.get('/internal/usage', async (c) => {

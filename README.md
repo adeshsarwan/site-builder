@@ -105,10 +105,10 @@ es.addEventListener('status', (e) => render(JSON.parse(e.data))); // { status, p
 ## Jobs API (Cloud Run + JSearch via OpenWeb Ninja)
 
 - Cloud Scheduler calls `POST /internal/refresh` every 8 hours. It fetches 4 countries (US, CA, AU, UK) × 8 categories (remote, healthcare, tech, sales, office, trades, finance, education) × 3 pages from OpenWeb Ninja's JSearch API (`api.openwebninja.com/jsearch/search`, `x-api-key`). ≈ 96 requests per refresh, ≈ 8,640/month — inside the Pro plan's 10,000.
-- New jobs are merged into each stored bucket (deduped, newest first, kept for 21 days, max 200 per bucket), so the database grows between refreshes.
+- Jobs are stored in **Postgres** (`DATABASE_URL`: Cloud SQL or any hosted Postgres). Tables are created automatically. Each refresh upserts jobs (a job seen in several categories keeps all of them) and deletes jobs older than 21 days. Search uses Postgres full-text search on title, company, location and description.
 - Visitor searches (`GET /jobs?country=&category=&remote=yes&level=&q=&location=&limit=&offset=`) are answered **only from the database**; they never call JSearch.
 - `MONTHLY_CAP` (9,500) stops refreshes before the plan allowance is exceeded. Usage: `GET /internal/usage`.
-- GitHub secrets: `GCP_DEPLOY_SA_JSON`, `OPENWEBNINJA_API_KEY`, `JOBS_API_KEY`. After the first deploy, set `JOBS_API_BASE` to the Cloud Run URL (shown in the run summary) and re-run "Deploy sites".
+- GitHub secrets: `GCP_DEPLOY_SA_JSON`, `OPENWEBNINJA_API_KEY`, `JOBS_API_KEY`, `DATABASE_URL`. For Cloud SQL also set the repo **variable** `CLOUDSQL_INSTANCE` (`project:region:instance`); the deploy connects Cloud Run to it. After the first deploy, set `JOBS_API_BASE` to the Cloud Run URL (shown in the run summary) and re-run "Deploy sites".
 
 ## Local development
 

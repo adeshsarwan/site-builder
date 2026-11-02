@@ -21,7 +21,7 @@ const fake = http.createServer((req, res) => {
   res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ status: 'OK', data }));
 });
 await new Promise((r) => fake.listen(0, r));
-Object.assign(process.env, { OPENWEBNINJA_API_KEY: 'own-key', JSEARCH_BASE: `http://127.0.0.1:${fake.address().port}`, STORE: 'memory', JOBS_API_KEY: 'test-key', NO_LISTEN: '1', PAGES_PER_BUCKET: '2', MONTHLY_CAP: '24', KEEP_DAYS: '3650' });
+Object.assign(process.env, { OPENWEBNINJA_API_KEY: 'own-key', DATABASE_URL: 'pglite:memory', JSEARCH_BASE: `http://127.0.0.1:${fake.address().port}`, JOBS_API_KEY: 'test-key', NO_LISTEN: '1', PAGES_PER_BUCKET: '2', MONTHLY_CAP: '24', KEEP_DAYS: '3650' });
 let calls = 0;
 const { default: app } = await import('../src/server.mjs');
 const call = (path, init = {}) => app.request(path, { ...init, headers: { 'x-api-key': 'test-key', ...(init.headers ?? {}) } });
