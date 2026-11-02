@@ -1,0 +1,27 @@
+name: API check
+# Read-only calls against the live Launch API (changes nothing).
+on:
+  workflow_dispatch:
+    inputs:
+      domain: { description: 'Site domain', required: true, default: jobsthe.world, type: string }
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      KEY: ${{ secrets.LAUNCH_API_KEY }}
+      BASE: https://sitebuilder.thebesads.com/api
+      D: ${{ inputs.domain }}
+    steps:
+      - run: |
+          get() { printf '\n### GET %s\n' "$1"; curl -sS -m 60 -w '\n[HTTP %{http_code}]\n' "$BASE$1" -H "Authorization: Bearer $KEY" | cut -c1-900 | head -c 1800; }
+          printf 'openapi: '; curl -sS "$BASE/openapi.json" | jq -c '{title: .info.title, paths: (.paths | length)}'
+          printf 'no key: '; curl -s -o /dev/null -w '%{http_code}\n' "$BASE/v1/sites/$D/stories"
+          get "/v1/sites/$D/stories?limit=2"
+          SLUG=$(curl -sS "$BASE/v1/sites/$D/stories?limit=1" -H "Authorization: Bearer $KEY" | jq -r '.stories[0].slug')
+          get "/v1/sites/$D/stories/$SLUG"
+          get "/v1/sites/$D/tasks?limit=3"
+          get "/v1/sites/$D/ads"
+          get "/v1/sites/$D/ads.txt"
+          get "/v1/sites/$D/config"
+          get "/v1/sites/$D/health"
+          get "/v1/jobs/health"
