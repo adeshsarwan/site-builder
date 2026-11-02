@@ -10,8 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1660
 origin: "generated"
-heroImage: ""
-heroAlt: ""
+heroImage: "/images/breaking-into-product-design-from-another-field-building-a-portfolio-w.jpg"
+heroAlt: "makeup, cosmetics, glass, lipstick"
+heroCredit:
+  name: "fotostrobi"
+  url: "https://pixabay.com/users/fotostrobi-5310373/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/makeup-cosmetics-glass-lipstick-3081015/"
 seo:
   title: "Product Design Portfolio With No Clients: A Guide"
   metaDescription: "Learn how to turn self-initiated projects into credible product design case studies, and how many you need before applying to remote design roles."
