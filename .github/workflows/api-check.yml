@@ -26,4 +26,6 @@ jobs:
           get "/v1/sites/$D/health"
           get "/v1/sites/$D/funnels"
           printf "apply overlay on /jobs: "; curl -s "https://$D/jobs" -o /dev/null -w "%{http_code} "; curl -s "https://$D/" | grep -c "id=\"apply-gate\"" || true
+          C=$(curl -s "$BASE/v1/jobs/companies?limit=1" -H "Authorization: Bearer $KEY" | jq -r ".companies[0].slug // empty")
+          printf "company page /companies/%s: " "$C"; curl -s -o /tmp/c.html -w "%{http_code} " "https://$D/companies/$C"; printf "apply links=%s overlay=%s\n" "$(grep -o "data-apply" /tmp/c.html | wc -l)" "$(grep -c "id=\"apply-gate\"" /tmp/c.html)"
           get "/v1/jobs/health"
