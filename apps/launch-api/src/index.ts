@@ -7,6 +7,7 @@ import { backfillImages } from './services/backfill';
 import { slugFromDomain, type Env, type LaunchInput } from './types';
 
 export { LaunchSiteWorkflow } from './workflow';
+export { AddArticlesWorkflow } from './addArticles';
 
 type AppEnv = { Bindings: Env & { ALLOWED_ORIGINS?: string } };
 // Served at https://sitebuilder.thebesads.com — the API lives under /api (e.g. /api/v1/sites).
@@ -101,6 +102,34 @@ api.get('/v1/sites/:id/events', async (c) => {
       await stream.sleep(2000);
     }
   });
+});
+
+// Add fresh articles to a live site from more library topics (and/or new topics), then redeploy.
+api.post('/v1/sites/:id/articles', async (c) => {
+  const p = c.req.param('id').toLowerCase();
+  const row = p.startsWith('site_')
+    ? await c.env.DB.prepare('SELECT * FROM sites WHERE id = ?').bind(p).first<any>()
+    : await c.env.DB.prepare('SELECT * FROM sites WHERE domain = ?').bind(p).first<any>();
+  if (!row) return c.json({ error: 'not found — launch the site first' }, 404);
+  const launched = JSON.parse(row.input_json) as LaunchInput;
+  const body = (await c.req.json().catch(() => ({}))) as { fromTopic?: number; count?: number; extra?: number };
+  const fromTopic = Math.max(0, Number(body.fromTopic ?? launched.libraryLimit ?? 0));
+  const count = Math.max(0, Math.min(80, Number(body.count ?? 0)));
+  const extra = Math.max(0, Math.min(40, Number(body.extra ?? 0)));
+  const instance = await c.env.CONTENT.create({
+    id: `articles-${row.slug}-${Date.now()}`,
+    params: { siteSlug: row.slug, input: { ...launched, name: launched.name ?? row.name, domain: row.domain }, fromTopic, count, extra },
+  });
+  return c.json({ taskId: instance.id, site: row.slug, fromTopic, count: count || 'all remaining', extra, statusUrl: `/api/v1/tasks/${instance.id}` }, 202);
+});
+
+api.get('/v1/tasks/:id', async (c) => {
+  try {
+    const inst = await c.env.CONTENT.get(c.req.param('id'));
+    return c.json({ taskId: c.req.param('id'), ...(await inst.status()) });
+  } catch {
+    return c.json({ error: 'not found' }, 404);
+  }
 });
 
 // Add photos to articles that have none, then redeploy the site.

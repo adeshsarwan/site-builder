@@ -1,6 +1,7 @@
 export interface Env {
   DB: D1Database;
   LAUNCH: Workflow<LaunchParams>;
+  CONTENT: Workflow<any>;
   API_KEY: string;
   CF_API_TOKEN: string;
   CF_ACCOUNT_ID: string;

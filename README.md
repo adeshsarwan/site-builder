@@ -89,6 +89,8 @@ Webhooks: each change POSTs `{ "type": "site.status", "data": <status> }` with `
 1. **Stage 1 — Launch site** (Actions): zone, GA4, fresh articles + photos + SEO, deploy, domain/SSL, Search Console. Ads are off.
 2. **Stage 2 — Enable ads** (Actions): after the ad units exist and the Price Optimiser configuration for the domain is published, run it with the domain and the ads.txt lines (separate lines with `;`). It checks the runtime serves that site key, turns ads on (`data-po-site` = domain), writes `/ads.txt`, and redeploys. Then apply for site verification in Ad Manager.
 
+**Add articles** (Actions) writes fresh articles for more library topics on a live site (default: all remaining), planned against existing titles, then redeploys; photos are filled during the deploy.
+
 **Site status** (Actions) shows a site's launch steps, the runtime config for the domain, and live checks (/, /ads.txt, SDK tag).
 
 ### One-click launch from GitHub

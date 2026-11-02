@@ -11,7 +11,8 @@
     { "binding": "DB", "database_name": "launch-db", "migrations_dir": "migrations" }
   ],
   "workflows": [
-    { "name": "launch-site", "binding": "LAUNCH", "class_name": "LaunchSiteWorkflow" }
+    { "name": "launch-site", "binding": "LAUNCH", "class_name": "LaunchSiteWorkflow" },
+    { "name": "add-articles", "binding": "CONTENT", "class_name": "AddArticlesWorkflow" }
   ],
   "vars": {
     "GITHUB_OWNER": "adeshsarwan",

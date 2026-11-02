@@ -1,0 +1,57 @@
+name: Add articles
+run-name: add articles ${{ inputs.domain }}
+
+# Writes fresh articles for a live site from more starting-library topics (titles/summaries only),
+# planned against the site's existing titles, then redeploys (photos are filled during the deploy).
+on:
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: 'Domain, e.g. jobsthe.world'
+        required: true
+        type: string
+      count:
+        description: 'How many more library topics (0 = all remaining)'
+        required: false
+        default: '0'
+        type: string
+      extra:
+        description: 'Extra brand-new topics (0–40)'
+        required: false
+        default: '0'
+        type: string
+      from_topic:
+        description: 'Library position to start from (empty = right after the topics the site already used)'
+        required: false
+        default: ''
+        type: string
+
+jobs:
+  add:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      API: https://sitebuilder.thebesads.com/api/v1
+      KEY: ${{ secrets.LAUNCH_API_KEY }}
+    steps:
+      - run: |
+          set -euo pipefail
+          BODY=$(jq -n --argjson c "${{ inputs.count }}" --argjson e "${{ inputs.extra }}" --arg f "${{ inputs.from_topic }}" \
+            '{count:$c, extra:$e} + (if $f == "" then {} else {fromTopic: ($f|tonumber)} end)')
+          R=$(curl -sS -X POST "$API/sites/${{ inputs.domain }}/articles" -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" -d "$BODY")
+          echo "$R" | jq .
+          TASK=$(echo "$R" | jq -r '.taskId // empty'); [ -n "$TASK" ] || exit 1
+          LAST=""
+          for i in $(seq 1 700); do
+            S=$(curl -sS "$API/tasks/$TASK" -H "Authorization: Bearer $KEY")
+            ST=$(echo "$S" | jq -r .status)
+            [ "$ST" != "$LAST" ] && echo "status: $ST" && LAST="$ST"
+            case "$ST" in
+              complete)
+                echo "$S" | jq -r '"### Added \(.output.written) articles to \(.output.site)\n\n" + (.output.titles | map("- " + .) | join("\n"))' >> "$GITHUB_STEP_SUMMARY"
+                echo "$S" | jq '.output'; exit 0;;
+              errored|terminated) echo "$S" | jq .; exit 1;;
+            esac
+            sleep 15
+          done
+          exit 1

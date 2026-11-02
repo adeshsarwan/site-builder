@@ -42,13 +42,13 @@ export function topicFromMarkdown(md: string): Topic | null {
  * Turns topics (+ optional extra count) into a plan of NEW articles for this site:
  * a fresh title and angle for its niche and audience, so no two sites share headlines.
  */
-export async function planArticles(env: Env, input: LaunchInput, topics: Topic[], extra: number): Promise<ArticlePlan[]> {
+export async function planArticles(env: Env, input: LaunchInput, topics: Topic[], extra: number, existingTitles: string[] = []): Promise<ArticlePlan[]> {
   const text = await claude(
     env,
     'You plan editorial calendars for career-advice websites. Every title you write is new and specific to the site\'s audience. Reply with JSON only.',
     `Site: ${input.name} (${input.domain}). Audience/niche: ${input.niche ?? 'job seekers'} in ${input.country ?? 'US'}.
 ${topics.length ? `For each of these ${topics.length} subject areas, propose ONE new article for this audience. Use a different title and angle — never reuse the wording below:\n${topics.map((t, i) => `${i + 1}. [${t.categorySlug}] ${t.title} — ${t.summary}`).join('\n')}\n` : ''}
-${extra > 0 ? `Then add ${extra} more article ideas on other search-driven topics not covered above.\n` : ''}
+${extra > 0 ? `Then add ${extra} more article ideas on other search-driven topics not covered above.\n` : ''}${existingTitles.length ? `The site already has these articles — do not duplicate or closely overlap them:\n${existingTitles.slice(0, 120).map((t) => `- ${t}`).join('\n')}\n` : ''}
 Category slugs: ${CATEGORIES.join(', ')}.
 Return a JSON array of {"title","categorySlug","angle"} where angle is one sentence on the reader's specific problem. ${topics.length + extra} items.`,
     Math.min(16000, 400 + (topics.length + extra) * 120),
