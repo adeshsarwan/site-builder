@@ -2,6 +2,7 @@ export interface Env {
   DB: D1Database;
   LAUNCH: Workflow<LaunchParams>;
   CONTENT: Workflow<any>;
+  GAMES_LAUNCH: Workflow<LaunchParams>;
   API_KEY: string;
   /** Second key for the superadmin (base topic library). Optional; without it nobody can edit the library. */
   SUPERADMIN_KEY?: string;
@@ -22,6 +23,16 @@ export interface Env {
   PIXABAY_API_KEY?: string;
   UNSPLASH_ACCESS_KEY?: string;
   DRY_RUN?: string;
+  // ---- H5 games portals (see src/games) ----
+  /** GitHub repo with the games portal builder (default h5-games-site-builder, same owner). */
+  GAMES_GITHUB_REPO?: string;
+  GAMES_GITHUB_BRANCH?: string;
+  /** Token with Contents: read/write on the games repo. Defaults to GITHUB_TOKEN. */
+  GAMES_GITHUB_TOKEN?: string;
+  /** Cloudflare account that holds the games Pages projects (default CF_ACCOUNT_ID). Needs Cloudflare Pages: Edit on CF_API_TOKEN. */
+  GAMES_CF_ACCOUNT_ID?: string;
+  /** Public base URL of the shared game files (R2). */
+  GAMES_CDN?: string;
 }
 
 export interface LaunchInput {

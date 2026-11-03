@@ -12,7 +12,8 @@
   ],
   "workflows": [
     { "name": "launch-site", "binding": "LAUNCH", "class_name": "LaunchSiteWorkflow" },
-    { "name": "add-articles", "binding": "CONTENT", "class_name": "AddArticlesWorkflow" }
+    { "name": "add-articles", "binding": "CONTENT", "class_name": "AddArticlesWorkflow" },
+    { "name": "launch-games-site", "binding": "GAMES_LAUNCH", "class_name": "GamesLaunchWorkflow" }
   ],
   "vars": {
     "GITHUB_OWNER": "adeshsarwan",
@@ -26,7 +27,12 @@
     "PO_RUNTIME_URL": "https://serve.thebesads.com/runtime/config",
     "IMAGE_PROVIDER": "pixabay",
     "JOBS_API_BASE": "https://jobs-api-28975270991.us-central1.run.app", // JOBS_API_KEY is a secret
-    "DRY_RUN": "false"
+    "DRY_RUN": "false",
+    // H5 games portals: builder repo, Cloudflare account of its Pages projects, shared game files (R2)
+    "GAMES_GITHUB_REPO": "h5-games-site-builder",
+    "GAMES_GITHUB_BRANCH": "main",
+    "GAMES_CF_ACCOUNT_ID": "4df8c97b1058bcf322f39d3dc24001f3",
+    "GAMES_CDN": "https://games.gamewhame.com"
   }
   // Secrets (wrangler secret put …):
   //   API_KEY            – bearer key your frontend sends

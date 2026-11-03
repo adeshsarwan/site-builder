@@ -9,11 +9,13 @@ import { openapi } from './openapi';
 import { stories } from './storiesApi';
 import { funnels } from './funnelsApi';
 import { library, type Role } from './libraryApi';
+import { games } from './games/api';
 import { unknownIds } from './services/library';
 import { slugFromDomain, type Env, type LaunchInput } from './types';
 
 export { LaunchSiteWorkflow } from './workflow';
 export { AddArticlesWorkflow } from './addArticles';
+export { GamesLaunchWorkflow } from './games/workflow';
 
 type AppEnv = { Bindings: Env & { ALLOWED_ORIGINS?: string }; Variables: { role: Role } };
 // Served at https://sitebuilder.thebesads.com — the API lives under /api (e.g. /api/v1/sites).
@@ -86,7 +88,7 @@ api.post('/v1/sites', async (c) => {
 });
 
 api.get('/v1/sites', async (c) => {
-  const { results } = await c.env.DB.prepare('SELECT id, domain, name, status, current_step, live_url, created_at, updated_at FROM sites ORDER BY created_at DESC LIMIT 200').all();
+  const { results } = await c.env.DB.prepare("SELECT id, domain, name, status, current_step, live_url, created_at, updated_at FROM sites WHERE kind = 'jobs' ORDER BY created_at DESC LIMIT 200").all();
   return c.json({ sites: results });
 });
 
@@ -185,6 +187,7 @@ api.post('/v1/sites/:id/retry', async (c) => {
   const id = await resolveId(c.env, c.req.param('id'));
   const site = id && (await getSiteRow(c.env, id));
   if (!site) return c.json({ error: 'not found' }, 404);
+  if (site.kind === 'games') return c.json({ error: 'This is a games site: use POST /v1/games/sites/{id}/retry' }, 409);
   if (site.status !== 'failed') return c.json({ error: `Only failed launches can be retried (status: ${site.status})` }, 409);
   const attempt = site.attempt + 1;
   await c.env.DB.batch([
@@ -199,6 +202,7 @@ api.route('/v1', manage);
 api.route('/v1', stories);
 api.route('/v1', funnels);
 api.route('/v1', library);
+api.route('/v1', games);
 api.get('/openapi.json', (c) => c.json(openapi));
 app.route('/api', api);
 app.get('/', (c) => c.json({ service: 'site-builder launch API', docs: 'https://github.com/adeshsarwan/site-builder/blob/main/docs/API.md', openapi: '/api/openapi.json', api: '/api/v1/sites' }));
