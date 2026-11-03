@@ -98,3 +98,28 @@ export async function wwwRedirect(env: Env, zoneId: string, domain: string) {
     }),
   });
 }
+
+/**
+ * Frees hostnames held by Workers: deletes Worker custom domains and zone Worker routes for them.
+ * Cloudflare owns those DNS records (read-only), so clearWebRecords can't remove them, and while a Worker holds
+ * a hostname no other site (e.g. a Pages project) can serve it. Returns what was detached, so it can be put back.
+ */
+export async function detachWorkers(env: Env, zoneId: string, hostnames: string[]) {
+  const detached: string[] = [];
+  const names = new Set(hostnames.map((h) => h.toLowerCase()));
+  const domains = await cf<any[]>(env, `/accounts/${env.CF_ACCOUNT_ID}/workers/domains?zone_id=${zoneId}`).catch(() => []);
+  for (const d of domains ?? []) {
+    if (!names.has(String(d.hostname).toLowerCase())) continue;
+    await cf(env, `/accounts/${env.CF_ACCOUNT_ID}/workers/domains/${d.id}`, { method: 'DELETE' });
+    detached.push(`${d.hostname} (custom domain of Worker ${d.service})`);
+  }
+  const routes = await cf<any[]>(env, `/zones/${zoneId}/workers/routes`).catch(() => []);
+  for (const r of routes ?? []) {
+    // Exact host (vexulor.site/*) or "*vexulor.site/*"; never wildcard-subdomain routes like *.vexulor.site/*.
+    const host = String(r.pattern).toLowerCase().split('/')[0];
+    if (!names.has(host) && !(host.startsWith('*') && !host.startsWith('*.') && names.has(host.slice(1)))) continue;
+    await cf(env, `/zones/${zoneId}/workers/routes/${r.id}`, { method: 'DELETE' });
+    detached.push(`route ${r.pattern} → Worker ${r.script ?? '(none)'}`);
+  }
+  return detached;
+}

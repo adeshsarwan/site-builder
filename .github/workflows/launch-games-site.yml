@@ -21,7 +21,7 @@ on:
         required: false
         type: string
       mode:
-        description: 'launch = start a new launch · follow = only report progress · retry = resume a failed launch'
+        description: 'launch = start a new launch · follow = only report progress · retry = resume a failed launch, or restart a stuck step'
         required: false
         default: launch
         type: choice
@@ -51,7 +51,7 @@ jobs:
                 '{domain:$d} + (if $n != "" then {name:$n} else {} end) + (if $c != "" then {primaryColor:$c} else {} end)')
               CODE=$(curl -sS -o /tmp/start.json -w '%{http_code}' -X POST "$API/games/sites" -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" -d "$BODY") ;;
             retry)
-              CODE=$(curl -sS -o /tmp/start.json -w '%{http_code}' -X POST "$API/games/sites/$DOMAIN/retry" -H "Authorization: Bearer $KEY") ;;
+              CODE=$(curl -sS -o /tmp/start.json -w '%{http_code}' -X POST "$API/games/sites/$DOMAIN/retry?force=1" -H "Authorization: Bearer $KEY") ;;
             *)
               CODE=$(curl -sS -o /tmp/start.json -w '%{http_code}' "$API/sites/$DOMAIN" -H "Authorization: Bearer $KEY") ;;
           esac

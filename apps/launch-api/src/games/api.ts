@@ -215,7 +215,11 @@ games.post('/games/sites/:id/retry', async (c) => {
   const ref = await resolveGamesSite(c.env, c.req.param('id'));
   const site = ref?.siteId ? await getSiteRow(c.env, ref.siteId) : null;
   if (!site) return notFound(c, 'launch');
-  if (site.status !== 'failed') return c.json({ error: `Only failed launches can be retried (status: ${site.status})` }, 409);
+  const force = ['1', 'true'].includes(c.req.query('force') ?? '');
+  if (site.status === 'live' || site.status === 'live_with_warnings') return c.json({ error: `The launch already finished (status: ${site.status})` }, 409);
+  if (site.status !== 'failed' && !force) return c.json({ error: `Only failed launches can be retried (status: ${site.status}). To restart a stuck step, add ?force=1.` }, 409);
+  // force: stop the running attempt; finished steps are kept, the current one starts over.
+  if (site.status !== 'failed') { try { await (await c.env.GAMES_LAUNCH.get(`${site.id}-${site.attempt}`)).terminate(); } catch { /* already gone */ } }
   const attempt = site.attempt + 1;
   await c.env.DB.batch([
     c.env.DB.prepare("UPDATE steps SET status = 'pending', detail = NULL WHERE site_id = ? AND status IN ('failed','running','waiting')").bind(site.id),

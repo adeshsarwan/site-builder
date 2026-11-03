@@ -142,12 +142,19 @@ export class GamesLaunchWorkflow extends WorkflowEntrypoint<Env, LaunchParams> {
       if (!(await isDone('custom_domain'))) {
         await step.do('domain:attach', { retries: { limit: 5, delay: '30 seconds', backoff: 'exponential' } }, async () => {
           if (dry) return;
+          // Whatever served the domain before goes: Worker custom domains/routes, then plain A/AAAA/CNAME records.
+          const detached = await cf.detachWorkers(cfEnv, zone.zoneId, [domain, `www.${domain}`]);
           const removed = await cf.clearWebRecords(cfEnv, zone.zoneId, [domain, `www.${domain}`]);
           await pages.addDomain(env, project, domain);
           // Pages adds this record itself when the zone is in the same account; this keeps it right either way.
-          await cf.upsertDns(cfEnv, zone.zoneId, { type: 'CNAME', name: domain, content: `${project}.pages.dev`, proxied: true }).catch(() => null);
+          const cname = await cf.upsertDns(cfEnv, zone.zoneId, { type: 'CNAME', name: domain, content: `${project}.pages.dev`, proxied: true }).then(() => null, (e: any) => String(e.message));
           await cf.wwwRedirect(cfEnv, zone.zoneId, domain);
-          await emit('custom_domain', 'running', `Attached ${domain} to ${project}${removed.length ? ` · removed old DNS: ${removed.join('; ')}` : ''}`);
+          const notes = [
+            detached.length ? `detached from Workers: ${detached.join('; ')} (re-attach in the dashboard to undo)` : '',
+            removed.length ? `removed old DNS: ${removed.join('; ')}` : '',
+            cname ? `CNAME not set: ${cname}` : '',
+          ].filter(Boolean);
+          await emit('custom_domain', 'running', `Attached ${domain} to ${project}${notes.length ? ` · ${notes.join(' · ')}` : ''}`);
         });
         await poll('custom_domain', 'domain', 40, () => '1 minute', async () => {
           if (dry) return true;
