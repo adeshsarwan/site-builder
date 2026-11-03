@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1643
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "business networking event"
+heroImage: "/images/the-weekly-networking-routine-who-to-message-what-to-say-and-when-to-f-3476021.jpg"
+heroAlt: "laptop, conference, presentation, seminar"
+heroCredit:
+  name: "difisher"
+  url: "https://pixabay.com/users/difisher-6360621/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/laptop-conference-presentation-3476021/"
 avoidImage:
   - "4818792"
 seo:

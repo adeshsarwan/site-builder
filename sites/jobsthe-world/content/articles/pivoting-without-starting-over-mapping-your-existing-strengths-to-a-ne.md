@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1758
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "career planning notebook desk"
+heroImage: "/images/pivoting-without-starting-over-mapping-your-existing-strengths-to-a-ne-849825.jpg"
+heroAlt: "student, typing, keyboard, text"
+heroCredit:
+  name: "StartupStockPhotos"
+  url: "https://pixabay.com/users/StartupStockPhotos-690514/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/student-typing-keyboard-text-849825/"
 avoidImage:
   - "498257"
 seo:

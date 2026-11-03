@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1805
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "private job search laptop"
+heroImage: "/images/searching-in-stealth-how-to-keep-your-employer-colleagues-and-linkedin-2785932.jpg"
+heroAlt: "chart, graph, finance, financial"
+heroCredit:
+  name: "Goumbik"
+  url: "https://pixabay.com/users/Goumbik-3752482/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/chart-graph-finance-financial-data-2785932/"
 avoidImage:
   - "2895448"
 seo:

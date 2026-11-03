@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1877
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "candidate interview handshake"
+heroImage: "/images/the-career-pivot-introduction-answering-walk-me-through-your-backgroun-1238964.jpg"
+heroAlt: "agree, agreement, asian, black"
+heroCredit:
+  name: "Shutterbug26"
+  url: "https://pixabay.com/users/Shutterbug26-2077322/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/agree-agreement-asian-black-1238964/"
 avoidImage:
   - "6986021"
 seo:

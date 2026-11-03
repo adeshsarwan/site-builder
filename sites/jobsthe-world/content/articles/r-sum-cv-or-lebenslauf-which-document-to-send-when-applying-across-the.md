@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1646
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "curriculum vitae document"
+heroImage: "/images/r-sum-cv-or-lebenslauf-which-document-to-send-when-applying-across-the-3196481.jpg"
+heroAlt: "laptop, office, hand, writing"
+heroCredit:
+  name: "AymaneJed"
+  url: "https://pixabay.com/users/AymaneJed-1888423/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/laptop-office-hand-writing-3196481/"
 avoidImage:
   - "3315963"
 seo:

@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1977
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "spreadsheet tracking laptop"
+heroImage: "/images/stop-applying-twice-building-a-job-application-log-with-status-columns-1979261.jpg"
+heroAlt: "people, business, meeting, business meeting"
+heroCredit:
+  name: "089photoshootings"
+  url: "https://pixabay.com/users/089photoshootings-4258482/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/people-business-meeting-1979261/"
 avoidImage:
   - "634941"
 seo:

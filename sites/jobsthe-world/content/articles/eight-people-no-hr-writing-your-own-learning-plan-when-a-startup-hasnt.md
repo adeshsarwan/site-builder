@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1770
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "startup team office"
+heroImage: "/images/eight-people-no-hr-writing-your-own-learning-plan-when-a-startup-hasnt-593341.jpg"
+heroAlt: "startup, start-up, people, silicon valley"
+heroCredit:
+  name: "StartupStockPhotos"
+  url: "https://pixabay.com/users/StartupStockPhotos-690514/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/startup-start-up-people-593341/"
 avoidImage:
   - "11143"
 seo:

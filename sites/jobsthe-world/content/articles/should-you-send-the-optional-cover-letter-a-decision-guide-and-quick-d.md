@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1641
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "writing cover letter"
+heroImage: "/images/should-you-send-the-optional-cover-letter-a-decision-guide-and-quick-d-1205256.jpg"
+heroAlt: "laptop, coffee, arm, desktop"
+heroCredit:
+  name: "27707"
+  url: "https://pixabay.com/users/27707-27707/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/laptop-coffee-arm-desktop-notebook-1205256/"
 avoidImage:
   - "3444212"
 seo:

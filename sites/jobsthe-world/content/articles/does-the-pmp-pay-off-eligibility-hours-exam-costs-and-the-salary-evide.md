@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1671
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "project manager planning board"
+heroImage: "/images/does-the-pmp-pay-off-eligibility-hours-exam-costs-and-the-salary-evide-2852375.jpg"
+heroAlt: "stickies, post-it, note, business"
+heroCredit:
+  name: "Alexas_Fotos"
+  url: "https://pixabay.com/users/Alexas_Fotos-686414/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/stickies-post-it-note-business-2852375/"
 avoidImage:
   - "10415017"
 seo:

@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 2111
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "weekly planning calendar desk"
+heroImage: "/images/the-four-week-job-search-reset-a-plan-for-when-your-applications-go-no-3045826.jpg"
+heroAlt: "calendar, a book, date, year"
+heroCredit:
+  name: "Darkmoon_Art"
+  url: "https://pixabay.com/users/Darkmoon_Art-1664300/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/calendar-a-book-date-year-day-3045826/"
 avoidImage:
   - "699480"
 seo:

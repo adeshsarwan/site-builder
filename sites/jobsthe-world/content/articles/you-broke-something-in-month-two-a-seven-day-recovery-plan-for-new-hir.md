@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1816
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "employee talking manager office"
+heroImage: "/images/you-broke-something-in-month-two-a-seven-day-recovery-plan-for-new-hir-7836199.jpg"
+heroAlt: "business, businessman, person, networking"
+heroCredit:
+  name: "dark_3"
+  url: "https://pixabay.com/users/dark_3-34208347/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/business-businessman-person-7836199/"
 avoidImage:
   - "4765739"
 seo:

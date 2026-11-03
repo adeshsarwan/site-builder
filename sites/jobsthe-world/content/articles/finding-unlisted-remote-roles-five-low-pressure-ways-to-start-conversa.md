@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1881
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "networking coffee meeting"
+heroImage: "/images/finding-unlisted-remote-roles-five-low-pressure-ways-to-start-conversa-594090.jpg"
+heroAlt: "startup, meeting, brainstorming, business"
+heroCredit:
+  name: "StartupStockPhotos"
+  url: "https://pixabay.com/users/StartupStockPhotos-690514/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/startup-meeting-brainstorming-594090/"
 avoidImage:
   - "2184940"
 seo:

@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1857
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "signing employment contract"
+heroImage: "/images/your-new-hire-admin-checklist-tax-forms-benefits-deadlines-and-contrac-9850004.jpg"
+heroAlt: "sign, signing, contract, coffee cup"
+heroCredit:
+  name: "abirkhan006"
+  url: "https://pixabay.com/users/abirkhan006-52157039/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/sign-signing-contract-agreement-9850004/"
 avoidImage:
   - "265132"
 seo:

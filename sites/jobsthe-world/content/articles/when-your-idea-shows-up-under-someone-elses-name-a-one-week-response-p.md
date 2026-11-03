@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1785
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "team meeting presentation"
+heroImage: "/images/when-your-idea-shows-up-under-someone-elses-name-a-one-week-response-p-10222205.jpg"
+heroAlt: "meeting, conference, business, office"
+heroCredit:
+  name: "ZaidAysh_Graphix"
+  url: "https://pixabay.com/users/ZaidAysh_Graphix-55381370/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/meeting-conference-business-office-10222205/"
 avoidImage:
   - "8355620"
 seo:

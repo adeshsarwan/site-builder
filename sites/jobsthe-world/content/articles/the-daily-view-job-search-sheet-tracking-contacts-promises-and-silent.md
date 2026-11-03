@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1914
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "planner notebook laptop desk"
+heroImage: "/images/the-daily-view-job-search-sheet-tracking-contacts-promises-and-silent-763730.jpg"
+heroAlt: "freelancer, apple, imac, iphone"
+heroCredit:
+  name: "Firmbee"
+  url: "https://pixabay.com/users/Firmbee-663163/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/freelancer-apple-imac-iphone-763730/"
 avoidImage:
   - "10463655"
 seo:

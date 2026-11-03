@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1895
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "woman updating resume laptop"
+heroImage: "/images/returning-to-work-after-a-career-break-drafting-a-resume-that-handles-849824.jpg"
+heroAlt: "student, typing, keyboard, text"
+heroCredit:
+  name: "StartupStockPhotos"
+  url: "https://pixabay.com/users/StartupStockPhotos-690514/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/student-typing-keyboard-text-woman-849824/"
 avoidImage:
   - "4047523"
 seo:

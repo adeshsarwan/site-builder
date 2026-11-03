@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1834
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "reviewing job offer document"
+heroImage: "/images/the-disappointing-offer-deciding-whether-to-push-trade-or-walk-away-an-2860799.jpg"
+heroAlt: "finance, free wallpaper, document, chart"
+heroCredit:
+  name: "6689062"
+  url: "https://pixabay.com/users/6689062-6689062/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/finance-document-chart-above-2860799/"
 avoidImage:
   - "2508607"
 seo:

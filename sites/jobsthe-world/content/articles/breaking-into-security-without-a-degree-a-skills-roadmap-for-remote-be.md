@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1620
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "cybersecurity analyst computer"
+heroImage: "/images/breaking-into-security-without-a-degree-a-skills-roadmap-for-remote-be-849822.jpg"
+heroAlt: "student, typing, keyboard, text"
+heroCredit:
+  name: "StartupStockPhotos"
+  url: "https://pixabay.com/users/StartupStockPhotos-690514/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/student-typing-keyboard-text-woman-849822/"
 avoidImage:
   - "869216"
 seo:

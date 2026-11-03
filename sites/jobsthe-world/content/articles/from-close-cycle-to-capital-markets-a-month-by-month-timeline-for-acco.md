@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1558
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "financial analyst charts"
+heroImage: "/images/from-close-cycle-to-capital-markets-a-month-by-month-timeline-for-acco-2722098.jpg"
+heroAlt: "hand, type, keyboard, money"
+heroCredit:
+  name: "nattanan23"
+  url: "https://pixabay.com/users/nattanan23-6312362/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/hand-type-keyboard-money-finance-2722098/"
 avoidImage:
   - "2769021"
 seo:

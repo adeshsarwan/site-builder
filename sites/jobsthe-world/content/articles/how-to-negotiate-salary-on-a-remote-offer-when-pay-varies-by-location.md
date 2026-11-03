@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 2031
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "salary negotiation meeting"
+heroImage: "/images/how-to-negotiate-salary-on-a-remote-offer-when-pay-varies-by-location-10222297.jpg"
+heroAlt: "meeting, conference, business, office"
+heroCredit:
+  name: "ZaidAysh_Graphix"
+  url: "https://pixabay.com/users/ZaidAysh_Graphix-55381370/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/meeting-conference-business-office-10222297/"
 avoidImage:
   - "10463843"
 seo:

@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1764
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "contract negotiation business"
+heroImage: "/images/the-counteroffer-playbook-choosing-between-base-pay-sign-on-bonus-equi-9498211.jpg"
+heroAlt: "meeting, business, office, team"
+heroCredit:
+  name: "Eren098566"
+  url: "https://pixabay.com/users/Eren098566-44725179/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/meeting-business-office-team-9498211/"
 avoidImage:
   - "10476553"
 seo:

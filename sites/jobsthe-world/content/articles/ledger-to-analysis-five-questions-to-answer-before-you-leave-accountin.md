@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1607
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "accountant spreadsheet calculator"
+heroImage: "/images/ledger-to-analysis-five-questions-to-answer-before-you-leave-accountin-1044172.jpg"
+heroAlt: "calculator, calculation, insurance, finance"
+heroCredit:
+  name: "stevepb"
+  url: "https://pixabay.com/users/stevepb-282134/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/calculator-calculation-insurance-1044172/"
 avoidImage:
   - "2007769"
 seo:

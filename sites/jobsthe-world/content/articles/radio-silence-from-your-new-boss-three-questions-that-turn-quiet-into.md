@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1746
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "manager employee one-on-one"
+heroImage: "/images/radio-silence-from-your-new-boss-three-questions-that-turn-quiet-into-2362133.jpg"
+heroAlt: "confident, successful, girl, woman"
+heroCredit:
+  name: "RobinHiggins"
+  url: "https://pixabay.com/users/RobinHiggins-1321953/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/confident-successful-girl-woman-2362133/"
 avoidImage:
   - "2907453"
 seo:

@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1708
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "startup founder interview"
+heroImage: "/images/startup-interview-prep-calendar-seven-days-of-practice-for-fast-loosel-849826.jpg"
+heroAlt: "student, typing, keyboard, text"
+heroCredit:
+  name: "StartupStockPhotos"
+  url: "https://pixabay.com/users/StartupStockPhotos-690514/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/student-typing-keyboard-text-849826/"
 avoidImage:
   - "1838785"
 seo:

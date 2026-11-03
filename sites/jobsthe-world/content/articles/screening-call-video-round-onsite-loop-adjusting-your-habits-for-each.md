@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1666
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "video interview laptop"
+heroImage: "/images/screening-call-video-round-onsite-loop-adjusting-your-habits-for-each-10207354.jpg"
+heroAlt: "remote work, online meeting, team collaboration, video call"
+heroCredit:
+  name: "konkapo"
+  url: "https://pixabay.com/users/konkapo-55292388/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/remote-work-online-meeting-10207354/"
 avoidImage:
   - "4621687"
 seo:

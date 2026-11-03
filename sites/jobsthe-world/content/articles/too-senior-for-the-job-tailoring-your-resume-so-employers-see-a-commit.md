@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1907
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "senior professional interview"
+heroImage: "/images/too-senior-for-the-job-tailoring-your-resume-so-employers-see-a-commit-10219062.jpg"
+heroAlt: "woman, professional, interview, affairs"
+heroCredit:
+  name: "erwinbosman"
+  url: "https://pixabay.com/users/erwinbosman-50462252/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/woman-professional-interview-10219062/"
 avoidImage:
   - "7769329"
 seo:

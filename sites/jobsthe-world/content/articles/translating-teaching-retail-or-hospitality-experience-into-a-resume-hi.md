@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1851
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "career change resume writing"
+heroImage: "/images/translating-teaching-retail-or-hospitality-experience-into-a-resume-hi-2785920.jpg"
+heroAlt: "chart, laptop wallpaper, graph, finance"
+heroCredit:
+  name: "Goumbik"
+  url: "https://pixabay.com/users/Goumbik-3752482/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/chart-graph-finance-financial-data-2785920/"
 avoidImage:
   - "1072366"
 seo:

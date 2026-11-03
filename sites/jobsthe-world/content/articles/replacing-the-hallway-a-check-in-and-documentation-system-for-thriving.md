@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1808
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "hybrid office laptop"
+heroImage: "/images/replacing-the-hallway-a-check-in-and-documentation-system-for-thriving-593378.jpg"
+heroAlt: "entrepreneur, startup, start-up, man"
+heroCredit:
+  name: "StartupStockPhotos"
+  url: "https://pixabay.com/users/StartupStockPhotos-690514/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/entrepreneur-startup-start-up-man-593378/"
 avoidImage:
   - "5975962"
 seo:

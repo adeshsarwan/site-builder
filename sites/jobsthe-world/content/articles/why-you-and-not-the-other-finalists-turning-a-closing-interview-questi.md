@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1731
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "final job interview"
+heroImage: "/images/why-you-and-not-the-other-finalists-turning-a-closing-interview-questi-4592797.jpg"
+heroAlt: "overwhelmed, stressed out, burned out, freak out"
+heroCredit:
+  name: "fotomacher_ch"
+  url: "https://pixabay.com/users/fotomacher_ch-1782794/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/overwhelmed-stressed-out-burned-out-4592797/"
 avoidImage:
   - "110671"
 seo:

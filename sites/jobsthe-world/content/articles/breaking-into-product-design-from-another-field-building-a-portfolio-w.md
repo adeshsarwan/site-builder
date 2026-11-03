@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1660
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "designer sketching wireframes"
+heroImage: "/images/breaking-into-product-design-from-another-field-building-a-portfolio-w-789160.jpg"
+heroAlt: "ux, design, webdesign, app"
+heroCredit:
+  name: "Firmbee"
+  url: "https://pixabay.com/users/Firmbee-663163/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/ux-design-webdesign-app-mobile-789160/"
 avoidImage:
   - "3081015"
 seo:

@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1857
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "home office video call"
+heroImage: "/images/asking-for-remote-or-hybrid-terms-in-your-offer-scripts-timing-and-the-849821.jpg"
+heroAlt: "student, woman, startup, business"
+heroCredit:
+  name: "StartupStockPhotos"
+  url: "https://pixabay.com/users/StartupStockPhotos-690514/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/student-woman-startup-business-849821/"
 avoidImage:
   - "2613125"
 seo:

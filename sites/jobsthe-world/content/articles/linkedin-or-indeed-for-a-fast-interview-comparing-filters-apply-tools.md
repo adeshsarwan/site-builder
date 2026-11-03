@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1717
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "online job application laptop"
+heroImage: "/images/linkedin-or-indeed-for-a-fast-interview-comparing-filters-apply-tools-2722107.jpg"
+heroAlt: "hand, type, keyboard, money"
+heroCredit:
+  name: "nattanan23"
+  url: "https://pixabay.com/users/nattanan23-6312362/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/hand-type-keyboard-money-finance-2722107/"
 avoidImage:
   - "1795578"
 seo:

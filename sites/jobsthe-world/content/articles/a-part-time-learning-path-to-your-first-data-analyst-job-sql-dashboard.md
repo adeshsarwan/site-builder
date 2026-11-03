@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1684
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "data analyst dashboard laptop"
+heroImage: "/images/a-part-time-learning-path-to-your-first-data-analyst-job-sql-dashboard-2717014.jpg"
+heroAlt: "office, business, notebook, statistics"
+heroCredit:
+  name: "Goumbik"
+  url: "https://pixabay.com/users/Goumbik-3752482/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/office-business-notebook-statistics-2717014/"
 avoidImage:
   - "1452987"
 seo:

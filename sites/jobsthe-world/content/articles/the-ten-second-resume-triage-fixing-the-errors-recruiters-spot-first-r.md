@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1710
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "recruiter reviewing resume"
+heroImage: "/images/the-ten-second-resume-triage-fixing-the-errors-recruiters-spot-first-r-2785864.jpg"
+heroAlt: "chart, graph, finance, financial"
+heroCredit:
+  name: "Goumbik"
+  url: "https://pixabay.com/users/Goumbik-3752482/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/chart-graph-finance-financial-data-2785864/"
 avoidImage:
   - "1163695"
 seo:

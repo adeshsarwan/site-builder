@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1785
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "job search laptop"
+heroImage: "/images/finding-real-us-openings-board-filters-company-career-pages-and-ways-t-624749.jpg"
+heroAlt: "office, secretary, business, woman"
+heroCredit:
+  name: "Firmbee"
+  url: "https://pixabay.com/users/Firmbee-663163/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/office-secretary-business-woman-624749/"
 avoidImage:
   - "2400367"
 seo:

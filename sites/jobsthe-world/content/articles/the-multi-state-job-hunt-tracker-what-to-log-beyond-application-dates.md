@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1726
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "job applications checklist"
+heroImage: "/images/the-multi-state-job-hunt-tracker-what-to-log-beyond-application-dates-5679000.jpg"
+heroAlt: "woman, communication, network, search"
+heroCredit:
+  name: "magnetme"
+  url: "https://pixabay.com/users/magnetme-18827429/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/woman-communication-network-search-5679000/"
 avoidImage:
   - "4403839"
 seo:

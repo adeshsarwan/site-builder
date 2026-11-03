@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1717
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "job interview conversation"
+heroImage: "/images/choosing-a-safe-flaw-how-to-discuss-your-weak-spots-in-an-interview-wi-3726428.jpg"
+heroAlt: "cv, resume, job, employment"
+heroCredit:
+  name: "olilynch"
+  url: "https://pixabay.com/users/olilynch-3815693/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/cv-resume-job-employment-business-3726428/"
 avoidImage:
   - "1642989"
 seo:

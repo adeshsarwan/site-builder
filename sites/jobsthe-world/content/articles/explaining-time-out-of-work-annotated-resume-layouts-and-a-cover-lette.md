@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1784
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "resume writing laptop"
+heroImage: "/images/explaining-time-out-of-work-annotated-resume-layouts-and-a-cover-lette-593344.jpg"
+heroAlt: "startup, start-up, people, silicon valley"
+heroCredit:
+  name: "StartupStockPhotos"
+  url: "https://pixabay.com/users/StartupStockPhotos-690514/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/startup-start-up-people-593344/"
 avoidImage:
   - "7245448"
 seo:

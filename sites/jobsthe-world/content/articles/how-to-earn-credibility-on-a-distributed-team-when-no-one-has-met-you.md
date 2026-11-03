@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 7
 wordCount: 1914
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "remote team video conference"
+heroImage: "/images/how-to-earn-credibility-on-a-distributed-team-when-no-one-has-met-you-10222200.jpg"
+heroAlt: "meeting, conference, business, office"
+heroCredit:
+  name: "ZaidAysh_Graphix"
+  url: "https://pixabay.com/users/ZaidAysh_Graphix-55381370/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/meeting-conference-business-office-10222200/"
 avoidImage:
   - "1634177"
 seo:

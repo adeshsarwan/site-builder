@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1845
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "employee promotion meeting"
+heroImage: "/images/moving-up-where-you-already-work-rewriting-your-resume-and-pitch-for-a-594091.jpg"
+heroAlt: "meeting, brainstorming, business, teamwork"
+heroCredit:
+  name: "StartupStockPhotos"
+  url: "https://pixabay.com/users/StartupStockPhotos-690514/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/meeting-brainstorming-business-594091/"
 avoidImage:
   - "283448"
 seo:

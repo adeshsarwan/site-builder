@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1955
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "webcam home office setup"
+heroImage: "/images/the-home-studio-rehearsal-a-48-hour-tech-and-room-check-before-a-remot-2846221.jpg"
+heroAlt: "business, computer, mobile, smartphone"
+heroCredit:
+  name: "6689062"
+  url: "https://pixabay.com/users/6689062-6689062/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/business-computer-mobile-smartphone-2846221/"
 avoidImage:
   - "4666623"
 seo:

@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1971
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "stressed employee desk"
+heroImage: "/images/drowning-in-week-three-sorting-normal-onboarding-chaos-from-real-role-2773007.jpg"
+heroAlt: "woman, women, office, work"
+heroCredit:
+  name: "ernestoeslava"
+  url: "https://pixabay.com/users/ernestoeslava-6289958/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/woman-women-office-work-business-2773007/"
 avoidImage:
   - "66700"
 seo:

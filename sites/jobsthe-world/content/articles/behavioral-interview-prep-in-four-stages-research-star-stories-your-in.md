@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1807
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "job interview preparation notes"
+heroImage: "/images/behavioral-interview-prep-in-four-stages-research-star-stories-your-in-3233643.jpg"
+heroAlt: "bulletin board, laptop, computer, stickies"
+heroCredit:
+  name: "geralt"
+  url: "https://pixabay.com/users/geralt-9301/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/bulletin-board-laptop-computer-3233643/"
 avoidImage:
   - "7471627"
 seo:

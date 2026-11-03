@@ -10,9 +10,13 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1708
 origin: "generated"
-heroImage: ""
-heroAlt: ""
-imageQuery: "interview panel office"
+heroImage: "/images/panel-or-one-on-one-matching-your-prep-time-to-the-interview-format-on-4131482.jpg"
+heroAlt: "job, interview, handshake, hiring"
+heroCredit:
+  name: "Tumisu"
+  url: "https://pixabay.com/users/Tumisu-148124/"
+  source: "Pixabay"
+  sourceUrl: "https://pixabay.com/photos/job-interview-handshake-hiring-4131482/"
 avoidImage:
   - "5689"
 seo:
