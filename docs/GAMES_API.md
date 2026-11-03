@@ -97,11 +97,11 @@ POST /v1/games/sites
 Only `domain` is required. Show `nameservers` to set at the registrar. Steps, in order:
 `zone` → `nameservers` (waits until Cloudflare reports the zone active) → `analytics` (new GA4 property) → `repo` (`sites/<key>/site.json`)
 → `pages` (Cloudflare Pages project `games-<key>`, built from the repo with `SITE=<key>`, rebuilt only by its own folder
-or shared code/catalogue) → `deploy` → `custom_domain` (old A/AAAA/CNAME for apex + www removed, domain attached, SSL, www → apex)
+or shared code/catalogue) → `deploy` → `custom_domain` (whatever served apex + www before is detached — Worker custom domains and routes, then A/AAAA/CNAME records, listed in the step detail so you can put them back — then domain attached, SSL, www → apex)
 → `search_console` (DNS verification, property, sitemap) → `ads` (skipped: test ads until stage 2) → `smoke_test`.
 
 Progress: poll `GET /v1/games/sites/{id}` or stream `GET /v1/sites/{id}/events?key=<API_KEY>` (SSE `step` / `status`, same as jobs).
-Webhooks, step and site statuses are the same as for jobs sites. A failed launch resumes with `POST /v1/games/sites/{id}/retry`.
+Webhooks, step and site statuses are the same as for jobs sites. A failed launch resumes with `POST /v1/games/sites/{id}/retry`; `?force=1` also restarts a running launch's current step (finished steps are kept).
 
 ```http
 GET /v1/games/sites            → { sites: [...], notLaunchedByApi: ["demo"] }
