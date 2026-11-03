@@ -10,13 +10,11 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1770
 origin: "generated"
-heroImage: "/images/eight-people-no-hr-writing-your-own-learning-plan-when-a-startup-hasnt.jpg"
-heroAlt: "lagoon nebula, nature, messier 8, ngc 6523"
-heroCredit:
-  name: "WikiImages"
-  url: "https://pixabay.com/users/WikiImages-1897/"
-  source: "Pixabay"
-  sourceUrl: "https://pixabay.com/photos/lagoon-nebula-messier-8-ngc-6523-11143/"
+heroImage: ""
+heroAlt: ""
+imageQuery: "startup team office"
+avoidImage:
+  - "11143"
 seo:
   title: "Startup Onboarding Plan: Build Your Own 90-Day Plan"
   metaDescription: "No onboarding at your eight-person remote startup? Use this 30-60-90 day plan to decide who to meet, what to learn and what to document from day one."

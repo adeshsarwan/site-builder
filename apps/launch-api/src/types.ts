@@ -3,6 +3,8 @@ export interface Env {
   LAUNCH: Workflow<LaunchParams>;
   CONTENT: Workflow<any>;
   API_KEY: string;
+  /** Second key for the superadmin (base topic library). Optional; without it nobody can edit the library. */
+  SUPERADMIN_KEY?: string;
   CF_API_TOKEN: string;
   CF_ACCOUNT_ID: string;
   GITHUB_TOKEN: string;
@@ -32,8 +34,10 @@ export interface LaunchInput {
   primaryColor?: string;
   /** Write one NEW article per starting-library topic (topics only; no text is reused). Default true. */
   useLibraryTopics?: boolean;
-  /** Cap on library topics used (default: all). */
+  /** Cap on library topics used (default: all enabled topics). */
   libraryLimit?: number;
+  /** Exact library topic ids to write from (GET /v1/library), in this order. Overrides "the first libraryLimit topics". */
+  libraryTopics?: string[];
   /** Extra brand-new topics beyond the library (0–40). Default 0. */
   generateArticles?: number;
   /** "pixabay" (download + self-host), "unsplash" (hotlink + credit) or "none". Default from IMAGE_PROVIDER. */

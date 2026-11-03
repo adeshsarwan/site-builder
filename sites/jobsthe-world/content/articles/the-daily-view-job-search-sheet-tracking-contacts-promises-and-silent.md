@@ -10,13 +10,11 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1914
 origin: "generated"
-heroImage: "/images/the-daily-view-job-search-sheet-tracking-contacts-promises-and-silent.jpg"
-heroAlt: "elderly woman, countryside, black and white, rice field"
-heroCredit:
-  name: "dhatchina"
-  url: "https://pixabay.com/users/dhatchina-20263859/"
-  source: "Pixabay"
-  sourceUrl: "https://pixabay.com/photos/elderly-woman-countryside-10463655/"
+heroImage: ""
+heroAlt: ""
+imageQuery: "planner notebook laptop desk"
+avoidImage:
+  - "10463655"
 seo:
   title: "Job Search Spreadsheet: A Daily-View Tracker, No Formulas"
   metaDescription: "Build a no-formula job search spreadsheet that sorts itself each morning: who you owe a reply, what you promised, which applications went quiet."

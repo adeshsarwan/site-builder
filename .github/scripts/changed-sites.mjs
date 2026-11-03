@@ -17,7 +17,7 @@ if (process.env.EVENT === 'workflow_dispatch') {
   const range = before && !/^0+$/.test(before) ? `${before}..HEAD` : 'HEAD~1..HEAD';
   let changed = [];
   try { changed = execSync(`git diff --name-only ${range}`).toString().split('\n').filter(Boolean); } catch { changed = ['apps/web/']; }
-  const shared = changed.some((f) => f.startsWith('apps/web/') || f.startsWith('.github/'));
+  const shared = changed.some((f) => f.startsWith('apps/web/') || f.startsWith('shared/') || f.startsWith('.github/'));
   sites = shared ? all : [...new Set(changed.map((f) => f.match(/^sites\/([^/_][^/]*)\//)?.[1]).filter((s) => s && all.includes(s)))];
 }
 

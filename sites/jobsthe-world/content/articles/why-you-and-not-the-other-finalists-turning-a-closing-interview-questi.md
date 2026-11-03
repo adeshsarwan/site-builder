@@ -10,13 +10,11 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1731
 origin: "generated"
-heroImage: "/images/why-you-and-not-the-other-finalists-turning-a-closing-interview-questi.jpg"
-heroAlt: "spring flowers, flowers, collage, floral"
-heroCredit:
-  name: "Shirley810"
-  url: "https://pixabay.com/users/Shirley810-9355/"
-  source: "Pixabay"
-  sourceUrl: "https://pixabay.com/photos/spring-flowers-flowers-collage-110671/"
+heroImage: ""
+heroAlt: ""
+imageQuery: "final job interview"
+avoidImage:
+  - "110671"
 seo:
   title: "Why Should We Hire You? A 60-Second Answer Template"
   metaDescription: "Freeze on 'why should we hire you?' Learn the hiring worry behind it, study three sample answers, and fill in a 60-second template with your numbers."

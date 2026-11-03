@@ -9,7 +9,7 @@ apps/launch-api/   Cloudflare Worker + Workflows + D1 — the Launch API (sitebu
 apps/jobs-api/     Cloud Run service wrapping JSearch (RapidAPI) — what /jobs on every site calls
 sites/<slug>/      One folder per site: site.config.json + content/articles/*.md
 sites/_template/   Config template used for new launches
-sites/_library/    Topic list for new sites (titles/summaries only — never published or copied)
+shared/            Code used by both the API and the site build (photo relevance)
 .github/workflows/ deploy.yml (sites) · deploy-launch-api.yml (API)
 ```
 
@@ -39,6 +39,7 @@ Implemented exactly as the publisher integration guide says:
    ```sh
    cd apps/launch-api
    npx wrangler secret put API_KEY            # long random string your frontend backend sends
+   npx wrangler secret put SUPERADMIN_KEY     # a different long random string: the only key that can edit the base topic library
    npx wrangler secret put CF_API_TOKEN
    npx wrangler secret put GITHUB_TOKEN
    npx wrangler secret put GCP_SA_JSON        # paste the JSON key
@@ -111,10 +112,11 @@ es.addEventListener('status', (e) => render(JSON.parse(e.data))); // { status, p
 
 ### Content notes
 
-- Every launched site gets its own articles. The library supplies only topic titles and one-line summaries; Claude plans a new title and angle for the site's audience and writes each article from scratch (new structure, wording, examples, SEO title, meta description, keywords, FAQ). No source text is reused and nothing links or canonicalises to another site.
+- Every launched site gets its own articles. The base library (D1 `library_topics`, managed with `/v1/library` and the superadmin key) holds only headlines, one-line summaries and categories; Claude plans a new title and angle for the site's audience and writes each article from scratch (new structure, wording, examples, SEO title, meta description, keywords, FAQ). No source text is reused and nothing links or canonicalises to another site.
 - Hero photos: `pixabay` (default) downloads the photo and commits it to `sites/<slug>/public/images/`, served from the site's own domain, as Pixabay's API terms require. `unsplash` hotlinks `images.unsplash.com`, triggers download tracking and shows the photographer credit with UTM links, as Unsplash's API guidelines require. Both show a credit line under the photo.
 - Bylines are "<Site> Editorial Team"; Claude is told not to invent statistics or people. Review generated articles before relying on them.
-- Cost and time scale with article count. Use `libraryLimit` to cap topics (e.g. 20 for a first launch).
+- Cost and time scale with article count. Use `libraryLimit` to cap topics (e.g. 20 for a first launch) or `libraryTopics` to pick exact ones.
+- Photos: each story's own photo query, then its category, then generic work scenes; a Pixabay hit is used only if its tags look like work (`shared/photo-relevance.mjs`). `POST /v1/sites/{id}/photos/refresh` replaces off-topic photos in bulk.
 
 ## Jobs API (Cloud Run + JSearch via OpenWeb Ninja)
 

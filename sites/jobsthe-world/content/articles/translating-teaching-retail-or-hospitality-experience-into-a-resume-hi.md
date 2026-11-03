@@ -10,13 +10,11 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1851
 origin: "generated"
-heroImage: "/images/translating-teaching-retail-or-hospitality-experience-into-a-resume-hi.jpg"
-heroAlt: "black, mac wallpaper, board, free wallpaper"
-heroCredit:
-  name: "stux"
-  url: "https://pixabay.com/users/stux-12364/"
-  source: "Pixabay"
-  sourceUrl: "https://pixabay.com/photos/black-board-traces-of-chalk-school-1072366/"
+heroImage: ""
+heroAlt: ""
+imageQuery: "career change resume writing"
+avoidImage:
+  - "1072366"
 seo:
   title: "Transferable Skills Resume: Teaching, Retail, Hospitality"
   metaDescription: "Line-by-line resume rewrites that turn teaching, retail and hospitality duties into measurable, remote-ready accomplishments hiring managers trust."

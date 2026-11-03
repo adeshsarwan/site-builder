@@ -10,13 +10,11 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1857
 origin: "generated"
-heroImage: "/images/asking-for-remote-or-hybrid-terms-in-your-offer-scripts-timing-and-the.jpg"
-heroAlt: "pig dog, inner pig dog, dog, animal"
-heroCredit:
-  name: "suju-foto"
-  url: "https://pixabay.com/users/suju-foto-165106/"
-  source: "Pixabay"
-  sourceUrl: "https://pixabay.com/photos/pig-dog-inner-pig-dog-dog-pig-2613125/"
+heroImage: ""
+heroAlt: ""
+imageQuery: "home office video call"
+avoidImage:
+  - "2613125"
 seo:
   title: "Negotiate Remote Work in a Job Offer: Scripts & Clauses"
   metaDescription: "Negotiate remote or hybrid terms after an offer: when to ask, word-for-word scripts, and the contract clauses that decide whether flexibility lasts."

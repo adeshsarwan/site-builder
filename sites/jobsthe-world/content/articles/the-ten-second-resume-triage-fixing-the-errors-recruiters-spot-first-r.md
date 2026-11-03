@@ -10,13 +10,11 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1710
 origin: "generated"
-heroImage: "/images/the-ten-second-resume-triage-fixing-the-errors-recruiters-spot-first-r.jpg"
-heroAlt: "books, stack, book store, stack of books"
-heroCredit:
-  name: "EliFrancis"
-  url: "https://pixabay.com/users/EliFrancis-1160677/"
-  source: "Pixabay"
-  sourceUrl: "https://pixabay.com/photos/books-stack-book-store-1163695/"
+heroImage: ""
+heroAlt: ""
+imageQuery: "recruiter reviewing resume"
+avoidImage:
+  - "1163695"
 seo:
   title: "Resume Triage: Fix the Errors Recruiters Spot First"
   metaDescription: "Applying to remote jobs with no replies? Use this ranked resume triage to fix the errors that get you screened out in seconds, and skip the ones that can wait."

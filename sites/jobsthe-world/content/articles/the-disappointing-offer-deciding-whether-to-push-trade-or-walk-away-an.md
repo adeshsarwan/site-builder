@@ -10,13 +10,11 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1834
 origin: "generated"
-heroImage: "/images/the-disappointing-offer-deciding-whether-to-push-trade-or-walk-away-an.jpg"
-heroAlt: "invitation, to visit, visit, invite"
-heroCredit:
-  name: "geralt"
-  url: "https://pixabay.com/users/geralt-9301/"
-  source: "Pixabay"
-  sourceUrl: "https://pixabay.com/photos/invitation-to-visit-visit-invite-2508607/"
+heroImage: ""
+heroAlt: ""
+imageQuery: "reviewing job offer document"
+avoidImage:
+  - "2508607"
 seo:
   title: "Disappointing Job Offer: Push, Trade or Walk Away"
   metaDescription: "Got a low job offer? Learn how to gauge your leverage, ask for non-salary perks when base pay is fixed, and confirm key remote-work terms in writing."

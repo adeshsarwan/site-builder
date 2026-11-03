@@ -10,13 +10,11 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 2031
 origin: "generated"
-heroImage: "/images/how-to-negotiate-salary-on-a-remote-offer-when-pay-varies-by-location.jpg"
-heroAlt: "desert, sand dunes, sahara, desert landscape"
-heroCredit:
-  name: "Wolfgang_Hasselmann"
-  url: "https://pixabay.com/users/Wolfgang_Hasselmann-12114733/"
-  source: "Pixabay"
-  sourceUrl: "https://pixabay.com/photos/desert-sand-dunes-sahara-10463843/"
+heroImage: ""
+heroAlt: ""
+imageQuery: "salary negotiation meeting"
+avoidImage:
+  - "10463843"
 seo:
   title: "Negotiate Remote Salary With Location-Based Pay Bands"
   metaDescription: "Scripts, research steps and a comparison framework to challenge location-based pay bands and negotiate currency, equity and benefits on remote offers."

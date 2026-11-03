@@ -5,7 +5,7 @@ run-name: ${{ github.event_name == 'workflow_dispatch' && format('deploy {0} {1}
 on:
   push:
     branches: [main]
-    paths: ['apps/web/**', 'sites/**', '.github/workflows/deploy.yml', '.github/scripts/**']
+    paths: ['apps/web/**', 'sites/**', 'shared/**', '.github/workflows/deploy.yml', '.github/scripts/**']
   workflow_dispatch:
     inputs:
       site:

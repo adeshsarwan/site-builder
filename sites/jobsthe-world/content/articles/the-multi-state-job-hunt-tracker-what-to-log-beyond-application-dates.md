@@ -10,13 +10,11 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1726
 origin: "generated"
-heroImage: "/images/the-multi-state-job-hunt-tracker-what-to-log-beyond-application-dates.jpg"
-heroAlt: "vienna state opera, night, long exposure, city"
-heroCredit:
-  name: "Mike_68"
-  url: "https://pixabay.com/users/Mike_68-10359383/"
-  source: "Pixabay"
-  sourceUrl: "https://pixabay.com/photos/vienna-state-opera-night-4403839/"
+heroImage: ""
+heroAlt: ""
+imageQuery: "job applications checklist"
+avoidImage:
+  - "4403839"
 seo:
   title: "Multi-State Job Hunt Tracker: What to Log Beyond Dates"
   metaDescription: "Build a job search tracker that logs time zones, licensing, relocation expectations and tax questions across states and regions, not just dates."
