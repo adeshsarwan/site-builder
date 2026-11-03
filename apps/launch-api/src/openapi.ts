@@ -9,7 +9,7 @@ export const openapi = {
   info: {
     title: 'Site Builder Launch API',
     version: '1.0.0',
-    description: 'Launch and manage job sites. All /v1 routes need `Authorization: Bearer <API_KEY>`. Call from a server, not a browser. Changes that touch a site (config, ads, ads.txt) commit to GitHub and start a deploy; follow it with GET /v1/deploys/{runKey}.',
+    description: 'Launch and manage job sites. All /v1 routes need `Authorization: Bearer <API_KEY>` (or the SUPERADMIN_KEY, which can also edit the base topic library). Call from a server, not a browser. Changes that touch a site (config, ads, ads.txt) commit to GitHub and start a deploy; follow it with GET /v1/deploys/{runKey}.',
   },
   servers: [{ url: 'https://sitebuilder.thebesads.com/api' }],
   security: [{ bearer: [] }],
@@ -17,6 +17,7 @@ export const openapi = {
     { name: 'Launch', description: 'Stage 1: create and launch a site' },
     { name: 'Stories', description: 'List, write, edit, rewrite, re-photo and delete stories (articles)' },
     { name: 'Content', description: 'Older content endpoints (kept for compatibility)' },
+    { name: 'Library', description: 'Base topic library (headlines new sites write fresh stories from). Reading needs any key; changes need the SUPERADMIN_KEY' },
     { name: 'Funnels', description: 'Questions + rewarded video before chosen URLs' },
     { name: 'Ads', description: 'Stage 2: enable ads, manage ads.txt' },
     { name: 'Site', description: 'Config, deploys, live health' },
@@ -77,7 +78,39 @@ export const openapi = {
         responses: { 202: accepted },
       },
     },
-    '/v1/sites/{id}/library': { get: { tags: ['Stories'], summary: 'Starting-library topics (index, title, summary, category) for library: { fromTopic, count }', parameters: [id], responses: { 200: json({ type: 'object' }) } } },
+    '/v1/sites/{id}/library': { get: { tags: ['Stories'], summary: 'Library topics for this site: which it has used and how many remain', parameters: [id], responses: { 200: json({ type: 'object' }) } } },
+    '/v1/sites/{id}/photos/refresh': {
+      post: {
+        tags: ['Stories'], summary: 'New photos for many stories at once (default: every story whose photo looks off-topic)', parameters: [id],
+        requestBody: { content: { 'application/json': { schema: { type: 'object', properties: {
+          slugs: { type: 'array', items: { type: 'string' } }, all: { type: 'boolean' },
+          queries: { type: 'object', additionalProperties: { type: 'string' }, description: 'slug → your own photo search words' },
+          dryRun: { type: 'boolean', description: 'List what would change; change nothing' } } } } } },
+        responses: { 200: json({ type: 'object' }, 'Dry run, or nothing to change'), 202: accepted },
+      },
+    },
+    '/v1/me': { get: { tags: ['Library'], summary: 'Which key you used: role admin or superadmin', responses: { 200: json({ type: 'object', properties: { role: { type: 'string', enum: ['admin', 'superadmin'] }, superadminConfigured: { type: 'boolean' } } }) } } },
+    '/v1/library': {
+      get: { tags: ['Library'], summary: 'List base topics (filters: q, category, enabled, site)', parameters: ['q', 'category', 'enabled', 'site'].map((n) => ({ name: n, in: 'query', schema: { type: 'string' } })), responses: { 200: json({ type: 'object' }) } },
+      post: {
+        tags: ['Library'], summary: 'Superadmin: add headlines (category and summary filled in if left out; duplicates skipped)',
+        requestBody: { required: true, content: { 'application/json': { schema: { type: 'object', required: ['topics'], properties: { topics: { type: 'array', items: { oneOf: [{ type: 'string' }, ref('LibraryTopicInput')] } } } } } } },
+        responses: { 201: json({ type: 'object' }), 403: json(ref('Error'), 'Not the superadmin key') },
+      },
+    },
+    '/v1/library/suggest': {
+      post: {
+        tags: ['Library'], summary: 'Superadmin: Claude proposes new headlines that do not overlap the library ("save": true adds them)',
+        requestBody: { content: { 'application/json': { schema: { type: 'object', properties: { count: { type: 'integer', maximum: 50 }, category: { type: 'string' }, theme: { type: 'string' }, save: { type: 'boolean' } } } } } },
+        responses: { 200: json({ type: 'object' }), 201: json({ type: 'object' }), 403: json(ref('Error')) },
+      },
+    },
+    '/v1/library/{topicId}': {
+      get: { tags: ['Library'], summary: 'One topic and the sites that used it', parameters: [{ name: 'topicId', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: json(ref('LibraryTopic')), 404: json(ref('Error')) } },
+      patch: { tags: ['Library'], summary: 'Superadmin: edit title, summary, category, enabled, position', parameters: [{ name: 'topicId', in: 'path', required: true, schema: { type: 'string' } }],
+        requestBody: { content: { 'application/json': { schema: ref('LibraryTopicInput') } } }, responses: { 200: json(ref('LibraryTopic')), 403: json(ref('Error')), 404: json(ref('Error')) } },
+      delete: { tags: ['Library'], summary: 'Superadmin: delete a topic (stories already written stay)', parameters: [{ name: 'topicId', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: json({ type: 'object' }), 403: json(ref('Error')), 404: json(ref('Error')) } },
+    },
     '/v1/sites/{id}/tasks': { get: { tags: ['Stories'], summary: 'Recent story-writing tasks for a site', parameters: [id, { name: 'limit', in: 'query', schema: { type: 'integer' } }], responses: { 200: json({ type: 'object' }) } } },
     '/v1/tasks/{taskId}': { get: { tags: ['Stories'], summary: 'Task progress with per-story status (pending → writing → written → published, or failed)', parameters: [{ name: 'taskId', in: 'path', required: true, schema: { type: 'string' } }], responses: { 200: json(ref('Task')), 404: json(ref('Error')) } } },
 
@@ -151,6 +184,8 @@ export const openapi = {
   components: {
     securitySchemes: { bearer: { type: 'http', scheme: 'bearer' } },
     schemas: {
+      LibraryTopic: { type: 'object', properties: { id: { type: 'string' }, title: { type: 'string' }, summary: { type: 'string' }, category: { type: 'string' }, enabled: { type: 'boolean' }, position: { type: 'integer' }, usedBy: { type: 'array', items: { type: 'string' } } } },
+      LibraryTopicInput: { type: 'object', properties: { title: { type: 'string' }, summary: { type: 'string' }, category: { type: 'string', enum: ['job-search-strategy', 'resume-cover-letters', 'interview-prep', 'salary-negotiation', 'workplace-success', 'career-change-growth'] }, enabled: { type: 'boolean' }, position: { type: 'integer' } } },
       Error: { type: 'object', properties: { error: { type: 'string' } } },
       Deploy: { type: 'object', properties: { runKey: { type: 'string' }, statusUrl: { type: 'string' } } },
       Accepted: { type: 'object', properties: { changed: { type: 'boolean' }, commit: { type: 'string' }, deploy: ref('Deploy'), warnings: { type: 'array', items: { type: 'string' } } } },
@@ -159,7 +194,7 @@ export const openapi = {
         properties: {
           domain: { type: 'string', example: 'jobsthe.world' }, name: { type: 'string' }, tagline: { type: 'string' }, description: { type: 'string' },
           niche: { type: 'string' }, country: { type: 'string', example: 'US' }, primaryColor: { type: 'string', example: '#1d4ed8' },
-          useLibraryTopics: { type: 'boolean', default: true }, libraryLimit: { type: 'integer' }, generateArticles: { type: 'integer', maximum: 40 },
+          useLibraryTopics: { type: 'boolean', default: true }, libraryLimit: { type: 'integer', description: 'Use the first N enabled library topics' }, libraryTopics: { type: 'array', items: { type: 'string' }, description: 'Exact library topic ids (GET /v1/library); overrides libraryLimit' }, generateArticles: { type: 'integer', maximum: 40 },
           imageProvider: { enum: ['pixabay', 'unsplash', 'none'] }, ga4MeasurementId: { type: 'string' }, webhookUrl: { type: 'string', format: 'uri' },
         },
       },
@@ -199,7 +234,7 @@ export const openapi = {
           stories: { type: 'array', description: 'Your exact titles (strings, or objects)', items: { oneOf: [{ type: 'string' }, { type: 'object', required: ['title'], properties: { title: { type: 'string' }, category: { $ref: '#/components/schemas/Category' }, angle: { type: 'string' }, slug: { type: 'string' } } }] } },
           ideas: { type: 'array', items: { type: 'string' }, description: 'Briefs; Claude writes a fresh title for each' },
           extra: { type: 'integer', maximum: 40, description: 'Claude picks this many new topics' },
-          library: { oneOf: [{ type: 'boolean' }, { type: 'object', properties: { fromTopic: { type: 'integer' }, count: { type: 'integer', description: '0 = all remaining' } } }] },
+          library: { oneOf: [{ type: 'boolean', description: 'true = every library topic this site has not used yet' }, { type: 'object', properties: { topics: { type: 'array', items: { type: 'string' }, description: 'Exact library topic ids' }, count: { type: 'integer', description: 'How many unused topics (0 = all remaining)' }, fromTopic: { type: 'integer', description: 'Old index-based start (ignores usage)' } } }] },
           instructions: { type: 'string', description: 'Guidance for every story in this task' },
           draft: { type: 'boolean', description: 'Write as drafts (hidden until PATCH draft:false)' },
           deploy: { type: 'boolean', default: true },

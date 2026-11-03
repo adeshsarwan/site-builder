@@ -10,13 +10,11 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1708
 origin: "generated"
-heroImage: "/images/panel-or-one-on-one-matching-your-prep-time-to-the-interview-format-on.jpg"
-heroAlt: "digital clock, clock, digital, time"
-heroCredit:
-  name: "Hans"
-  url: "https://pixabay.com/users/Hans-2/"
-  source: "Pixabay"
-  sourceUrl: "https://pixabay.com/photos/digital-clock-clock-digital-time-5689/"
+heroImage: ""
+heroAlt: ""
+imageQuery: "interview panel office"
+avoidImage:
+  - "5689"
 seo:
   title: "Panel vs One-on-One Interview Prep: Split Your Time Right"
   metaDescription: "Panel and one-on-one interviews need different prep. See how to split your hours, rehearse on video, and prepare for each remote format with a checklist."

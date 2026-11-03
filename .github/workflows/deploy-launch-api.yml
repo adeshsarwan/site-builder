@@ -3,7 +3,7 @@ name: Deploy Launch API
 on:
   push:
     branches: [main]
-    paths: ['apps/launch-api/**', '.github/workflows/deploy-launch-api.yml']
+    paths: ['apps/launch-api/**', 'shared/**', '.github/workflows/deploy-launch-api.yml']
   workflow_dispatch:
 
 concurrency:
@@ -29,8 +29,9 @@ jobs:
       - run: npm ci
       - run: npx tsc --noEmit
       # D1 database is auto-provisioned on first deploy (no database_id in wrangler.jsonc).
-      - run: npx wrangler deploy --var CF_ACCOUNT_ID:${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      # Migrations first (they only add tables/columns), so new code never runs without its tables.
       - run: npx wrangler d1 migrations apply launch-db --remote
+      - run: npx wrangler deploy --var CF_ACCOUNT_ID:${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       # Lets /api/v1/jobs/* reach the jobs API (same key the sites use). Skipped if the GitHub secret is missing.
       - name: Sync JOBS_API_KEY to the Worker
         env:

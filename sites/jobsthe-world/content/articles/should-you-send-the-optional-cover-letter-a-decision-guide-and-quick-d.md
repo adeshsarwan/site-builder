@@ -10,13 +10,11 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1641
 origin: "generated"
-heroImage: "/images/should-you-send-the-optional-cover-letter-a-decision-guide-and-quick-d.jpg"
-heroAlt: "see no evil, hear no evil, speak no evil, frog"
-heroCredit:
-  name: "Alexas_Fotos"
-  url: "https://pixabay.com/users/Alexas_Fotos-686414/"
-  source: "Pixabay"
-  sourceUrl: "https://pixabay.com/photos/see-no-evil-hear-no-evil-3444212/"
+heroImage: ""
+heroAlt: ""
+imageQuery: "writing cover letter"
+avoidImage:
+  - "3444212"
 seo:
   title: "Optional Cover Letter: Send It or Skip It? Decision Guide"
   metaDescription: "Not sure whether to send an optional cover letter? Use this quick decision checklist and a 20-minute drafting method built for remote job applications."

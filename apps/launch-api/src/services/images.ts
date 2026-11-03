@@ -1,6 +1,7 @@
 import type { Env } from '../types';
 import type { HeroImage } from './content';
 import { createBlob } from './github';
+import { bestHit, imageQueries as sharedQueries, photoScore } from '../../../../shared/photo-relevance.mjs';
 
 // Free stock photos for article heroes.
 //  - Pixabay (default): the API forbids permanent hotlinking, so the image is downloaded and committed
@@ -13,27 +14,19 @@ export interface PickedImage { hero: HeroImage; blob?: { path: string; sha: stri
 
 const UTM = 'utm_source=site_builder&utm_medium=referral';
 
-const CATEGORY_QUERY: Record<string, string> = {
-  'interview-prep': 'job interview',
-  'resume-cover-letters': 'resume writing desk',
-  'job-search-strategy': 'job search laptop',
-  'salary-negotiation': 'business meeting handshake',
-  'workplace-success': 'office teamwork',
-  'career-change-growth': 'career planning notebook',
-};
-const STOP = new Set('a an and the to of for in on with without from your you how what when why is are do does it its this that vs into at by as be can should'.split(' '));
+export { photoScore, looksOffTopic, MIN_PHOTO_SCORE } from '../../../../shared/photo-relevance.mjs';
 
-/** Search phrases from most to least specific: article query → title keywords → category → generic. */
-export function imageQueries(primary: string | undefined, title: string, categorySlug: string): string[] {
-  const words = title.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter((w) => w.length > 2 && !STOP.has(w));
-  const q = [primary, words.slice(0, 3).join(' '), words.slice(0, 2).join(' '), CATEGORY_QUERY[categorySlug], 'people working laptop', 'office work']
-    .map((x) => (x ?? '').trim()).filter(Boolean);
-  return [...new Set(q)];
+/** Search phrases: the story's own photo query → its category → generic work scenes (never raw title words). */
+export function imageQueries(primary: string | undefined, _title: string, categorySlug: string): string[] {
+  return sharedQueries(primary, categorySlug);
 }
 
 /** Tries each phrase until one returns an unused photo. */
 export async function pickImageWithFallback(env: Env, queries: string[], slug: string, siteSlug: string, used: Set<string>, errors?: string[]): Promise<PickedImage | null> {
-  for (const q of queries) {
+  // Each phrase is tried inside Pixabay's "business" category first, then across all photos.
+  const provider = (env.IMAGE_PROVIDER ?? 'pixabay').toLowerCase();
+  const tries = provider === 'pixabay' ? [...queries.map((q) => `${BUSINESS}${q}`), ...queries] : queries;
+  for (const q of tries) {
     try {
       const r = await pickImage(env, q, slug, siteSlug, used);
       if (r) return r;
@@ -45,6 +38,8 @@ export async function pickImageWithFallback(env: Env, queries: string[], slug: s
   return null;
 }
 
+const BUSINESS = 'category:business ';
+
 export async function pickImage(env: Env, query: string, slug: string, siteSlug: string, used: Set<string>): Promise<PickedImage | null> {
   const provider = (env.IMAGE_PROVIDER ?? 'pixabay').toLowerCase();
   if (provider === 'unsplash' && env.UNSPLASH_ACCESS_KEY) return unsplash(env, query, used);
@@ -53,12 +48,14 @@ export async function pickImage(env: Env, query: string, slug: string, siteSlug:
 }
 
 async function pixabay(env: Env, query: string, slug: string, siteSlug: string, used: Set<string>): Promise<PickedImage | null> {
+  const business = query.startsWith(BUSINESS);
+  query = query.replace(BUSINESS, '');
   const u = new URL('https://pixabay.com/api/');
-  u.search = new URLSearchParams({ key: env.PIXABAY_API_KEY!, q: query.slice(0, 100), image_type: 'photo', orientation: 'horizontal', safesearch: 'true', min_width: '1200', per_page: '20' }).toString();
+  u.search = new URLSearchParams({ key: env.PIXABAY_API_KEY!, q: query.slice(0, 100), image_type: 'photo', orientation: 'horizontal', safesearch: 'true', min_width: '1200', per_page: '30', ...(business ? { category: 'business' } : {}) }).toString();
   const res = await fetch(u);
   if (!res.ok) throw new Error(`Pixabay ${res.status}`);
   const hits: any[] = ((await res.json()) as any).hits ?? [];
-  const hit = hits.find((h) => !used.has(`px-${h.id}`));
+  const hit = bestHit(hits, query, (h: any) => used.has(`px-${h.id}`));
   if (!hit) return null;
   used.add(`px-${hit.id}`);
   const img = await fetch(hit.largeImageURL);
@@ -80,7 +77,7 @@ async function unsplash(env: Env, query: string, used: Set<string>): Promise<Pic
   const res = await fetch(`https://api.unsplash.com/search/photos?${new URLSearchParams({ query, orientation: 'landscape', per_page: '20', content_filter: 'high' })}`, { headers });
   if (!res.ok) throw new Error(`Unsplash ${res.status}`);
   const results: any[] = ((await res.json()) as any).results ?? [];
-  const p = results.find((r) => !used.has(`us-${r.id}`));
+  const p = results.find((r) => !used.has(`us-${r.id}`) && photoScore(`${r.alt_description ?? ''} ${(r.tags ?? []).map((t: any) => t.title).join(' ')}`, query) >= 0);
   if (!p) return null;
   used.add(`us-${p.id}`);
   await fetch(p.links.download_location, { headers }).catch(() => {}); // required "download" tracking
@@ -92,3 +89,4 @@ async function unsplash(env: Env, query: string, used: Set<string>): Promise<Pic
     },
   };
 }
+

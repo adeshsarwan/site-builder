@@ -3,6 +3,7 @@ import type { Env, LaunchInput } from './types';
 import * as gh from './services/github';
 import { planArticles, writeArticle, toMarkdown, topicFromMarkdown, classifyTitles, slugify, CATEGORIES, type ArticlePlan, type Topic, type HeroImage } from './services/content';
 import { articlesDir, parseStory, serializeStory } from './services/stories';
+import { pickTopics, recordUsage } from './services/library';
 
 export interface StoryRequest { title: string; category?: string; angle?: string; slug?: string }
 
@@ -10,8 +11,9 @@ export interface AddArticlesParams {
   siteSlug: string;
   input: LaunchInput;          // name, domain, niche, country
   kind?: 'add' | 'rewrite';
-  /** Library topics to use: sites/_library/articles (sorted), from index `fromTopic`, `count` of them (0 = all remaining). null = none. */
-  library?: { fromTopic: number; count: number } | null;
+  /** Base library topics (D1). `topics`: exact ids. Otherwise the ones this site hasn't used yet; `fromTopic` = old
+   *  index-based slice; `legacySkip` = topics a site launched before usage tracking already used. `count` 0 = all. null = none. */
+  library?: { topics?: string[]; fromTopic?: number; legacySkip?: number; count: number } | null;
   /** Old shape (kept for compatibility): same as library + extra. */
   fromTopic?: number;
   count?: number;
@@ -70,12 +72,9 @@ export class AddArticlesWorkflow extends WorkflowEntrypoint<Env, AddArticlesPara
           };
         }
       }
-      const topics: Topic[] = [];
-      if (library && kind === 'add') {
-        const lib = await gh.listTree(env, 'sites/_library/articles');
-        const slice = lib.slice(library.fromTopic, library.count > 0 ? library.fromTopic + library.count : undefined);
-        for (const f of slice) { const t = topicFromMarkdown(await gh.readBlob(env, f.sha)); if (t) topics.push(t); }
-      }
+      const topics: (Topic & { id: string })[] = library && kind === 'add'
+        ? await pickTopics(env, siteSlug, { ids: library.topics, count: library.count, fromPosition: library.fromTopic, legacySkip: library.legacySkip })
+        : [];
       return { titles, topics, keep, existingSlugs: existing.map((f) => f.path.split('/').pop()!.replace(/\.md$/, '')) };
     });
 
@@ -101,6 +100,8 @@ export class AddArticlesWorkflow extends WorkflowEntrypoint<Env, AddArticlesPara
       const taken = new Set(ctx.existingSlugs);
       return all.map((x) => { let s = x.slug, n = 2; while (taken.has(s)) s = `${x.slug}-${n++}`; taken.add(s); return { ...x, slug: s }; });
     });
+
+    if (ctx.topics.length) await step.do('record-library-usage', () => recordUsage(env, siteSlug, ctx.topics.map((t) => t.id), taskId));
 
     await step.do('record-plan', async () => {
       const stmts = plans.map((pl, i) => env.DB.prepare('INSERT OR REPLACE INTO task_items (task_id, idx, title, slug, category) VALUES (?, ?, ?, ?, ?)').bind(taskId, i, pl.title, pl.slug, pl.categorySlug));

@@ -10,13 +10,11 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1717
 origin: "generated"
-heroImage: "/images/linkedin-or-indeed-for-a-fast-interview-comparing-filters-apply-tools.jpg"
-heroAlt: "social media, facebook, twitter, instagram"
-heroCredit:
-  name: "AS_Photography"
-  url: "https://pixabay.com/users/AS_Photography-1546875/"
-  source: "Pixabay"
-  sourceUrl: "https://pixabay.com/photos/social-media-facebook-twitter-1795578/"
+heroImage: ""
+heroAlt: ""
+imageQuery: "online job application laptop"
+avoidImage:
+  - "1795578"
 seo:
   title: "LinkedIn or Indeed for a Fast Interview? Compared"
   metaDescription: "LinkedIn vs Indeed for remote jobs: compare filters, apply tools, costs and visibility claims, then use a 14-day test to pick where to spend your time."

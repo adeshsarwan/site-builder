@@ -8,30 +8,40 @@ import { manage } from './manage';
 import { openapi } from './openapi';
 import { stories } from './storiesApi';
 import { funnels } from './funnelsApi';
+import { library, type Role } from './libraryApi';
+import { unknownIds } from './services/library';
 import { slugFromDomain, type Env, type LaunchInput } from './types';
 
 export { LaunchSiteWorkflow } from './workflow';
 export { AddArticlesWorkflow } from './addArticles';
 
-type AppEnv = { Bindings: Env & { ALLOWED_ORIGINS?: string } };
+type AppEnv = { Bindings: Env & { ALLOWED_ORIGINS?: string }; Variables: { role: Role } };
 // Served at https://sitebuilder.thebesads.com — the API lives under /api (e.g. /api/v1/sites).
 const app = new Hono<AppEnv>();
 const api = new Hono<AppEnv>();
 
 api.use('/v1/*', async (c, next) => {
   const origins = (c.env.ALLOWED_ORIGINS ?? '').split(',').map((s) => s.trim()).filter(Boolean);
-  return cors({ origin: origins.length ? origins : '*', allowHeaders: ['Authorization', 'Content-Type', 'Last-Event-ID'], allowMethods: ['GET', 'POST', 'OPTIONS'] })(c, next);
+  return cors({ origin: origins.length ? origins : '*', allowHeaders: ['Authorization', 'Content-Type', 'Last-Event-ID'], allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'] })(c, next);
 });
 
 // Bearer auth (constant-time compare). EventSource can't send headers, so ?key= is accepted on the events stream.
+// API_KEY → role "admin" (everything except editing the base library); SUPERADMIN_KEY → role "superadmin" (everything).
+const sameKey = (key: string, secret?: string) => {
+  if (!secret) return false;
+  const a = new TextEncoder().encode(key), b = new TextEncoder().encode(secret);
+  let diff = a.length ^ b.length;
+  for (let i = 0; i < Math.max(a.length, b.length); i++) diff |= (a[i] ?? 0) ^ (b[i] ?? 0);
+  return diff === 0;
+};
 api.use('/v1/*', async (c, next) => {
   if (c.req.method === 'OPTIONS') return next();
   const header = c.req.header('Authorization')?.replace(/^Bearer\s+/i, '');
   const key = header ?? (c.req.path.endsWith('/events') ? c.req.query('key') : undefined) ?? '';
-  const a = new TextEncoder().encode(key), b = new TextEncoder().encode(c.env.API_KEY ?? '');
-  let diff = a.length ^ b.length;
-  for (let i = 0; i < Math.max(a.length, b.length); i++) diff |= (a[i] ?? 0) ^ (b[i] ?? 0);
-  if (!c.env.API_KEY || diff !== 0) return c.json({ error: 'unauthorized' }, 401);
+  const isSuper = sameKey(key, c.env.SUPERADMIN_KEY);
+  const isAdmin = sameKey(key, c.env.API_KEY);
+  if (!isSuper && !isAdmin) return c.json({ error: 'unauthorized' }, 401);
+  c.set('role', isSuper ? 'superadmin' : 'admin');
   return next();
 });
 
@@ -44,6 +54,11 @@ api.post('/v1/sites', async (c) => {
   const domain = input?.domain?.toLowerCase().trim().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '');
   if (!input || !domain || !DOMAIN_RE.test(domain)) return c.json({ error: 'A valid "domain" is required, e.g. "jobsthe.world"' }, 400);
   if (input.generateArticles !== undefined && (input.generateArticles < 0 || input.generateArticles > 40)) return c.json({ error: 'generateArticles must be 0–40' }, 400);
+  if (input.libraryTopics !== undefined) {
+    if (!Array.isArray(input.libraryTopics) || input.libraryTopics.some((t) => typeof t !== 'string')) return c.json({ error: 'libraryTopics must be a list of topic ids (GET /v1/library)' }, 400);
+    const unknown = await unknownIds(c.env, input.libraryTopics);
+    if (unknown.length) return c.json({ error: `Unknown library topic ids: ${unknown.slice(0, 10).join(', ')}` }, 400);
+  }
   input.domain = domain;
   input.name ??= domain;
 
@@ -183,6 +198,7 @@ api.post('/v1/sites/:id/retry', async (c) => {
 api.route('/v1', manage);
 api.route('/v1', stories);
 api.route('/v1', funnels);
+api.route('/v1', library);
 api.get('/openapi.json', (c) => c.json(openapi));
 app.route('/api', api);
 app.get('/', (c) => c.json({ service: 'site-builder launch API', docs: 'https://github.com/adeshsarwan/site-builder/blob/main/docs/API.md', openapi: '/api/openapi.json', api: '/api/v1/sites' }));

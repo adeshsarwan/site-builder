@@ -10,13 +10,11 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1785
 origin: "generated"
-heroImage: "/images/finding-real-us-openings-board-filters-company-career-pages-and-ways-t.jpg"
-heroAlt: "kitchen, dining, interior, home"
-heroCredit:
-  name: "jessebridgewater"
-  url: "https://pixabay.com/users/jessebridgewater-4820770/"
-  source: "Pixabay"
-  sourceUrl: "https://pixabay.com/photos/kitchen-dining-interior-home-room-2400367/"
+heroImage: ""
+heroAlt: ""
+imageQuery: "job search laptop"
+avoidImage:
+  - "2400367"
 seo:
   title: "Find Real Remote US Job Openings and Skip Ghost Listings"
   metaDescription: "Spot live remote US openings, search company career pages and ATS links directly, and reach a human reviewer with a repeatable weekly routine."

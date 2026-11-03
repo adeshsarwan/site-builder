@@ -136,7 +136,7 @@ export async function writeArticle(env: Env, input: LaunchInput, plan: ArticlePl
 Rules: never mention or link to other career-advice websites. No invented statistics, studies, quotes or people. Only cite figures from official sources (e.g. U.S. Bureau of Labor Statistics, CareerOneStop, government sites) when you are confident they are accurate, and name the source; otherwise give advice without numbers.
 The body is Markdown with ## and ### headings, short paragraphs, lists, and one table where it genuinely helps. 1,200–1,800 words.`,
     `Write "${plan.title}" for ${input.niche ?? 'job seekers'} in ${input.country ?? 'US'}. Reader problem: ${plan.angle}
-Submit: description (1–2 sentence dek), seoTitle (≤60 chars, includes the main keyword), metaDescription (140–155 chars, specific benefit), keywords (primary + 3–5 secondary), readTime (minutes), body (Markdown, no H1), faq (3 items, answers 40–80 words), sources (official URLs actually referenced, may be empty), imageQuery (2–4 word stock-photo search for a relevant people-at-work hero photo).`,
+Submit: description (1–2 sentence dek), seoTitle (≤60 chars, includes the main keyword), metaDescription (140–155 chars, specific benefit), keywords (primary + 3–5 secondary), readTime (minutes), body (Markdown, no H1), faq (3 items, answers 40–80 words), sources (official URLs actually referenced, may be empty), imageQuery (2–4 plain words describing a literal photo of people at work that fits this story, e.g. "job interview handshake", "woman reviewing resume laptop", "team video call". Describe the scene, not the title: never use the title's metaphors or wordplay).`,
     { type: 'object', required: ['description', 'seoTitle', 'metaDescription', 'keywords', 'readTime', 'body', 'faq', 'sources', 'imageQuery'],
       properties: {
         description: { type: 'string' }, seoTitle: { type: 'string' }, metaDescription: { type: 'string' },
@@ -181,6 +181,8 @@ export function toMarkdown(input: LaunchInput, a: WrittenArticle, dateIso: strin
     `origin: "generated"`,
     `heroImage: ${q(img?.src ?? '')}`,
     `heroAlt: ${q(img?.alt ?? '')}`,
+    // No photo yet: the deploy picks one using this query (see shared/photo-relevance.mjs).
+    ...(img ? [] : [`imageQuery: ${q(a.imageQuery)}`]),
     ...(img?.credit ? ['heroCredit:', `  name: ${q(img.credit.name)}`, `  url: ${q(img.credit.url)}`, `  source: ${q(img.credit.source)}`, `  sourceUrl: ${q(img.credit.sourceUrl)}`] : []),
     'seo:',
     `  title: ${q(a.seoTitle)}`,
@@ -215,4 +217,26 @@ Submit exactly ${titles.length} items.`,
     const it = out.items?.[i] ?? {};
     return { categorySlug: CATEGORIES.includes(it.categorySlug) ? it.categorySlug : CATEGORIES[0], angle: String(it.angle || `Practical, specific guidance on: ${t}`) };
   });
+}
+
+/** A literal stock-photo search (2–4 words) for each story: a scene of people at work, never the title's metaphors. */
+export async function photoQueries(env: Env, input: LaunchInput, items: { title: string; description?: string; category?: string }[]): Promise<string[]> {
+  const out: string[] = [];
+  for (let i = 0; i < items.length; i += 25) {
+    const group = items.slice(i, i + 25);
+    const r = await claudeJson<{ queries: string[] }>(
+      env,
+      'You pick hero photos for career-advice articles from a stock photo library (Pixabay).',
+      `Site: ${input.name} (${input.domain}), audience: ${input.niche ?? 'job seekers'}.
+For each article, write a 2–4 word search for a literal photo of people at work that fits it (e.g. "job interview handshake", "woman reviewing resume laptop", "team video call", "nurse hospital office").
+Describe a real workplace scene. Never use the title's metaphors or wordplay (for "Radio Silence From Your New Boss" write "manager employee one-on-one meeting", not "radio").
+${group.map((t, k) => `${k + 1}. [${t.category ?? ''}] ${t.title}${t.description ? ` — ${t.description}` : ''}`).join('\n')}
+Submit exactly ${group.length} queries, in order.`,
+      { type: 'object', required: ['queries'], properties: { queries: { type: 'array', items: { type: 'string' } } } },
+      400 + group.length * 40,
+      `photo queries for ${group.length} stories`,
+    );
+    group.forEach((_, k) => out.push(String(r.queries?.[k] ?? '').trim().slice(0, 80)));
+  }
+  return out;
 }

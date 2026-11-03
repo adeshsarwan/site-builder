@@ -10,13 +10,11 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1620
 origin: "generated"
-heroImage: "/images/breaking-into-security-without-a-degree-a-skills-roadmap-for-remote-be.jpg"
-heroAlt: "security, man, escalator, police"
-heroCredit:
-  name: "RyanMcGuire"
-  url: "https://pixabay.com/users/RyanMcGuire-123690/"
-  source: "Pixabay"
-  sourceUrl: "https://pixabay.com/photos/security-man-escalator-police-869216/"
+heroImage: ""
+heroAlt: ""
+imageQuery: "cybersecurity analyst computer"
+avoidImage:
+  - "869216"
 seo:
   title: "Cybersecurity Without a Degree: Remote Skills Roadmap"
   metaDescription: "Learn which security fundamentals to study first and which free labs and home setups prove them to remote hiring managers—no CS degree needed."

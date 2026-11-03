@@ -8,13 +8,16 @@
 //   DELETE /sites/:id/stories/:slug           remove a story (and its photo)
 //   POST   /sites/:id/stories/:slug/rewrite   rewrite one story with Claude (keeps URL, date and photo)
 //   POST   /sites/:id/stories/:slug/photo     pick a new photo on the next deploy (optional search words)
+//   POST   /sites/:id/photos/refresh          new photos for many stories at once (default: the off-topic ones)
 //   GET    /sites/:id/library                 starting-library topics (for "write from library")
 //   GET    /sites/:id/tasks                   recent story-writing tasks
 //   GET    /tasks/:taskId                     one task with per-story progress (served from index.ts)
 import { Hono } from 'hono';
 import type { Env, LaunchInput } from './types';
 import * as gh from './services/github';
-import { topicFromMarkdown, slugify, CATEGORIES } from './services/content';
+import { topicFromMarkdown, slugify, CATEGORIES, photoQueries } from './services/content';
+import { looksOffTopic } from './services/images';
+import { listTopics, usedBySite, unknownIds, pickTopics } from './services/library';
 import { articlesDir, loadStories, loadStory, parseStory, serializeStory, summary, pixabayId, type Story } from './services/stories';
 import { resolveSite, commitAndDeploy, type SiteRef } from './manage';
 import type { StoryRequest } from './addArticles';
@@ -83,11 +86,23 @@ stories.post('/sites/:id/stories', async (c) => {
     .map((s: any) => ({ title: String(s.title).slice(0, 160), category: s.category, angle: s.angle, slug: s.slug ? slugify(s.slug) : undefined }));
   const ideas: string[] = (Array.isArray(b.ideas) ? b.ideas : []).map(String).filter(Boolean).map((s: string) => s.slice(0, 300));
   const extra = Math.max(0, Math.min(40, Number(b.extra ?? 0)));
-  let library: { fromTopic: number; count: number } | null = null;
+  // library: true (all topics this site hasn't used) | { count } | { topics: [ids] } | { fromTopic, count } (old index-based)
+  let library: { topics?: string[]; fromTopic?: number; legacySkip?: number; count: number } | null = null;
   if (b.library) {
     const launched = await inputFor(c.env, site);
-    const lb = b.library === true ? {} : b.library;
-    library = { fromTopic: Math.max(0, Number(lb.fromTopic ?? launched.libraryLimit ?? 0)), count: Math.max(0, Math.min(80, Number(lb.count ?? 0))) };
+    const lb = b.library === true ? {} : Array.isArray(b.library) ? { topics: b.library } : b.library;
+    const topics: string[] | undefined = Array.isArray(lb.topics) ? lb.topics.map(String) : undefined;
+    if (topics) {
+      const unknown = await unknownIds(c.env, topics);
+      if (unknown.length) return c.json({ error: `Unknown library topic ids: ${unknown.slice(0, 10).join(', ')}` }, 400);
+    }
+    library = {
+      topics,
+      fromTopic: lb.fromTopic !== undefined ? Math.max(0, Number(lb.fromTopic)) : undefined,
+      legacySkip: Math.max(0, Number(launched.libraryLimit ?? 0)),
+      count: Math.max(0, Math.min(80, Number(lb.count ?? topics?.length ?? 0))),
+    };
+    if (!(await pickTopics(c.env, site.slug, library)).length) return c.json({ error: 'No library topics left for this site. Add topics with POST /v1/library (superadmin) or pass library.topics.' }, 400);
   }
   const total = own.length + ideas.length + extra;
   if (!total && !library) return c.json({ error: 'Give at least one of: stories (your titles), ideas, extra (count), library' }, 400);
@@ -236,15 +251,65 @@ stories.post('/sites/:id/stories/:slug/photo', async (c) => {
   return c.json({ slug, query: story.fm.imageQuery ?? null, avoiding: story.fm.avoidImage ?? [], note: 'The deploy picks and commits the new photo.', ...out }, 202);
 });
 
+/** Clears a story's photo so the next deploy picks a new one (never the same Pixabay photo again). Returns the old image file to delete. */
+function clearPhoto(site: SiteRef, slug: string, story: Story, query?: string): string | null {
+  const avoid = pixabayId(story.fm.heroCredit?.sourceUrl);
+  const hero = String(story.fm.heroImage ?? '');
+  story.fm.heroImage = '';
+  story.fm.heroAlt = '';
+  delete story.fm.heroCredit;
+  if (query) story.fm.imageQuery = query.slice(0, 80); else delete story.fm.imageQuery;
+  if (avoid) story.fm.avoidImage = [...new Set([...(Array.isArray(story.fm.avoidImage) ? story.fm.avoidImage : []), avoid])];
+  return hero.startsWith('/images/') ? `sites/${site.slug}/public${hero}` : null;
+}
+
+// New photos for many stories in one commit + deploy.
+//   {}                                  → every story whose photo looks off-topic (tags with no work words, or animals/food/nature…)
+//   { "slugs": ["a", "b"] }             → just these
+//   { "all": true }                     → every story
+//   { "queries": { "a": "team video call" } }  → your own search words (others get a query written by Claude)
+//   { "dryRun": true }                  → list what would change, change nothing
+stories.post('/sites/:id/photos/refresh', async (c) => {
+  const site = await resolveSite(c.env, c.req.param('id'));
+  if (!site) return notFound(c);
+  const b = (await c.req.json().catch(() => ({}))) as any;
+  const given: Record<string, string> = b.queries && typeof b.queries === 'object' ? b.queries : {};
+  const wanted = new Set<string>([...(Array.isArray(b.slugs) ? b.slugs.map(String) : []), ...Object.keys(given)]);
+  const all = await loadStories(c.env, site.slug);
+  const picked = all.filter((s) => (b.all ? true : wanted.size ? wanted.has(s.slug) : !s.story.fm.heroImage || looksOffTopic(String(s.story.fm.heroAlt ?? ''))));
+  const unknown = [...wanted].filter((w) => !all.some((s) => s.slug === w));
+  if (!picked.length) return c.json({ changed: 0, unknown, note: wanted.size ? 'No matching stories' : 'No off-topic photos found' }, unknown.length ? 404 : 200);
+  if (picked.length > 150) return c.json({ error: 'At most 150 stories per call' }, 400);
+  const need = picked.filter((s) => !given[s.slug]);
+  const written = need.length ? await photoQueries(c.env, await inputFor(c.env, site), need.map((s) => ({ title: String(s.story.fm.title ?? s.slug), description: s.story.fm.description, category: s.story.fm.categorySlug }))) : [];
+  const query = (slug: string) => given[slug] ?? written[need.findIndex((s) => s.slug === slug)] ?? '';
+  const plan = picked.map((s) => ({ slug: s.slug, title: s.story.fm.title, oldPhoto: s.story.fm.heroAlt || null, query: query(s.slug) }));
+  if (b.dryRun) return c.json({ dryRun: true, changed: plan.length, unknown, stories: plan });
+  const files: gh.TreeFile[] = [];
+  for (const s of picked) {
+    const old = clearPhoto(site, s.slug, s.story, query(s.slug));
+    files.push({ path: `${articlesDir(site.slug)}/${s.slug}.md`, content: serializeStory(s.story) });
+    if (old) files.push({ path: old, sha: null });
+  }
+  const out = await commitAndDeploy(c.env, site.slug, files, `New photos for ${picked.length} stories on ${site.slug}`, true);
+  return c.json({ changed: plan.length, unknown, stories: plan, note: 'The deploy picks and commits the new photos (2–4 minutes).', ...out }, 202);
+});
+
 // ---------- library + tasks ----------
+// The base library as seen by one site: which topics it has already written from, and which are left.
 stories.get('/sites/:id/library', async (c) => {
   const site = await resolveSite(c.env, c.req.param('id'));
   if (!site) return notFound(c);
-  const lib = await gh.listTree(c.env, 'sites/_library/articles');
   const launched = await inputFor(c.env, site);
-  const topics = [];
-  for (let i = 0; i < lib.length; i++) { const t = topicFromMarkdown(await gh.readBlob(c.env, lib[i].sha)); if (t) topics.push({ index: i, ...t }); }
-  return c.json({ total: topics.length, launchedWith: launched.libraryLimit ?? null, note: 'Topics only: each site gets a freshly written story with its own title. Pass library: { fromTopic, count } to POST /stories.', topics });
+  const all = await listTopics(c.env);
+  const used = await usedBySite(c.env, site.slug);
+  const remaining = new Set((await pickTopics(c.env, site.slug, { legacySkip: launched.libraryLimit ?? 0 })).map((t) => t.id));
+  const topics = all.map((t, index) => ({ index, ...t, usedOnSite: used.has(t.id) || (!remaining.has(t.id) && t.enabled) }));
+  return c.json({
+    total: all.length, remaining: remaining.size, launchedWith: launched.libraryLimit ?? null,
+    note: 'Topics only: each site gets a freshly written story with its own title. POST /stories with library: true (all remaining), { count }, or { topics: [ids] }.',
+    topics,
+  });
 });
 
 stories.get('/sites/:id/tasks', async (c) => {

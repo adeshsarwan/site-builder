@@ -10,13 +10,11 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1807
 origin: "generated"
-heroImage: "/images/behavioral-interview-prep-in-four-stages-research-star-stories-your-in.jpg"
-heroAlt: "kitchen, cooking, knife, cilantro"
-heroCredit:
-  name: "Rambling_Roy"
-  url: "https://pixabay.com/users/Rambling_Roy-29593818/"
-  source: "Pixabay"
-  sourceUrl: "https://pixabay.com/photos/kitchen-cooking-knife-cilantro-7471627/"
+heroImage: ""
+heroAlt: ""
+imageQuery: "job interview preparation notes"
+avoidImage:
+  - "7471627"
 seo:
   title: "Behavioral Interview Prep: 4 Stages for Remote Jobs"
   metaDescription: "Follow a four-stage behavioral interview prep plan: research the company, build STAR stories, assemble an interview folder, and run a calm interview morning."

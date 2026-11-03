@@ -10,13 +10,11 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1857
 origin: "generated"
-heroImage: "/images/your-new-hire-admin-checklist-tax-forms-benefits-deadlines-and-contrac.jpg"
-heroAlt: "wordpress, blogging, blogger, editor"
-heroCredit:
-  name: "pixelcreatures"
-  url: "https://pixabay.com/users/pixelcreatures-127599/"
-  source: "Pixabay"
-  sourceUrl: "https://pixabay.com/photos/wordpress-blogging-blogger-editor-265132/"
+heroImage: ""
+heroAlt: ""
+imageQuery: "signing employment contract"
+avoidImage:
+  - "265132"
 seo:
   title: "New Hire Paperwork Checklist: US, Canada, UK, Australia"
   metaDescription: "Starting a remote job? See which tax forms, benefits deadlines and contracts apply in the US, Canada, UK and Australia, and what happens if you're late."

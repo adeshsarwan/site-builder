@@ -10,13 +10,11 @@ pubDate: 2026-11-02
 readTime: 8
 wordCount: 1717
 origin: "generated"
-heroImage: "/images/choosing-a-safe-flaw-how-to-discuss-your-weak-spots-in-an-interview-wi.jpg"
-heroAlt: "cashbox, money, currency, cash box"
-heroCredit:
-  name: "Alexas_Fotos"
-  url: "https://pixabay.com/users/Alexas_Fotos-686414/"
-  source: "Pixabay"
-  sourceUrl: "https://pixabay.com/photos/cashbox-money-currency-cash-box-1642989/"
+heroImage: ""
+heroAlt: ""
+imageQuery: "job interview conversation"
+avoidImage:
+  - "1642989"
 seo:
   title: "Discussing Weaknesses in an Interview: Safe Flaws to Pick"
   metaDescription: "Pick a real, low-risk weakness, show the system you use to manage it, and give remote-job interviewers proof—with scripts and examples you can adapt."

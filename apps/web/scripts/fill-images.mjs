@@ -5,6 +5,7 @@
 import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { siteDir } from './site-config.mjs';
+import { bestHit, imageQueries } from '../../../shared/photo-relevance.mjs';
 
 const KEY = process.env.PIXABAY_API_KEY;
 const SITE = process.env.SITE;
@@ -12,20 +13,16 @@ if (!KEY) { console.log('fill-images: PIXABAY_API_KEY not set — skipping'); pr
 
 const dir = path.join(siteDir(SITE), 'content', 'articles');
 const imgDir = path.join(siteDir(SITE), 'public', 'images');
-const CATEGORY_QUERY = {
-  'interview-prep': 'job interview', 'resume-cover-letters': 'resume writing desk', 'job-search-strategy': 'job search laptop',
-  'salary-negotiation': 'business meeting handshake', 'workplace-success': 'office teamwork', 'career-change-growth': 'career planning notebook',
-};
-const STOP = new Set('a an and the to of for in on with without from your you how what when why is are do does it its this that vs into at by as be can should'.split(' '));
 const q = (v) => JSON.stringify(v ?? '');
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const field = (fm, k) => { const v = fm.match(new RegExp(`^${k}:\\s*(.*)$`, 'm'))?.[1]?.trim() ?? ''; try { return JSON.parse(v); } catch { return v; } };
 
 const searchCache = new Map();
-async function search(term) {
-  if (searchCache.has(term)) return searchCache.get(term);
+async function search(term, category = '') {
+  const cacheKey = `${category}|${term}`;
+  if (searchCache.has(cacheKey)) return searchCache.get(cacheKey);
   const u = new URL('https://pixabay.com/api/');
-  u.search = new URLSearchParams({ key: KEY, q: term.slice(0, 100), image_type: 'photo', orientation: 'horizontal', safesearch: 'true', min_width: '1200', per_page: '30' });
+  u.search = new URLSearchParams({ key: KEY, q: term.slice(0, 100), image_type: 'photo', orientation: 'horizontal', safesearch: 'true', min_width: '1200', per_page: '30', ...(category ? { category } : {}) });
   for (let attempt = 1; attempt <= 4; attempt++) {
     const res = await fetch(u);
     if (res.status === 429) {
@@ -36,7 +33,7 @@ async function search(term) {
     }
     if (!res.ok) throw new Error(`Pixabay ${res.status}`);
     const hits = (await res.json()).hits ?? [];
-    searchCache.set(term, hits);
+    searchCache.set(cacheKey, hits);
     await sleep(700); // stay well under 100 requests/minute
     return hits;
   }
@@ -62,11 +59,12 @@ mkdirSync(imgDir, { recursive: true });
 let added = 0;
 for (const a of todo) {
   const slug = a.f.replace(/\.md$/, '');
-  const words = a.title.toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter((w) => w.length > 2 && !STOP.has(w));
-  const terms = [...new Set([a.query, words.slice(0, 3).join(' '), words.slice(0, 2).join(' '), CATEGORY_QUERY[a.category], 'people working laptop', 'office work'].filter(Boolean))];
+  // The story's photo query, then its category, then generic work scenes — never raw title words.
+  // Each is tried in Pixabay's business category first; only hits whose tags look like work are taken.
+  const terms = imageQueries(a.query, a.category);
   let hit = null;
-  for (const t of terms) {
-    try { hit = (await search(t)).find((h) => !used.has(String(h.id))); } catch (e) { console.log(`  ${slug} [${t}]: ${e.message}`); }
+  for (const [t, cat] of [...terms.map((t) => [t, 'business']), ...terms.map((t) => [t, ''])]) {
+    try { hit = bestHit(await search(t, cat), t, (h) => used.has(String(h.id))); } catch (e) { console.log(`  ${slug} [${t}]: ${e.message}`); }
     if (hit) break;
   }
   if (!hit) { console.log(`  ${slug}: no photo found`); continue; }

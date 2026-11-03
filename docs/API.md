@@ -3,7 +3,7 @@
 Base URL: `https://sitebuilder.thebesads.com/api`
 Machine-readable spec: `GET /api/openapi.json` (OpenAPI 3.1; import into Postman/Swagger or generate a typed client).
 
-Every `/v1` call needs `Authorization: Bearer <API_KEY>`. Call the API from your frontend's **server** (API route, server action, backend) — never ship the key to browsers.
+Every `/v1` call needs `Authorization: Bearer <API_KEY>`. The `SUPERADMIN_KEY` works everywhere too and is the only key that can change the base topic library (§2b). `GET /v1/me` → `{ role: "admin" | "superadmin" }` tells your frontend which mode to show. Call the API from your frontend's **server** (API route, server action, backend) — never ship the key to browsers.
 
 `{id}` in a path can be the launch id (`site_…`), the domain (`jobsthe.world`) or the site folder (`jobsthe-world`).
 
@@ -25,6 +25,7 @@ Poll `GET /v1/deploys/{runKey}` every 10 s until `status: "completed"`; `conclus
 POST /v1/sites
 { "domain": "newsite.com", "name": "New Site", "niche": "remote workers", "country": "US", "libraryLimit": 15, "generateArticles": 0 }
 ```
+How many stories a new site starts with = library topics + `generateArticles` (0–40 brand-new topics Claude picks). Library topics are either `libraryLimit` (the first N enabled topics) or `libraryTopics` (exact topic ids from `GET /v1/library`, e.g. `["how-to-tap-into-the-hidden-job-market", …]`). `useLibraryTopics: false` skips the library.
 Returns `siteId`, `nameservers` (set them at the registrar) and `steps`. Follow progress with `GET /v1/sites/{id}` (poll) or `GET /v1/sites/{id}/events?key=<API_KEY>` (Server-Sent Events: `step`, `status`). A failed launch resumes with `POST /v1/sites/{id}/retry`. Ads are **not** turned on here; that is stage 2.
 
 ## 2. Stories
@@ -50,7 +51,7 @@ POST /v1/sites/jobsthe.world/stories
 }
 → 202 { "taskId": "stories-jobsthe-world-mh1x2k", "statusUrl": "/api/v1/tasks/stories-jobsthe-world-mh1x2k" }
 ```
-Use any mix of `stories` (exact titles), `ideas` (briefs), `extra` (Claude picks topics) and `library` (`true` = all remaining starting-library topics; or `{ fromTopic, count }` — see `GET /v1/sites/{id}/library`). Max 80 per task. `draft: true` writes them hidden; publish later with `PATCH … { "draft": false }`.
+Use any mix of `stories` (exact titles), `ideas` (briefs), `extra` (Claude picks topics) and `library`: `true` = every library topic this site hasn't used, `{ "count": 10 }` = the next 10 unused, `{ "topics": ["topic-id", …] }` = exactly these. `GET /v1/sites/{id}/library` shows what's used and what remains. Max 80 per task. `draft: true` writes them hidden; publish later with `PATCH … { "draft": false }`.
 
 Categories: `job-search-strategy`, `resume-cover-letters`, `interview-prep`, `salary-negotiation`, `workplace-success`, `career-change-growth`.
 
@@ -93,6 +94,30 @@ POST   /v1/sites/{id}/stories/{slug}/photo    { "query": "remote team video call
 DELETE /v1/sites/{id}/stories/{slug}                                                    → removes the story and its photo files
 ```
 A rewrite keeps the URL, publish date and photo, and sets `updatedDate`.
+
+### Fix photos in bulk
+```http
+POST /v1/sites/{id}/photos/refresh  {}                                   → every story whose photo looks off-topic
+POST /v1/sites/{id}/photos/refresh  { "slugs": ["a", "b"] }   or   { "all": true }
+POST /v1/sites/{id}/photos/refresh  { "queries": { "a": "team video call" } }   → your own search words
+POST /v1/sites/{id}/photos/refresh  { "dryRun": true }                   → list what would change
+```
+Claude writes a literal photo search for each story (a work scene, never the title's metaphors), the old photo is removed and never picked again, and the deploy picks new ones. How photos are chosen: the story's photo query → its category → generic work scenes, each searched in Pixabay's business category first. A Pixabay hit is used only if its tags look like work and none look off-topic (animals, food, nature, music…), see `shared/photo-relevance.mjs`.
+
+## 2b. Base topic library (superadmin)
+
+The library is a list of **headlines** (title + one-line summary + category). It holds no story text: every site gets its own freshly written story from a topic, with a new title and angle for its audience, so no two sites share text. Each site remembers which topics it used, so later batches take the ones it hasn't.
+
+Reading needs any key. Changes need the `SUPERADMIN_KEY` (others get `403`).
+```http
+GET    /v1/library?q=&category=&enabled=true&site=jobsthe-world   → topics with usedBy (and usedOnSite)
+GET    /v1/library/{topicId}
+POST   /v1/library   { "topics": ["How to Explain a Layoff in an Interview", { "title": "…", "summary": "…", "category": "salary-negotiation" }] }
+PATCH  /v1/library/{topicId}   { "title", "summary", "category", "enabled": false, "position": 3 }
+DELETE /v1/library/{topicId}
+POST   /v1/library/suggest   { "count": 10, "category": "salary-negotiation", "theme": "healthcare", "save": false }
+```
+`POST` fills in a missing category or summary with Claude and skips headlines already in the library (`skipped`, with the existing id). `enabled: false` keeps a topic but stops offering it to sites. `suggest` returns new headlines that don't overlap the library; nothing is saved unless `"save": true`. Editing a topic never changes stories already written from it.
 
 ## 3. Funnels (questions → rewarded video → page)
 

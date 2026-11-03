@@ -10,13 +10,11 @@ pubDate: 2026-11-02
 readTime: 7
 wordCount: 1914
 origin: "generated"
-heroImage: "/images/how-to-earn-credibility-on-a-distributed-team-when-no-one-has-met-you.jpg"
-heroAlt: "loch earn, scotland, high, loch"
-heroCredit:
-  name: "indianabones"
-  url: "https://pixabay.com/users/indianabones-3210458/"
-  source: "Pixabay"
-  sourceUrl: "https://pixabay.com/photos/loch-earn-scotland-high-loch-earn-1634177/"
+heroImage: ""
+heroAlt: ""
+imageQuery: "remote team video conference"
+avoidImage:
+  - "1634177"
 seo:
   title: "Earn Credibility on a Distributed Team as a New Hire"
   metaDescription: "New to a remote team across time zones? Learn the async habits—written updates, clear handoffs, reliable follow-through—that build trust fast."

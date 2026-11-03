@@ -6,6 +6,7 @@ import * as gh from './services/github';
 import * as google from './services/google';
 import { planArticles, writeArticle, toMarkdown, topicFromMarkdown, type ArticlePlan, type Topic } from './services/content';
 import { pickImageWithFallback, imageQueries } from './services/images';
+import { pickTopics, recordUsage } from './services/library';
 
 type Out = Record<string, any>;
 const FINISHED = ['done', 'warning', 'skipped'];
@@ -110,15 +111,11 @@ export class LaunchSiteWorkflow extends WorkflowEntrypoint<Env, LaunchParams> {
         if (await isDone('content')) return step.do('content:stored', async () => JSON.parse((await getStepRow(env, siteId, 'content'))?.output_json ?? '{}'));
         await step.do('content:start', () => emit('content', 'running', 'Planning topics'));
         const useLib = input.useLibraryTopics !== false;
-        const topics: Topic[] = useLib && !dry
-          ? await step.do('content:topics', async () => {
-              const files = await gh.listTree(env, 'sites/_library/articles');
-              const limit = input.libraryLimit ?? files.length;
-              const out: Topic[] = [];
-              for (const f of files.slice(0, limit)) { const t = topicFromMarkdown(await gh.readBlob(env, f.sha)); if (t) out.push(t); }
-              return out;
-            })
+        // Base library topics (D1): the chosen ids, or the first libraryLimit enabled topics. (Dry runs pick them too; it's D1 only.)
+        const topics: (Topic & { id: string })[] = useLib
+          ? await step.do('content:topics', () => pickTopics(env, slug, { ids: input.libraryTopics, count: input.libraryTopics?.length ? undefined : input.libraryLimit, fromPosition: input.libraryTopics?.length ? undefined : 0 }))
           : [];
+        if (topics.length) await step.do('content:usage', () => recordUsage(env, slug, topics.map((t) => t.id), siteId));
         const extra = Math.max(0, Math.min(40, input.generateArticles ?? 0));
         const total = (dry ? Math.min(input.libraryLimit ?? 3, 3) : topics.length) + extra;
         if (total === 0) throw new Error('No articles requested (useLibraryTopics=false and generateArticles=0)');
