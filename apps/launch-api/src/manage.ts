@@ -45,7 +45,7 @@ export async function saveConfig(env: Env, site: SiteRef, config: any, message: 
 }
 
 /** ads.txt lines: data records "domain, account, DIRECT|RESELLER[, cert]", variables (KEY=value) and # comments. */
-function validateAdsTxt(lines: string[]) {
+export function validateAdsTxt(lines: string[]) {
   const clean: string[] = [];
   const warnings: string[] = [];
   for (const raw of lines) {

@@ -2,12 +2,13 @@ import { STEPS, type Env, type LaunchInput, type SiteStatus, type StepKey, type 
 
 const now = () => new Date().toISOString();
 
-export async function createSite(env: Env, id: string, slug: string, input: LaunchInput) {
+/** steps/kind default to a jobs site; games sites pass their own step list and kind 'games'. */
+export async function createSite(env: Env, id: string, slug: string, input: { domain: string; name?: string }, steps: readonly { key: string; label: string }[] = STEPS, kind: 'jobs' | 'games' = 'jobs') {
   await env.DB.batch([
-    env.DB.prepare('INSERT INTO sites (id, domain, slug, name, status, input_json) VALUES (?, ?, ?, ?, ?, ?)').bind(
-      id, input.domain, slug, input.name ?? input.domain, 'queued', JSON.stringify(input),
+    env.DB.prepare('INSERT INTO sites (id, domain, slug, name, status, input_json, kind) VALUES (?, ?, ?, ?, ?, ?, ?)').bind(
+      id, input.domain, slug, input.name ?? input.domain, 'queued', JSON.stringify(input), kind,
     ),
-    ...STEPS.map((s, i) => env.DB.prepare('INSERT INTO steps (site_id, key, position, label) VALUES (?, ?, ?, ?)').bind(id, s.key, i, s.label)),
+    ...steps.map((s, i) => env.DB.prepare('INSERT INTO steps (site_id, key, position, label) VALUES (?, ?, ?, ?)').bind(id, s.key, i, s.label)),
     env.DB.prepare('INSERT INTO events (site_id, status, message) VALUES (?, ?, ?)').bind(id, 'queued', 'Launch requested'),
   ]);
 }
@@ -16,7 +17,7 @@ export async function getSiteRow(env: Env, id: string) {
   return env.DB.prepare('SELECT * FROM sites WHERE id = ?').bind(id).first<any>();
 }
 
-export async function getStepRow(env: Env, id: string, key: StepKey) {
+export async function getStepRow(env: Env, id: string, key: StepKey | string) {
   return env.DB.prepare('SELECT * FROM steps WHERE site_id = ? AND key = ?').bind(id, key).first<any>();
 }
 
@@ -27,6 +28,7 @@ export async function siteStatus(env: Env, id: string) {
   const finished = steps.filter((s) => ['done', 'warning', 'skipped'].includes(s.status)).length;
   return {
     siteId: site.id,
+    kind: site.kind ?? 'jobs',
     domain: site.domain,
     slug: site.slug,
     name: site.name,
@@ -53,7 +55,7 @@ export async function updateSite(env: Env, id: string, patch: Partial<{ status: 
     .run();
 }
 
-export async function setStep(env: Env, id: string, key: StepKey, status: StepStatus, detail?: string | null, output?: unknown) {
+export async function setStep(env: Env, id: string, key: StepKey | string, status: StepStatus, detail?: string | null, output?: unknown) {
   const ts = now();
   const sets = ['status = ?', 'detail = ?'];
   const vals: unknown[] = [status, detail ?? null];

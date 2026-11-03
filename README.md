@@ -1,6 +1,8 @@
 # site-builder
 
-One Astro codebase, many job sites. Push to `main` and changed sites deploy to Cloudflare.
+One Astro codebase, many job sites. The same Launch API also creates H5 games portals from [`h5-games-site-builder`](https://github.com/adeshsarwan/h5-games-site-builder): see [docs/GAMES_API.md](docs/GAMES_API.md).
+
+ Push to `main` and changed sites deploy to Cloudflare.
 `POST /api/v1/sites` on the Launch API sets up a new domain end to end and reports progress.
 
 ```

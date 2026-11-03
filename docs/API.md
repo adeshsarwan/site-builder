@@ -1,6 +1,8 @@
 # Site Builder API — frontend guide
 
 Base URL: `https://sitebuilder.thebesads.com/api`
+**H5 games portals:** see [GAMES_API.md](GAMES_API.md) (`/v1/games/…`).
+
 Machine-readable spec: `GET /api/openapi.json` (OpenAPI 3.1; import into Postman/Swagger or generate a typed client).
 
 Every `/v1` call needs `Authorization: Bearer <API_KEY>`. The `SUPERADMIN_KEY` works everywhere too and is the only key that can change the base topic library (§2b). `GET /v1/me` → `{ role: "admin" | "superadmin" }` tells your frontend which mode to show. Call the API from your frontend's **server** (API route, server action, backend) — never ship the key to browsers.
