@@ -1,0 +1,86 @@
+name: Launch games site
+run-name: games ${{ inputs.domain }}${{ inputs.mode != 'launch' && format(' ({0})', inputs.mode) || '' }}
+
+# Launches an H5 games portal through the Launch API (POST /api/v1/games/sites) and follows it.
+# The first step prints the nameservers to set at the registrar. If the nameservers aren't active yet when this run
+# ends, run it again with mode "follow" — the launch itself keeps going in the API either way.
+# Needs the repo secret LAUNCH_API_KEY (same value as the Launch API's API_KEY).
+on:
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: 'Domain, e.g. vexulor.site'
+        required: true
+        type: string
+      name:
+        description: 'Site name (launch only), e.g. Vexulor'
+        required: false
+        type: string
+      primary_color:
+        description: 'Accent colour (launch only), e.g. #7c3aed'
+        required: false
+        type: string
+      mode:
+        description: 'launch = start a new launch · follow = only report progress · retry = resume a failed launch'
+        required: false
+        default: launch
+        type: choice
+        options: [launch, follow, retry]
+      minutes:
+        description: 'How long to follow progress'
+        required: false
+        default: '60'
+        type: string
+
+jobs:
+  launch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 200
+    env:
+      API: https://sitebuilder.thebesads.com/api/v1
+      KEY: ${{ secrets.LAUNCH_API_KEY }}
+      DOMAIN: ${{ inputs.domain }}
+    steps:
+      - name: Start
+        run: |
+          set -euo pipefail
+          [ -n "$KEY" ] || { echo "::error::Add the LAUNCH_API_KEY repo secret (same value as API_KEY on the launch-api Worker)"; exit 1; }
+          case "${{ inputs.mode }}" in
+            launch)
+              BODY=$(jq -n --arg d "$DOMAIN" --arg n "${{ inputs.name }}" --arg c "${{ inputs.primary_color }}" \
+                '{domain:$d} + (if $n != "" then {name:$n} else {} end) + (if $c != "" then {primaryColor:$c} else {} end)')
+              CODE=$(curl -sS -o /tmp/start.json -w '%{http_code}' -X POST "$API/games/sites" -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" -d "$BODY") ;;
+            retry)
+              CODE=$(curl -sS -o /tmp/start.json -w '%{http_code}' -X POST "$API/games/sites/$DOMAIN/retry" -H "Authorization: Bearer $KEY") ;;
+            *)
+              CODE=$(curl -sS -o /tmp/start.json -w '%{http_code}' "$API/sites/$DOMAIN" -H "Authorization: Bearer $KEY") ;;
+          esac
+          echo "HTTP $CODE"; jq . /tmp/start.json || cat /tmp/start.json
+          if [ "$CODE" -ge 400 ]; then echo "::error::$(jq -r '.error // "request failed"' /tmp/start.json 2>/dev/null)"; exit 1; fi
+          NS=$(jq -r '(.nameservers // []) | join(", ")' /tmp/start.json)
+          if [ -n "$NS" ]; then
+            echo "::notice::Nameservers for $DOMAIN: $NS"
+            echo "### Nameservers for $DOMAIN" >> "$GITHUB_STEP_SUMMARY"
+            jq -r '.nameservers[] | "- `\(.)`"' /tmp/start.json >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Follow progress
+        run: |
+          set -uo pipefail
+          LAST=""
+          END=$(( $(date +%s) + ${{ inputs.minutes }} * 60 ))
+          while [ "$(date +%s)" -lt "$END" ]; do
+            S=$(curl -sS "$API/sites/$DOMAIN" -H "Authorization: Bearer $KEY")
+            LINE=$(echo "$S" | jq -r '"\(.status) \(.progress)% — " + ([.steps[]? | select(.status=="running" or .status=="waiting" or .status=="failed") | "\(.label): \(.detail // .status)"] | join(" | "))' 2>/dev/null)
+            [ "$LINE" != "$LAST" ] && echo "$(date -u +%H:%M:%S) $LINE" && LAST="$LINE"
+            STATUS=$(echo "$S" | jq -r .status 2>/dev/null)
+            case "$STATUS" in live|live_with_warnings|failed) break ;; esac
+            sleep 20
+          done
+          echo "$S" | jq -r '"### \(.domain): \(.status) (\(.progress)%)\n\n| Step | Status | Detail |\n|---|---|---|\n" + ([.steps[] | "| \(.label) | \(.status) | \(.detail // "" | gsub("\\|";"/")) |"] | join("\n"))' >> "$GITHUB_STEP_SUMMARY"
+          echo "$S" | jq -r '.steps[] | "\(.status)\t\(.label)\t\(.detail // "")"'
+          case "$STATUS" in
+            live|live_with_warnings) echo "::notice::https://$DOMAIN is $STATUS" ;;
+            failed) echo "::error::$(echo "$S" | jq -r .error)"; exit 1 ;;
+            *) echo "::notice::Still $STATUS — the launch keeps going in the API. Run again with mode \"follow\" to check." ;;
+          esac
