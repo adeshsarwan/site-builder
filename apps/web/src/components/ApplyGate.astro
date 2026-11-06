@@ -6,7 +6,8 @@
 //  - rewarded is shown only after the visitor opts in (the "Watch" button) and is preloaded beforehand;
 //  - the link is unlocked only on a real grant: onGranted fired and the lifecycle settled as "granted"
 //    (not from closing the ad, onReady or video completion);
-//  - no fill / error / timeout → the visitor still gets the link (never trapped).
+//  - no fill / error / timeout → the visitor still gets the link (never trapped);
+//  - closed early → "Try again" once; a second attempt without a reward opens the link anyway.
 // Browsers block tabs opened long after a click, so after the ad we try to open the tab and always
 // show a one-tap "Open application" button as well.
 import type { Funnel } from '@/lib/site';
@@ -68,6 +69,7 @@ const allowSkip = f.rewarded?.allowSkip === true; // apply funnels: no skip unle
     new MutationObserver(() => { if (!preloaded) maybePreload(); }).observe(document.body, { childList: true, subtree: true });
 
     let current: { url: string; company: string; title: string } | null = null;
+    let misses = 0; // non-granted ad attempts for the current job
     const openJob = (how: string) => {
       if (!current) return;
       remember(current.url);
@@ -87,6 +89,7 @@ const allowSkip = f.rewarded?.allowSkip === true; // apply funnels: no skip unle
       if (!ads() || isUnlocked(a.href)) return; // ad SDK missing, or already unlocked → normal link
       e.preventDefault();
       current = { url: a.href, company: a.dataset.company || 'the employer', title: a.dataset.title || '' };
+      misses = 0;
       const fill = (s: string) => s.replace(/\{company\}/g, current!.company).replace(/\{title\}/g, current!.title);
       dlg.querySelector('.ag-msg')!.textContent = fill(template);
       dlg.querySelector('.ag-job')!.textContent = current.title ? `${current.title} · ${current.company}` : current.company;
@@ -124,6 +127,9 @@ const allowSkip = f.rewarded?.allowSkip === true; // apply funnels: no skip unle
       const status = fallback ?? (closed ? 'closed' : String(res?.status ?? 'unavailable'));
       const userStopped = /declin|dismiss|clos|cancel|skip/i.test(status) || (closed && !fallback);
       if (!userStopped) { track('apply_gate_fallback', { status }); return openJob(`fallback-${status}`); }
+      // A broken creative (e.g. a video that won't play) looks like an early close and tends to come back on
+      // retry, so after a second attempt without a reward we open the link anyway rather than trap the visitor.
+      if (++misses >= 2) { track('apply_gate_fallback', { status: `retry-${status}` }); return openJob(`fallback-retry-${status}`); }
       track('apply_gate_incomplete', { status });
       view('incomplete');
       dlg.querySelectorAll<HTMLButtonElement>('[data-ag-watch]').forEach((b) => (b.disabled = false));
