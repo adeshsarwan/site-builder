@@ -61,11 +61,14 @@ jobs:
             const fs = require("fs");
             const p = `sites/${process.env.SLUG}/site.config.json`;
             const c = JSON.parse(fs.readFileSync(p, "utf8"));
-            c.ads = { ...c.ads,
-              enabled: true,
-              poSite: process.env.DOMAIN,
-              sdkUrl: "https://serve.thebesads.com/sdk/publisher-sdk.js",
-              runtimeUrl: "https://serve.thebesads.com/runtime/config" };
+            // A site on a dedicated Price Optimiser bundle (sdkMode "bundle") keeps its own sdkUrl.
+            c.ads = c.ads?.sdkMode === "bundle"
+              ? { ...c.ads, enabled: true, poSite: process.env.DOMAIN }
+              : { ...c.ads,
+                  enabled: true,
+                  poSite: process.env.DOMAIN,
+                  sdkUrl: "https://serve.thebesads.com/sdk/publisher-sdk.js",
+                  runtimeUrl: "https://serve.thebesads.com/runtime/config" };
             const lines = (process.env.ADS_TXT || "").split(/;|\n/).map(s => s.trim()).filter(Boolean);
             if (lines.length) c.ads.adsTxt = [...new Set(lines)];
             fs.writeFileSync(p, JSON.stringify(c, null, 2) + "\n");

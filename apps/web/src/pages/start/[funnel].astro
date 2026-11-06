@@ -108,8 +108,12 @@ const seo = { title: f.title, description: f.intro ?? f.title, path: `/start/${f
       setTimeout(() => resolve(ads()), 8000); // continue without ads if the SDK never loads
     });
 
-    // 1. Preload the rewarded ad while the visitor answers.
-    if (useRewarded) whenAds().then((a) => a?.preloadReward?.()).catch(() => {});
+    // 1. While the visitor answers: preload the (hidden) results view's display slots and the rewarded ad,
+    //    independently, once. Display fill never blocks the reward button.
+    whenAds().then((a) => {
+      a?.preloadNextViewAds?.(RESULT_SLOTS)?.catch?.(() => {});
+      if (useRewarded) a?.preloadReward?.()?.catch?.(() => {});
+    }).catch(() => {});
 
     // Progressive enhancement: one step at a time.
     let i = 0;
@@ -174,23 +178,17 @@ const seo = { title: f.title, description: f.intro ?? f.title, path: `/start/${f
       ads()?.revealNextViewAds?.(RESULT_SLOTS).catch?.(() => {});
     };
 
-    document.getElementById('fn-skip')!.addEventListener('click', () => {
-      ads()?.preloadNextViewAds?.(RESULT_SLOTS)?.catch?.(() => {});
-      showResults();
-    });
+    document.getElementById('fn-skip')!.addEventListener('click', () => showResults());
 
     const watch = document.getElementById('fn-watch') as HTMLButtonElement | null;
     watch?.addEventListener('click', async () => {
       watch.disabled = true;
       const a = await whenAds();
       if (!a) return showResults();
-      // 3. While the rewarded video plays, preload the results view's display slots.
-      a.preloadNextViewAds?.(RESULT_SLOTS)?.catch?.(() => {});
-      await a.showRewardAfterOptIn({
-        onGranted() { /* reward = results view; shown after close */ },
-        onClosed() {},
-        onFallback() { /* no-fill, decline, timeout or error: continue without a reward */ },
-      });
+      // 2. Opt-in → Price Optimiser shows the rewarded ad (GPT). Resolves after it closes / ends, never at onReady.
+      const res = await a.showRewardAfterOptIn({});
+      try { (window as any).gtag?.('event', res?.granted ? 'rewarded_granted' : 'rewarded_fallback', { status: res?.status }); } catch {}
+      // 3. Results view either way (this funnel offers "No thanks"); its preloaded slots are revealed there.
       showResults();
     });
   </script>

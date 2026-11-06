@@ -1,10 +1,11 @@
 ---
 // On-page funnel gate. On a gated URL the visitor first answers the questions, then (opt-in) watches
 // the rewarded ad, then sees the page they came for. Following the Price Optimiser guide:
-//  - while the visitor answers, the rewarded ad is preloaded (preloadRewarded);
-//  - the page's own ad slots stay hidden (not requested) until the page is shown;
-//  - while the rewarded ad is showing, those slots are preloaded (preloadSlots); after it closes the page is
-//    shown and the slots are revealed (revealSlots). No-fill, skip or SDK failure → page shown anyway.
+//  - while the visitor answers, the page's own (hidden) display slots and the rewarded ad are preloaded,
+//    independently and once (preloadSlots / preloadRewarded) — display fill never blocks the reward button;
+//  - the rewarded ad is shown only after the visitor opts in; we wait for its terminal outcome (never onReady);
+//  - then the page is shown and the same div IDs are revealed (revealSlots, after two frames).
+//    No-fill, skip or SDK failure → page shown anyway.
 // A small inline script in <head> (see Base.astro) decides before first paint whether to gate this
 // visit (already answered? query rules?). Without JavaScript the page is shown normally.
 import type { Funnel } from '@/lib/site';
@@ -62,8 +63,11 @@ const allowSkip = f.rewarded?.allowSkip !== false;
     const pageSlots = () => [...document.querySelectorAll<HTMLElement>('.ad-slot[id]')].filter((el) => !g.contains(el)).map((el) => el.id);
 
     track('funnel_start');
-    // 1. Preload the rewarded ad while the visitor answers.
-    if (useRewarded) whenAds().then((a) => a?.preloadReward?.()).catch(() => {});
+    // 1. While the visitor answers: preload the page's display slots and the rewarded ad, independently, once.
+    whenAds().then((a) => {
+      a?.preloadNextViewAds?.(pageSlots())?.catch?.(() => {});
+      if (useRewarded) a?.preloadReward?.()?.catch?.(() => {});
+    }).catch(() => {});
 
     let i = 0;
     g.classList.add('js');
@@ -92,10 +96,7 @@ const allowSkip = f.rewarded?.allowSkip !== false;
       // Same answers also unlock server pages gated by this funnel (e.g. /jobs) for `days`.
       fetch(`/start/${id}`, { method: 'POST', body: new FormData(form), headers: { 'x-funnel': '1' }, credentials: 'same-origin' }).catch(() => {});
       track('funnel_answers', answers);
-      if (!useRewarded) {
-        ads()?.preloadNextViewAds?.(pageSlots())?.catch?.(() => {});
-        return reveal('no-rewarded');
-      }
+      if (!useRewarded) return reveal('no-rewarded');
       form.hidden = true;
       ready.hidden = false;
     };
@@ -103,7 +104,6 @@ const allowSkip = f.rewarded?.allowSkip !== false;
     show(0);
 
     document.getElementById('fn-gate-skip')?.addEventListener('click', () => {
-      ads()?.preloadNextViewAds?.(pageSlots())?.catch?.(() => {});
       track('rewarded_skip');
       reveal('skip');
     });
@@ -112,15 +112,11 @@ const allowSkip = f.rewarded?.allowSkip !== false;
       watch.disabled = true;
       const a = await whenAds();
       if (!a) return reveal('no-sdk');
-      // 3. While the rewarded ad is showing, preload the page's display slots.
-      a.preloadNextViewAds?.(pageSlots())?.catch?.(() => {});
-      let how = 'closed';
-      await a.showRewardAfterOptIn({
-        onGranted() { how = 'granted'; track('rewarded_granted'); },
-        onClosed() {},
-        onFallback(r: any) { how = `fallback-${r?.status ?? 'unknown'}`; },
-      });
-      reveal(how);
+      // 2. Opt-in → rewarded. Resolves after the ad closes / ends; the page is revealed only then.
+      const res = await a.showRewardAfterOptIn({});
+      if (res?.granted) track('rewarded_granted');
+      // 3. Reveal the page either way (this funnel offers "No thanks"), then reveal its preloaded slots.
+      reveal(res?.granted ? 'granted' : `fallback-${res?.status ?? 'unknown'}`);
     });
   }
 </script>

@@ -4,7 +4,8 @@
 // intercepted: an overlay asks the visitor to view a rewarded ad (rendered by GPT); after the reward is granted
 // the job opens in a new tab. Rules from the Price Optimiser guide:
 //  - rewarded is shown only after the visitor opts in (the "Watch" button) and is preloaded beforehand;
-//  - the link is unlocked only from onGranted (not from closing the ad);
+//  - the link is unlocked only on a real grant: onGranted fired and the lifecycle settled as "granted"
+//    (not from closing the ad, onReady or video completion);
 //  - no fill / error / timeout → the visitor still gets the link (never trapped).
 // Browsers block tabs opened long after a click, so after the ad we try to open the tab and always
 // show a one-tap "Open application" button as well.
@@ -111,10 +112,11 @@ const allowSkip = f.rewarded?.allowSkip === true; // apply funnels: no skip unle
       const a = ads();
       if (!a) { dlg.showModal(); return openJob('no-sdk'); }
       const res = await a.showRewardAfterOptIn({
-        onGranted() { granted = true; },
         onClosed() { closed = true; },
         onFallback(r: any) { fallback = String(r?.status ?? 'unavailable'); },
       });
+      // Resolves after the ad's terminal outcome. Unlock only on a real grant (onGranted + status "granted").
+      granted = Boolean(res?.granted);
       dlg.showModal();
       if (granted) { track('apply_gate_granted'); return openJob('granted'); }
       // The visitor chose to stop (declined / closed early) → offer to watch again.

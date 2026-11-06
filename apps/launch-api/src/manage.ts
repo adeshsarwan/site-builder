@@ -112,7 +112,10 @@ manage.post('/sites/:id/ads/enable', async (c) => {
     return c.json({ error: `The Price Optimiser runtime is not serving siteKey "${site.domain}" yet. Publish the configuration, or pass requireRuntime=false.`, runtime }, 409);
   }
   const cfg = structuredClone(site.config);
-  cfg.ads = { ...cfg.ads, enabled: true, poSite: site.domain, sdkUrl: SDK_URL, runtimeUrl: RUNTIME_URL };
+  // A site on a dedicated Price Optimiser bundle keeps its own sdkUrl.
+  cfg.ads = cfg.ads?.sdkMode === 'bundle'
+    ? { ...cfg.ads, enabled: true, poSite: site.domain }
+    : { ...cfg.ads, enabled: true, poSite: site.domain, sdkUrl: SDK_URL, runtimeUrl: RUNTIME_URL };
   const incoming = linesFrom(body);
   const { lines, warnings } = validateAdsTxt(incoming);
   if (incoming.length) cfg.ads.adsTxt = lines;
