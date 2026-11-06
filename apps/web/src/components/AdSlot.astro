@@ -6,7 +6,5 @@ export type SlotId = 'ad-leaderboard' | 'ad-incontent' | 'ad-results' | 'ad-side
 interface Props { id: SlotId; class?: string }
 const { id, class: cls = '' } = Astro.props;
 const variant = id.replace('ad-', '').replace(/-\d$/, '');
-// Only containers mapped in Price Optimiser for this site (ads.slots) are rendered; unmapped ones would sit empty.
-const mapped = !site.ads.slots?.length || site.ads.slots.includes(id);
 ---
-{site.ads.enabled && mapped && <div id={id} class={`ad-slot ad-slot--${variant} ${cls}`} aria-label="Advertisement"></div>}
+{site.ads.enabled && <div id={id} class={`ad-slot ad-slot--${variant} ${cls}`} aria-label="Advertisement"></div>}

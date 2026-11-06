@@ -109,14 +109,21 @@ const allowSkip = f.rewarded?.allowSkip !== false;
     });
     const watch = document.getElementById('fn-gate-watch') as HTMLButtonElement | null;
     watch?.addEventListener('click', async () => {
+      if (watch.disabled) return;
       watch.disabled = true;
-      const a = await whenAds();
-      if (!a) return reveal('no-sdk');
-      // 2. Opt-in → rewarded. Resolves after the ad closes / ends; the page is revealed only then.
-      const res = await a.showRewardAfterOptIn({});
-      if (res?.granted) track('rewarded_granted');
-      // 3. Reveal the page either way (this funnel offers "No thanks"), then reveal its preloaded slots.
-      reveal(res?.granted ? 'granted' : `fallback-${res?.status ?? 'unknown'}`);
+      let how = 'error';
+      try {
+        const a = await whenAds();
+        if (!a) { how = 'no-sdk'; return; }
+        // 2. Opt-in → rewarded. Resolves after the terminal outcome; granted = onGranted, completed = granted + closed.
+        const res = await a.showRewardAfterOptIn({});
+        if (res?.completed) track('rewarded_granted');
+        how = res?.completed ? 'granted' : `fallback-${res?.status ?? 'unknown'}`;
+      } finally {
+        watch.disabled = false;
+        // 3. Reveal the page either way (this funnel offers "No thanks"), then reveal its preloaded slots.
+        reveal(how);
+      }
     });
   }
 </script>

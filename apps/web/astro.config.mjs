@@ -14,7 +14,7 @@ export default defineConfig({
   build: { format: 'file' },
   adapter: cloudflare({ imageService: 'passthrough' }),
   markdown: {
-    rehypePlugins: [[rehypeAdSlots, { enabled: site.ads?.enabled !== false, slots: site.ads?.slots ?? null }]],
+    rehypePlugins: [[rehypeAdSlots, { enabled: site.ads?.enabled !== false }]],
   },
   vite: {
     resolve: {

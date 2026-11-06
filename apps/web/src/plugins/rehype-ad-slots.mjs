@@ -14,7 +14,7 @@ const slotNode = (id) => ({
   children: [],
 });
 
-export default function rehypeAdSlots({ enabled = true, slots = null } = {}) {
+export default function rehypeAdSlots({ enabled = true } = {}) {
   return (tree) => {
     if (!enabled) return;
     const out = [];
@@ -22,7 +22,7 @@ export default function rehypeAdSlots({ enabled = true, slots = null } = {}) {
     for (const node of tree.children) {
       if (node.type === 'element' && node.tagName === 'h2') {
         h2++;
-        const slot = SLOTS.find((s) => s.before === h2 && (!slots?.length || slots.includes(s.id)));
+        const slot = SLOTS.find((s) => s.before === h2);
         if (slot) out.push(slotNode(slot.id));
       }
       out.push(node);

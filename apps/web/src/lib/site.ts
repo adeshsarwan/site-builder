@@ -59,14 +59,6 @@ export interface SiteConfig {
     adsTxt: string[];
     /** Show the sticky anchor container */
     anchor?: boolean;
-    /**
-     * How the Price Optimiser SDK is loaded.
-     *  - "publisher-sdk" (default): shared publisher-sdk.js, deferred, data-auto-init="false", initialised by our integration.
-     *  - "bundle": a dedicated per-site experience bundle (sdkUrl), loaded once with async; it auto-initialises.
-     */
-    sdkMode?: 'publisher-sdk' | 'bundle';
-    /** Div IDs mapped to ad units in Price Optimiser for this site. Other containers are not rendered. Default: all. */
-    slots?: string[];
   };
   analytics: { ga4MeasurementId?: string };
   searchConsole?: { googleSiteVerification?: string };

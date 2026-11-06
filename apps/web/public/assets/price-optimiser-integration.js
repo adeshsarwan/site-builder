@@ -1,150 +1,126 @@
-// Price Optimiser integration. Loaded once with `defer` after the SDK script (see Base.astro).
-// Price Optimiser owns GPT, inventory mapping, sizes, floors, refresh, waterfalls and rewarded presentation.
-// This file never defines GPT slots, never sets price targeting and never calls display/refresh itself.
-//
-// Two load modes, chosen per site (ads.sdkMode):
-//  - "bundle": the site's dedicated experience bundle (e.g. /experiences/jobsthe.world.js). It auto-initialises;
-//    we only resolve its public API (bounded wait) and check status().siteKey. Signatures per the jobsthe.world
-//    handoff: preloadRewarded(), showRewarded(callbacks), showInterstitial(), preloadSlots(ids), revealSlots(ids).
-//  - "publisher-sdk": shared publisher-sdk.js with data-auto-init="false"; we call init() once.
-//
+// Price Optimiser integration (Rules API SDK on serve.thebesads.com). Loaded once with `defer`, after
+// publisher-sdk.js (data-auto-init="false"), see Base.astro. This file is the single initialisation owner.
+// Price Optimiser owns GPT, inventory mapping, sizes, floors, experiments, refresh and rewarded presentation.
+// We never define GPT slots, set price targeting, or call display / refresh / makeRewardedVisible.
 // The rest of the site talks only to window.siteAds (funnels, apply gate).
 (function (window, document) {
   'use strict';
-  const me = document.currentScript;
-  const MODE = (me && me.dataset.poMode) || 'publisher-sdk';
-  const SITE_KEY = (me && me.dataset.poSite) || '';
-  const ALLOWED = ((me && me.dataset.poSlots) || '').split(',').map((s) => s.trim()).filter(Boolean);
-  const REQUIRED = ['preloadSlots', 'revealSlots', 'preloadRewarded', 'showRewarded'];
+  const sdkTag = document.querySelector('script[data-po-site]');
+  const SITE_KEY = (sdkTag && sdkTag.getAttribute('data-po-site')) || '';
 
-  // No CMP on these sites yet. If one is added, make this return its "ads allowed" state;
-  // every ad call below checks it, and content is never blocked on it.
+  // There is no CMP on these sites yet. When one is added, define window.siteAdsConsent() returning its
+  // "ads allowed" state: nothing below initialises the SDK or requests ads while it returns false.
   const canRequestAds = () => {
     try { return typeof window.siteAdsConsent === 'function' ? window.siteAdsConsent() === true : true; } catch { return false; }
   };
+  const consentError = () => Object.assign(new Error('consent_required'), { status: 'consent_required' });
 
-  const camel = (s) => s.toLowerCase().replace(/[^a-z0-9]+([a-z0-9])/g, (_, c) => c.toUpperCase()); // jobsthe.world → jobstheWorld
-  function resolveSDK() {
-    const candidates = [
-      window.PublisherExperienceSDK && window.PublisherExperienceSDK[camel(SITE_KEY)],
-      window.PriceOptimiserExperience,
-      window.PublisherExperience,
-    ];
-    return candidates.find((po) => {
-      if (!po || !REQUIRED.every((n) => typeof po[n] === 'function')) return false;
-      if (MODE !== 'bundle') return true;
-      try { return po.status().siteKey === SITE_KEY; } catch { return false; }
-    });
-  }
-
-  // Bounded readiness: up to 8 s for the public API. Never blocks content.
-  let readyPromise = null;
-  function ready(timeoutMs = 8000) {
-    if (readyPromise) return readyPromise;
-    readyPromise = (async () => {
-      const deadline = Date.now() + timeoutMs;
-      let po;
-      while (!(po = resolveSDK()) && Date.now() < deadline) await new Promise((r) => setTimeout(r, 50));
-      if (!po) throw new Error('Price Optimiser SDK unavailable');
-      if (MODE !== 'bundle' && typeof po.init === 'function') await po.init(); // auto-init is off in this mode
-      return po;
+  // One-time initialisation, only once consent permits. A refusal is not cached, so a later call can init.
+  let initPromise = null;
+  function ready() {
+    if (initPromise) return initPromise;
+    if (!canRequestAds()) return Promise.reject(consentError());
+    initPromise = (async () => {
+      const ads = window.PublisherExperience;
+      if (!ads) throw new Error('Price Optimiser SDK failed to load');
+      await ads.init();
+      const site = ads.status && ads.status().siteKey;
+      if (SITE_KEY && site !== SITE_KEY) throw new Error(`Unexpected Price Optimiser site: ${site}`);
+      return ads;
     })();
-    readyPromise.catch((error) => { console.warn('Ads unavailable', error); });
-    return readyPromise;
+    initPromise.catch((error) => console.warn('Ads unavailable', error && error.message));
+    return initPromise;
   }
-  const adsReady = ready();
+  ready().catch(() => {}); // initialise display placements on load (consent permitting)
 
-  // Exact, mapped, mounted, unique div IDs only. Unknown/absent IDs are dropped, duplicates are refused.
+  // Display: exact, mounted, unique div IDs only; never an empty array (empty selectors widen the scope).
   function mountedIds(ids) {
-    return [...new Set(ids)].filter((id) => {
-      if (ALLOWED.length && !ALLOWED.includes(id)) return false;
+    return [...new Set(ids || [])].filter((id) => {
       const n = document.querySelectorAll(`[id="${id}"]`).length;
-      if (n > 1) { console.warn(`Duplicate ad div: ${id}`); return false; }
+      if (n > 1) console.warn(`Duplicate ad div: ${id}`);
       return n === 1;
     });
   }
-  const twoFrames = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-
-  // Display: preload into mounted (possibly hidden) destination divs — a real ad request.
+  // Preload a near-term hidden destination's slots (real GAM requests into the mounted hidden divs).
   async function preloadNextViewAds(ids) {
-    if (!canRequestAds()) return { status: 'consent_required' };
-    const po = await adsReady;
     const mounted = mountedIds(ids);
-    return mounted.length ? po.preloadSlots(mounted) : { status: 'no_mounted_slots' };
+    if (!mounted.length) return { status: 'skipped', results: [] };
+    const ads = await ready();
+    return ads.preloadSlots(mounted);
   }
-  // Display: call AFTER the destination is visible (the caller unhides it first). Same div IDs as the preload.
+  // Call after the caller has unhidden the destination; same IDs as the preload.
   async function revealNextViewAds(ids) {
-    await twoFrames();
-    if (!canRequestAds()) return { status: 'content_visible_without_ads' };
-    const po = await adsReady;
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
     const mounted = mountedIds(ids);
-    return mounted.length ? po.revealSlots(mounted) : { status: 'no_mounted_slots' };
+    if (!mounted.length) return { status: 'skipped', results: [] };
+    const ads = await ready();
+    return ads.revealSlots(mounted);
   }
 
-  // Rewarded: preload while the visitor is in the question / waiting flow. Independent of display preload.
+  // Rewarded warm-up: one shared promise per flow, so duplicate callers reuse it.
   let rewardWarm = null;
   function preloadReward() {
-    if (!canRequestAds()) return Promise.resolve({ status: 'consent_required' });
-    if (rewardWarm) return rewardWarm;
-    rewardWarm = adsReady
-      .then((po) => (MODE === 'bundle' ? po.preloadRewarded() : po.preloadRewarded('rewarded')))
-      .catch((error) => ({ status: 'error', error }));
+    if (!rewardWarm) {
+      rewardWarm = ready()
+        .then((ads) => ads.preloadRewarded('rewarded'))
+        .catch((error) => { rewardWarm = null; return { status: (error && error.status) || 'error' }; });
+    }
     return rewardWarm;
   }
 
-  // Rewarded: only after an explicit user opt-in. Resolves after the ad's terminal outcome (closed / fallback),
-  // never at onReady. The reward comes from onGranted only (never readiness, video completion or closing).
-  let rewardBusy = false;
-  let interstitialBusy = false;
-  async function showRewardAfterOptIn({ onGranted, onClosed, onFallback } = {}) {
-    if (rewardBusy || interstitialBusy) return { status: 'busy', granted: false };
-    rewardBusy = true;
-    let grantedCb = false;
-    let fellBack = false;
-    const fallback = (r) => { if (fellBack) return; fellBack = true; try { onFallback && onFallback(r); } catch {} };
+  // One in-flight guard across rewarded and interstitial.
+  let busy = false;
+
+  // Rewarded show, after the user's opt-in only. Resolves after the terminal outcome, never at onReady.
+  //  - granted: onGranted fired (the only grant signal);
+  //  - completed: granted AND closed, checked idempotently from both callbacks (order doesn't matter);
+  //    if the lifecycle settles granted without an onClosed callback, settling counts as the close.
+  // Callback errors are swallowed so they can't break the SDK's lifecycle.
+  async function showRewardAfterOptIn({ onGranted, onClosed, onFallback, onComplete } = {}) {
+    if (busy) return { status: 'busy', granted: false, completed: false };
+    busy = true;
+    let granted = false, closed = false, completed = false, fellBack = false;
+    const safe = (fn, arg) => { try { fn && fn(arg); } catch {} };
+    const complete = () => { if (completed || !granted || !closed) return; completed = true; safe(onComplete); };
+    const fallback = (r) => { if (fellBack) return; fellBack = true; safe(onFallback, r); };
     try {
-      if (!canRequestAds()) { fallback({ status: 'consent_required' }); return { status: 'consent_required', granted: false }; }
-      const po = await adsReady;
-      const callbacks = {
-        onGranted(detail) {
-          if (grantedCb) return;
-          grantedCb = true;
-          try { onGranted && onGranted(detail); } catch {} // record the entitlement once; no navigation here
-        },
-        onClosed(event) { try { onClosed && onClosed(event); } catch {} }, // closing alone is not a reward
-        onFallback(result) { fallback(result); }, // unavailable, timeout, declined, busy, error
-      };
-      const result = (MODE === 'bundle' ? await po.showRewarded(callbacks) : await po.showRewarded('rewarded', callbacks)) || {};
-      const status = String(result.status || (grantedCb ? 'granted' : 'unavailable'));
-      // publisher-sdk (config v3 handoff): grant from onGranted only. Bundle handoff: onGranted + status "granted".
-      const granted = MODE === 'bundle' ? grantedCb && status === 'granted' : grantedCb;
+      const ads = await ready();
+      const result = (await ads.showRewarded('rewarded', {
+        onGranted(detail) { if (granted) return; granted = true; safe(onGranted, detail); complete(); },
+        onClosed(event) { closed = true; safe(onClosed, event); complete(); },
+        onFallback(r) { fallback(r); }, // unavailable, timeout, declined, busy, error…
+      })) || {};
+      const status = String(result.status || (granted ? 'granted' : 'unavailable'));
+      if (granted && !closed) { closed = true; complete(); } // settled = terminal outcome
       if (!granted) fallback({ status });
-      return { ...result, status, granted };
+      return { ...result, status, granted, closed, completed };
     } catch (error) {
-      fallback({ status: 'error' });
-      return { status: 'error', granted: false };
+      const status = (error && error.status) || 'error'; // SDK load / init failure, or consent
+      fallback({ status });
+      return { status, granted: false, closed, completed: false };
     } finally {
-      rewardWarm = null; // the preload is consumed; the next opportunity preloads afresh
-      rewardBusy = false;
+      rewardWarm = null; // a new flow preloads afresh
+      busy = false;
     }
   }
 
-  // Interstitial: publisher-triggered only at an agreed break; never concurrently with rewarded.
-  // (The jobsthe.world bundle installs its own /find/results/ triggers; we add none.)
+  // Interstitial: only at the publisher's existing natural break; never overlapping rewarded.
   async function requestInterstitialOpportunity() {
-    if (interstitialBusy || rewardBusy || !canRequestAds()) return { status: 'busy' };
-    interstitialBusy = true;
+    if (busy) return { status: 'busy' };
+    busy = true;
     try {
-      const po = await adsReady;
-      if (typeof po.showInterstitial !== 'function') return { status: 'unavailable' };
-      return (MODE === 'bundle' ? await po.showInterstitial() : await po.showInterstitial('interstitial')) || {};
-    } catch {
-      return { status: 'error' };
+      const ads = await ready();
+      return (await ads.showInterstitial('interstitial')) || {};
+    } catch (error) {
+      return { status: (error && error.status) || 'error' };
     } finally {
-      interstitialBusy = false; // the caller always continues its flow
+      busy = false; // the caller always continues its flow
     }
   }
 
-  window.siteAds = { mode: MODE, adsReady, ready, canRequestAds, preloadNextViewAds, revealNextViewAds, preloadReward, showRewardAfterOptIn, requestInterstitialOpportunity };
+  window.siteAds = {
+    get adsReady() { return ready(); },
+    ready, canRequestAds, preloadNextViewAds, revealNextViewAds, preloadReward, showRewardAfterOptIn, requestInterstitialOpportunity,
+  };
   document.dispatchEvent(new CustomEvent('siteads:ready'));
 })(window, document);

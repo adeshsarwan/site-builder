@@ -70,8 +70,10 @@ const allowSkip = f.rewarded?.allowSkip === true; // apply funnels: no skip unle
 
     let current: { url: string; company: string; title: string } | null = null;
     let misses = 0; // non-granted ad attempts for the current job
+    let opened = false; // guards against opening the same application twice
     const openJob = (how: string) => {
-      if (!current) return;
+      if (!current || opened) return;
+      opened = true;
       remember(current.url);
       const w = window.open(current.url, '_blank');
       if (w) { try { w.opener = null; } catch {} }
@@ -89,7 +91,7 @@ const allowSkip = f.rewarded?.allowSkip === true; // apply funnels: no skip unle
       if (!ads() || isUnlocked(a.href)) return; // ad SDK missing, or already unlocked → normal link
       e.preventDefault();
       current = { url: a.href, company: a.dataset.company || 'the employer', title: a.dataset.title || '' };
-      misses = 0;
+      misses = 0; opened = false; // a new offer: fresh grant / fallback state
       const fill = (s: string) => s.replace(/\{company\}/g, current!.company).replace(/\{title\}/g, current!.title);
       dlg.querySelector('.ag-msg')!.textContent = fill(template);
       dlg.querySelector('.ag-job')!.textContent = current.title ? `${current.title} · ${current.company}` : current.company;
@@ -106,33 +108,42 @@ const allowSkip = f.rewarded?.allowSkip === true; // apply funnels: no skip unle
       track('apply_gate_open', { company: current.company });
     }, true);
 
-    dlg.querySelectorAll<HTMLButtonElement>('[data-ag-watch]').forEach((btn) => btn.addEventListener('click', async () => {
-      btn.disabled = true;
-      // GPT shows the rewarded ad in its own full-screen overlay. A modal <dialog> sits in the browser's
-      // top layer above everything, so close ours while the ad is up and reopen it for the result.
-      dlg.close();
-      let granted = false, closed = false, fallback: string | null = null;
-      const a = ads();
-      if (!a) { dlg.showModal(); return openJob('no-sdk'); }
-      const res = await a.showRewardAfterOptIn({
-        onClosed() { closed = true; },
-        onFallback(r: any) { fallback = String(r?.status ?? 'unavailable'); },
-      });
-      // Resolves after the ad's terminal outcome. Unlock only on a real grant (onGranted + status "granted").
-      granted = Boolean(res?.granted);
-      dlg.showModal();
-      if (granted) { track('apply_gate_granted'); return openJob('granted'); }
-      // The visitor chose to stop (declined / closed early) → offer to watch again.
-      // No ad could be shown (no fill, error, timeout, busy) → don't trap them: reveal the link.
-      const status = fallback ?? (closed ? 'closed' : String(res?.status ?? 'unavailable'));
-      const userStopped = /declin|dismiss|clos|cancel|skip/i.test(status) || (closed && !fallback);
-      if (!userStopped) { track('apply_gate_fallback', { status }); return openJob(`fallback-${status}`); }
-      // A broken creative (e.g. a video that won't play) looks like an early close and tends to come back on
-      // retry, so after a second attempt without a reward we open the link anyway rather than trap the visitor.
-      if (++misses >= 2) { track('apply_gate_fallback', { status: `retry-${status}` }); return openJob(`fallback-retry-${status}`); }
-      track('apply_gate_incomplete', { status });
-      view('incomplete');
-      dlg.querySelectorAll<HTMLButtonElement>('[data-ag-watch]').forEach((b) => (b.disabled = false));
+    const watchBtns = () => dlg.querySelectorAll<HTMLButtonElement>('[data-ag-watch]');
+    let watching = false;
+    watchBtns().forEach((btn) => btn.addEventListener('click', async () => {
+      if (watching) return; // repeated clicks while an ad is in flight
+      watching = true;
+      watchBtns().forEach((b) => (b.disabled = true));
+      try {
+        // GPT shows the rewarded ad in its own full-screen overlay. A modal <dialog> sits in the browser's
+        // top layer above everything, so close ours while the ad is up and reopen it for the result.
+        dlg.close();
+        let closed = false, fallback: string | null = null;
+        const a = ads();
+        if (!a) { dlg.showModal(); return openJob('no-sdk'); }
+        // Resolves after the terminal outcome. The link opens only when the reward was granted (onGranted)
+        // and the ad has closed; closing, video completion or a resolved promise alone never grant.
+        const res = await a.showRewardAfterOptIn({
+          onClosed() { closed = true; },
+          onFallback(r: any) { fallback = String(r?.status ?? 'unavailable'); },
+        });
+        dlg.showModal();
+        if (res?.completed) { track('apply_gate_granted'); return openJob('granted'); }
+        // No ad could be shown (no fill, error, timeout, busy, init failure) → don't trap them: reveal the link.
+        // The visitor stopped the ad (declined / closed early) → offer to watch again.
+        const status = fallback ?? (closed ? 'closed' : String(res?.status ?? 'unavailable'));
+        const userStopped = /declin|dismiss|clos|cancel|skip/i.test(status) || (closed && !fallback);
+        if (!userStopped) { track('apply_gate_fallback', { status }); return openJob(`fallback-${status}`); }
+        // Separate UX decision (not part of the Price Optimiser handoff): a creative that can't play (e.g. a video
+        // with an unplayable source) looks the same as an early close through the public callbacks, so after a
+        // second attempt without a reward the link opens anyway. Logged as its own event, never as a grant.
+        if (++misses >= 2) { track('apply_gate_retry_access', { status }); return openJob(`retry-${status}`); }
+        track('apply_gate_incomplete', { status });
+        view('incomplete');
+      } finally {
+        watching = false;
+        watchBtns().forEach((b) => (b.disabled = false));
+      }
     }));
     dlg.querySelectorAll('[data-ag-skip]').forEach((l) => l.addEventListener('click', () => { if (current) remember(current.url); track('apply_gate_skip'); dlg.close(); }));
     dlg.querySelector('[data-ag-open]')!.addEventListener('click', () => setTimeout(() => dlg.close(), 50));

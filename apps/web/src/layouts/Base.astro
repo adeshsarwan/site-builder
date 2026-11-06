@@ -70,20 +70,13 @@ const gateCfg = gate ? { id: gate.id, days: gate.rememberDays ?? 30, freq: gate.
     )}
     {ld.map((o) => <script type="application/ld+json" set:html={JSON.stringify(o)} />)}
 
-    {site.ads.enabled && (site.ads.sdkMode === 'bundle' ? (
-      <>
-        <!-- Price Optimiser: the site's dedicated bundle, loaded once (async; it auto-initialises), then our integration. -->
-        <link rel="preconnect" href={new URL(site.ads.sdkUrl).origin} />
-        <script is:inline async src={site.ads.sdkUrl}></script>
-        <script is:inline defer data-po-mode="bundle" data-po-site={site.ads.poSite} data-po-slots={(site.ads.slots ?? []).join(',')} src="/assets/price-optimiser-integration.js"></script>
-      </>
-    ) : (
+    {site.ads.enabled && (
       <>
         <!-- Price Optimiser: exactly one SDK, deferred, then the integration file. No async, no inline init. -->
         <script is:inline defer data-auto-init="false" data-po-site={site.ads.poSite} data-po-runtime-config-url={site.ads.runtimeUrl} src={site.ads.sdkUrl}></script>
-        <script is:inline defer data-po-mode="publisher-sdk" data-po-site={site.ads.poSite} data-po-slots={(site.ads.slots ?? []).join(',')} src="/assets/price-optimiser-integration.js"></script>
+        <script is:inline defer src="/assets/price-optimiser-integration.js"></script>
       </>
-    ))}
+    )}
     {ga && (
       <>
         <script is:inline async src={`https://www.googletagmanager.com/gtag/js?id=${ga}`}></script>

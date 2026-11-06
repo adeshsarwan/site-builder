@@ -62,9 +62,6 @@ a { color: var(--primary); }
 .grid--4 { grid-template-columns: repeat(4, 1fr); }
 .with-sidebar { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 40px; align-items: start; }
 .sidebar { display: flex; flex-direction: column; gap: 24px; }
-/* Sites without a mapped sidebar unit: no empty right column. */
-.sidebar:not(:has(*)) { display: none; }
-.with-sidebar:has(> .sidebar:not(:has(*))) { grid-template-columns: minmax(0, 1fr); }
 .sticky { position: sticky; top: 16px; }
 
 /* Cards */

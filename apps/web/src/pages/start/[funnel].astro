@@ -182,14 +182,19 @@ const seo = { title: f.title, description: f.intro ?? f.title, path: `/start/${f
 
     const watch = document.getElementById('fn-watch') as HTMLButtonElement | null;
     watch?.addEventListener('click', async () => {
+      if (watch.disabled) return;
       watch.disabled = true;
-      const a = await whenAds();
-      if (!a) return showResults();
-      // 2. Opt-in → Price Optimiser shows the rewarded ad (GPT). Resolves after it closes / ends, never at onReady.
-      const res = await a.showRewardAfterOptIn({});
-      try { (window as any).gtag?.('event', res?.granted ? 'rewarded_granted' : 'rewarded_fallback', { status: res?.status }); } catch {}
-      // 3. Results view either way (this funnel offers "No thanks"); its preloaded slots are revealed there.
-      showResults();
+      try {
+        const a = await whenAds();
+        if (!a) return;
+        // 2. Opt-in → Price Optimiser shows the rewarded ad (GPT). Resolves after the terminal outcome, never at onReady.
+        const res = await a.showRewardAfterOptIn({});
+        try { (window as any).gtag?.('event', res?.completed ? 'rewarded_granted' : 'rewarded_fallback', { status: res?.status }); } catch {}
+      } finally {
+        watch.disabled = false;
+        // 3. Results view either way (this funnel offers "No thanks"); its preloaded slots are revealed there.
+        showResults();
+      }
     });
   </script>
 </Base>

@@ -31,5 +31,5 @@ jobs:
       - name: Live site checks
         run: |
           for p in / /ads.txt /robots.txt /sitemap.xml /find-jobs; do printf "%-14s %s\n" "$p" "$(curl -s -o /dev/null -w '%{http_code}' "https://$DOMAIN$p")"; done
-          echo "SDK tags on homepage:"; curl -s "https://$DOMAIN/" | grep -o -E '<script[^>]*(publisher-sdk|/experiences/)[^>]*>' || echo "(none — ads not enabled)"
+          echo "SDK tags on homepage:"; curl -s "https://$DOMAIN/" | grep -o '<script[^>]*publisher-sdk[^>]*>' || echo "(none — ads not enabled)"
           echo "ads.txt:"; curl -s "https://$DOMAIN/ads.txt"
