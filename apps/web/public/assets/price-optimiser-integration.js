@@ -93,7 +93,7 @@
   }
 
   // Rewarded: only after an explicit user opt-in. Resolves after the ad's terminal outcome (closed / fallback),
-  // never at onReady. `granted` is true only when onGranted fired AND the lifecycle settled as "granted".
+  // never at onReady. The reward comes from onGranted only (never readiness, video completion or closing).
   let rewardBusy = false;
   let interstitialBusy = false;
   async function showRewardAfterOptIn({ onGranted, onClosed, onFallback } = {}) {
@@ -116,7 +116,8 @@
       };
       const result = (MODE === 'bundle' ? await po.showRewarded(callbacks) : await po.showRewarded('rewarded', callbacks)) || {};
       const status = String(result.status || (grantedCb ? 'granted' : 'unavailable'));
-      const granted = grantedCb && status === 'granted';
+      // publisher-sdk (config v3 handoff): grant from onGranted only. Bundle handoff: onGranted + status "granted".
+      const granted = MODE === 'bundle' ? grantedCb && status === 'granted' : grantedCb;
       if (!granted) fallback({ status });
       return { ...result, status, granted };
     } catch (error) {

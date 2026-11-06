@@ -46,19 +46,12 @@
   "ads": {
     "enabled": true,
     "poSite": "jobsthe.world",
-    "sdkMode": "bundle",
-    "sdkUrl": "https://priceoptimiser1.thebesads.com/experiences/jobsthe.world.js",
+    "sdkUrl": "https://serve.thebesads.com/sdk/publisher-sdk.js",
     "runtimeUrl": "https://serve.thebesads.com/runtime/config",
     "adsTxt": [
       "google.com, pub-1574836376762965, DIRECT, f08c47fec0942fa0"
     ],
-    "anchor": true,
-    "slots": [
-      "ad-leaderboard",
-      "ad-incontent",
-      "ad-results",
-      "ad-anchor"
-    ]
+    "anchor": true
   },
   "analytics": {
     "ga4MeasurementId": "G-H6H3P8EN7K"
