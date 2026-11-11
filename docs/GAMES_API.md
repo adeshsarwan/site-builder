@@ -105,7 +105,7 @@ Webhooks, step and site statuses are the same as for jobs sites. A failed launch
 
 ```http
 GET /v1/games/sites            → { sites: [...], notLaunchedByApi: ["demo"] }
-GET /v1/games/sites/{id}       → { siteKey, domain, pagesProject, adsMode, launch: { status, progress, steps } }
+GET /v1/games/sites/{id}       → { siteKey, domain, pagesProject, adsMode, analytics: { measurementId, property, propertyId, keyEvents }, launch: { status, progress, steps } }
 ```
 
 ### Settings
@@ -179,8 +179,8 @@ POST /v1/games/sites/{id}/analytics/setup   { "measurementId"?: "G-…", "proper
 → 200 { changed: false, measurementId, property, createdProperty, setup: { dimensions, metrics, keyEvents, retention, errors }, summary }
 → 202 { changed: true, …, commit, deploy }   when site.json gets a new analytics.ga4 / analytics.ga4Property (site rebuilds)
 ```
-Works for sites made by hand too (`{id}` = site key, e.g. `torunex-site`). `site.json → analytics.ga4Property` is the
-property to use when linking GA4 to Ad Manager from your frontend. Not done by the API: the Ad Manager link (frontend)
+Works for sites made by hand too (`{id}` = site key, e.g. `torunex-site`). `analytics.propertyId` in `GET /v1/games/sites/{id}` is the
+property to use when linking GA4 to Ad Manager and Google Ads from your frontend (available once the `analytics` step is done). Not done by the API: the Ad Manager link (frontend)
 and the Google Ads link. Enhanced measurement is on by default for every new web stream.
 
 ### Deploys and health

@@ -12,7 +12,7 @@
 // Portal sites — what differs per site: domain, name/theme, which games, ad units, ads.txt:
 //   POST   /games/sites                     launch a portal (zone → nameservers → GA4 → site.json → Pages → domain → Search Console)
 //   GET    /games/sites                     list
-//   GET    /games/sites/:id                 launch status (live progress: GET /sites/:id/events)
+//   GET    /games/sites/:id                 launch status + analytics { measurementId, property, propertyId, keyEvents } (live progress: GET /sites/:id/events)
 //   POST   /games/sites/:id/retry           resume a failed launch
 //   GET    /games/sites/:id/config          site.json        PATCH → name, tagline, description, theme, logo, games, exclude, featured, categories, contactEmail
 //   GET    /games/sites/:id/games           games on this site with their URLs and ad units
@@ -210,7 +210,9 @@ games.get('/games/sites/:id', async (c) => {
   const ref = await resolveGamesSite(c.env, c.req.param('id'));
   if (!ref) return notFound(c);
   const status = ref.siteId ? await siteStatus(c.env, ref.siteId) : null;
-  return c.json({ siteKey: ref.key, domain: ref.site.domain || null, pagesProject: pagesProjectOf(ref), adsMode: ref.site.ads?.mode, launch: status, eventsUrl: ref.siteId ? `/api/v1/sites/${ref.siteId}/events` : null });
+  const a = ref.site.analytics ?? {};
+  const analytics = { measurementId: a.ga4 || null, property: a.ga4Property || null, propertyId: a.ga4Property ? String(a.ga4Property).replace(/^properties\//, '') : null, keyEvents: ga4.GA_KEY_EVENTS };
+  return c.json({ siteKey: ref.key, domain: ref.site.domain || null, pagesProject: pagesProjectOf(ref), adsMode: ref.site.ads?.mode, analytics, launch: status, eventsUrl: ref.siteId ? `/api/v1/sites/${ref.siteId}/events` : null });
 });
 
 games.post('/games/sites/:id/retry', async (c) => {
