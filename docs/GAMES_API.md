@@ -95,7 +95,7 @@ POST /v1/games/sites
 → 202 { siteId, siteKey, nameservers, steps, statusUrl, eventsUrl }
 ```
 Only `domain` is required. Show `nameservers` to set at the registrar. Steps, in order:
-`zone` → `nameservers` (waits until Cloudflare reports the zone active) → `analytics` (new GA4 property) → `repo` (`sites/<key>/site.json`)
+`zone` → `nameservers` (waits until Cloudflare reports the zone active) → `analytics` (GA4: finds the domain's property or creates one, then adds the custom dimensions, metrics and key events below) → `repo` (`sites/<key>/site.json`)
 → `pages` (Cloudflare Pages project `games-<key>`, built from the repo with `SITE=<key>`, rebuilt only by its own folder
 or shared code/catalogue) → `deploy` → `custom_domain` (whatever served apex + www before is detached — Worker custom domains and routes, then A/AAAA/CNAME records, listed in the step detail so you can put them back — then domain attached, SSL, www → apex)
 → `search_console` (DNS verification, property, sitemap) → `ads` (skipped: test ads until stage 2) → `smoke_test`.
@@ -159,6 +159,30 @@ PATCH /v1/games/sites/{id}/ads.txt     { "add": [...], "remove": [...] }
 ```
 Add a consent banner (Google CMP) before serving real ads to visitors in the EEA/UK.
 
+### Analytics (GA4)
+The launch step and this endpoint do the same idempotent setup in GA account `GA4_ACCOUNT_ID` (Thebesads): find the
+property for the site (by Measurement ID, else by the web stream's domain) or create one (time zone `GA4_TIME_ZONE`,
+default `Asia/Singapore`, USD), then add whatever is missing:
+
+| What | Values |
+|---|---|
+| Custom dimensions (event scope) | `game`, `placement`, `page_type`, `app_name`, `list`, `source`, `view`, `ad_slot` |
+| Custom metrics | `seconds_played` (seconds), `list_position` (standard) |
+| Key events | `game_start`, `store_click` (created before GA has seen them, so no 24-hour wait) |
+| Data retention | 14 months (event and user data) |
+
+These match the events the portal sends (`src/app.js` in `h5-games-site-builder`); keep the two lists in sync
+(`apps/launch-api/src/games/analytics.ts`). Nothing is ever deleted.
+
+```http
+POST /v1/games/sites/{id}/analytics/setup   { "measurementId"?: "G-…", "property"?: "properties/123" }
+→ 200 { changed: false, measurementId, property, createdProperty, setup: { dimensions, metrics, keyEvents, retention, errors }, summary }
+→ 202 { changed: true, …, commit, deploy }   when site.json gets a new analytics.ga4 / analytics.ga4Property (site rebuilds)
+```
+Works for sites made by hand too (`{id}` = site key, e.g. `torunex-site`). `site.json → analytics.ga4Property` is the
+property to use when linking GA4 to Ad Manager from your frontend. Not done by the API: the Ad Manager link (frontend)
+and the Google Ads link. Enhanced measurement is on by default for every new web stream.
+
 ### Deploys and health
 Every change returns `commit` and `deploy.statusUrl`:
 ```http
@@ -178,3 +202,5 @@ no domain for live ads), `5xx` (GitHub or Cloudflare).
   (`GAMES_CF_ACCOUNT_ID` in `wrangler.jsonc`). New portal domains are added as zones in that account.
 - `GITHUB_TOKEN` must also have **Contents: Read and write** on `h5-games-site-builder`, or set a separate `GAMES_GITHUB_TOKEN` secret.
 - The Cloudflare Pages GitHub app must have access to the repo (it does, from the first site).
+- GA4: `GCP_SA_JSON` service account must be **Editor** on GA account `GA4_ACCOUNT_ID` (Account access management), and the
+  Google Analytics Admin API must be enabled in its Cloud project (`site-builder-513503`).

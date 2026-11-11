@@ -1,0 +1,34 @@
+name: Games site GA4 setup
+run-name: ga4 ${{ inputs.site }}
+
+# Runs POST /api/v1/games/sites/{site}/analytics/setup: finds or creates the GA4 property, adds the custom
+# dimensions, metrics and key events, sets 14-month retention. Safe to run again. Needs the LAUNCH_API_KEY secret.
+on:
+  workflow_dispatch:
+    inputs:
+      site:
+        description: 'Site key or domain, e.g. torunex-site'
+        required: true
+        type: string
+      measurement_id:
+        description: 'Optional: existing Measurement ID (G-XXXXXXXXXX)'
+        required: false
+        type: string
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up GA4
+        env:
+          KEY: ${{ secrets.LAUNCH_API_KEY }}
+          SITE: ${{ inputs.site }}
+          MID: ${{ inputs.measurement_id }}
+        run: |
+          BODY=$(jq -n --arg m "$MID" 'if $m == "" then {} else {measurementId: $m} end')
+          R=$(curl -sS -w '\n%{http_code}' -X POST "https://sitebuilder.thebesads.com/api/v1/games/sites/$SITE/analytics/setup" \
+            -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' -d "$BODY")
+          CODE=$(echo "$R" | tail -1); JSON=$(echo "$R" | sed '$d')
+          echo "$JSON" | jq . || echo "$JSON"
+          echo "$JSON" | jq -r '"### GA4 \(.measurementId // "") \(.property // "")\n\n\(.summary // .error)"' >> "$GITHUB_STEP_SUMMARY" || true
+          [ "$CODE" -lt 300 ]

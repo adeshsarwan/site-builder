@@ -8,6 +8,7 @@ import * as cf from '../services/cloudflare';
 import * as google from '../services/google';
 import * as repo from './repo';
 import * as pages from './pages';
+import * as ga4 from './analytics';
 import { GAMES_STEPS, loadCatalog, newSiteJson, siteGames, sitePath, type GamesLaunchInput } from './sites';
 export { GAMES_STEPS };
 
@@ -93,14 +94,28 @@ export class GamesLaunchWorkflow extends WorkflowEntrypoint<Env, LaunchParams> {
         await step.do('nameservers:done', async () => { await updateSite(env, siteId, { status: 'running' }); await emit('nameservers', 'done', 'Domain is active on Cloudflare', {}); });
       }
 
-      // 3. GA4
-      const ga = await once<{ measurementId?: string }>('analytics', async () => {
+      // 3. GA4: find or create the property + web stream, then custom dimensions/metrics, key events, retention
+      const ga = await once<{ measurementId?: string; property?: string }>('analytics', async () => {
         if (dry) return { output: { measurementId: 'G-DRYRUN000' }, detail: 'G-DRYRUN000' };
-        if (input.ga4MeasurementId) return { output: { measurementId: input.ga4MeasurementId }, detail: `Using existing stream ${input.ga4MeasurementId}` };
-        if (!env.GA4_ACCOUNT_ID || !env.GCP_SA_JSON) throw new StepSkipped('GA4_ACCOUNT_ID / GCP_SA_JSON not configured');
-        const token = await google.googleToken(env, google.SCOPES_GA);
-        const r = await google.createGa4(token, env.GA4_ACCOUNT_ID, input.name ?? domain, domain);
-        return { output: r, detail: r.measurementId };
+        if (!ga4.gaConfigured(env)) {
+          if (input.ga4MeasurementId) return { output: { measurementId: input.ga4MeasurementId }, detail: `Using existing stream ${input.ga4MeasurementId} (not configured: GCP_SA_JSON missing)` };
+          throw new StepSkipped('GA4_ACCOUNT_ID / GCP_SA_JSON not configured');
+        }
+        const token = await ga4.gaToken(env);
+        let ref: { property: string; measurementId: string } | null;
+        let how: string;
+        if (input.ga4MeasurementId) {
+          ref = await ga4.findGa4(token, env.GA4_ACCOUNT_ID!, { measurementId: input.ga4MeasurementId, domain, names: [input.name ?? '', domain] });
+          if (!ref) return { output: { measurementId: input.ga4MeasurementId }, detail: `Using ${input.ga4MeasurementId}; not in GA account ${env.GA4_ACCOUNT_ID}, so dimensions and key events were not set up` };
+          how = 'existing stream';
+        } else {
+          const r = await ga4.ensureGa4(env, token, domain, input.name ?? domain);
+          ref = r; how = r.created ? 'new property' : 'existing property';
+        }
+        // Setup problems are reported, not fatal: the Measurement ID is what the site needs; POST /games/sites/{id}/analytics/setup re-runs this.
+        const setup = await ga4.configureGa4(token, ref.property).catch((e: any) => ({ error: String(e.message) }) as any);
+        const summary = 'error' in setup ? `setup failed: ${setup.error}` : ga4.setupSummary(setup);
+        return { output: { ...ref, setup }, detail: `${ref.measurementId} (${how}, ${ref.property}) · ${summary}` };
       });
 
       // 4. site.json
@@ -108,6 +123,7 @@ export class GamesLaunchWorkflow extends WorkflowEntrypoint<Env, LaunchParams> {
         const catalog = await loadCatalog(env);
         const site = newSiteJson(key, input, catalog);
         site.analytics.ga4 = ga.measurementId ?? '';
+        if (ga.property) site.analytics.ga4Property = ga.property;
         const firstGame = site.featured[0] ?? siteGames(site, catalog)[0]?.slug ?? null;
         if (dry) return { output: { commit: 'dry-commit', firstGame }, detail: `sites/${key}/site.json (dry run)` };
         const r = await repo.updateJson(env, [sitePath(key)], (cur) => ({ [sitePath(key)]: cur[sitePath(key)] ?? site }), `Add games site ${domain}`);

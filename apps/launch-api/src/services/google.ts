@@ -24,7 +24,7 @@ export async function googleToken(env: Env, scopes: string[]): Promise<string> {
   return body.access_token;
 }
 
-async function g<T = any>(token: string, url: string, init: RequestInit = {}): Promise<T> {
+export async function g<T = any>(token: string, url: string, init: RequestInit = {}): Promise<T> {
   const res = await fetch(url, { ...init, headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...(init.headers ?? {}) } });
   const text = await res.text();
   const body = text ? JSON.parse(text) : {};

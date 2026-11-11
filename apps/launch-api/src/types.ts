@@ -14,6 +14,8 @@ export interface Env {
   GITHUB_BRANCH: string;
   GCP_SA_JSON?: string;
   GA4_ACCOUNT_ID?: string;
+  /** Reporting time zone of new games-portal GA4 properties (default Asia/Singapore). */
+  GA4_TIME_ZONE?: string;
   OWNER_EMAILS?: string;
   ANTHROPIC_API_KEY?: string;
   CLAUDE_MODEL?: string;

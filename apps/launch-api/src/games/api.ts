@@ -23,6 +23,7 @@
 //   GET|PUT|PATCH /games/sites/:id/ads.txt
 //   POST   /games/sites/:id/deploy          rebuild now        GET /games/sites/:id/deployments?commit=
 //   GET    /games/sites/:id/health          live checks
+//   POST   /games/sites/:id/analytics/setup { measurementId?, property? } GA4: find/create property, add dimensions, metrics, key events, retention
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import type { Role } from '../libraryApi';
@@ -31,6 +32,7 @@ import { ensureZone } from '../services/cloudflare';
 import { validateAdsTxt } from '../manage';
 import * as repo from './repo';
 import * as pages from './pages';
+import * as ga4 from './analytics';
 import {
   AD_KINDS, CATALOG, GAMES_STEPS, SITE_SLOTS, UNIT_RE, cdn, categoriesOf, isSlug, loadCatalog, newSiteJson, pagesProjectOf, resolveGamesSite,
   siteGames, siteKeyFor, sitePath, siteUnit, unitsFor, type Game, type GamesLaunchInput, type GamesSiteRef,
@@ -398,6 +400,32 @@ games.get('/games/sites/:id/deployments', withSite(async (c, ref) => {
     return c.json(d ?? { status: 'queued', commit, note: 'Cloudflare has not started a build for this commit yet (or a later build includes it).', latest: list[0] ?? null });
   }
   return c.json({ pagesProject: project, deployments: list });
+}));
+
+// GA4: same setup the launch does, for sites made before it existed (or to repair one). Idempotent.
+// Uses, in order: body.property, body.measurementId, site.json analytics.ga4Property / ga4, else finds or creates
+// a property for the domain. Writes the Measurement ID and property into site.json when they change.
+games.post('/games/sites/:id/analytics/setup', withSite(async (c, ref) => {
+  if (!ga4.gaConfigured(c.env)) return c.json({ error: 'GA4_ACCOUNT_ID / GCP_SA_JSON are not configured' }, 501);
+  const b = await body(c);
+  const domain = ref.site.domain || null;
+  const mid: string | undefined = b.measurementId || ref.site.analytics?.ga4 || undefined;
+  if (mid && !/^G-[A-Z0-9]+$/.test(mid)) return c.json({ error: 'measurementId must look like G-XXXXXXXXXX' }, 400);
+  const token = await ga4.gaToken(c.env);
+  let found: { property: string; measurementId: string } | null = null;
+  let created = false;
+  try {
+    const prop: string | undefined = b.property || (!b.measurementId && ref.site.analytics?.ga4Property) || undefined;
+    if (prop && mid) found = { property: ga4.normProperty(String(prop)), measurementId: mid };
+    else if (mid) found = await ga4.findGa4(token, c.env.GA4_ACCOUNT_ID!, { measurementId: mid, domain: domain ?? undefined, names: [ref.site.name, domain ?? ''] });
+    else if (domain) { const r = await ga4.ensureGa4(c.env, token, domain, ref.site.name || domain); found = r; created = r.created; }
+    else return c.json({ error: 'The site has no domain yet; pass measurementId or property' }, 409);
+  } catch (e: any) { return c.json({ error: `GA4 lookup failed: ${e.message}` }, 502); }
+  if (!found) return c.json({ error: `${mid} is not a web stream in GA account ${c.env.GA4_ACCOUNT_ID}, or the service account has no access to it` }, 404);
+  const setup = await ga4.configureGa4(token, found.property);
+  const result = { measurementId: found.measurementId, property: found.property, createdProperty: created, setup, summary: ga4.setupSummary(setup) };
+  if (ref.site.analytics?.ga4 === found.measurementId && ref.site.analytics?.ga4Property === found.property) return c.json({ changed: false, ...result });
+  return changeSite(c, ref, `GA4 ${found.measurementId}`, (s) => { s.analytics = { ...(s.analytics ?? {}), ga4: found!.measurementId, ga4Property: found!.property }; }, result);
 }));
 
 games.get('/games/sites/:id/health', withSite(async (c, ref) => {

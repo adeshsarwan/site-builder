@@ -8,7 +8,7 @@ import { projectName } from './pages';
 export const GAMES_STEPS = [
   { key: 'zone', label: 'Domain on Cloudflare' },
   { key: 'nameservers', label: 'Waiting for nameservers' },
-  { key: 'analytics', label: 'Create GA4 property' },
+  { key: 'analytics', label: 'GA4: property, dimensions, key events' },
   { key: 'repo', label: 'Write site.json to GitHub' },
   { key: 'pages', label: 'Create Cloudflare Pages project' },
   { key: 'deploy', label: 'Build & deploy' },
@@ -98,7 +98,7 @@ export function newSiteJson(key: string, input: GamesLaunchInput, catalog: Game[
     assets: 'proxy',
     adsTxt: input.adsTxt ?? [],
     contactEmail: input.contactEmail ?? '',
-    analytics: { ga4: input.ga4MeasurementId ?? '' },
+    analytics: { ga4: input.ga4MeasurementId ?? '' } as { ga4: string; ga4Property?: string },
   };
 }
 
