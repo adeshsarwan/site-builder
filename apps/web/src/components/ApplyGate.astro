@@ -61,12 +61,10 @@ const allowSkip = f.rewarded?.allowSkip === true; // apply funnels: no skip unle
     const remember = (url: string) => { if (!store) return; store.setItem(unlockedKey, freq === 'session' ? '1' : [...(store.getItem(unlockedKey) || '').split('\n').filter(Boolean), url].slice(-50).join('\n')); };
     const slug = (s: string) => s.toLowerCase().replace(/['’]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 
-    // Preload once the page shows job links (also covers lists rendered later), so the rewarded ad shows fast.
-    let preloaded = false;
-    const preload = () => { if (preloaded) return; preloaded = true; ads()?.preloadReward?.()?.catch?.(() => { preloaded = false; }); };
-    const maybePreload = () => { if (document.querySelector('a[data-apply]')) (ads() ? preload() : document.addEventListener('siteads:ready', preload, { once: true })); };
-    setTimeout(maybePreload, 1500);
-    new MutationObserver(() => { if (!preloaded) maybePreload(); }).observe(document.body, { childList: true, subtree: true });
+    // Preload when the offer opens (one shared preload per offer). The SDK expires an unused rewarded preload
+    // after 45 s, so warming it at page load meant most "Watch" clicks found it expired and ran a fresh request,
+    // whose ad is then made visible seconds after the click instead of from it.
+    const preload = () => { ads()?.preloadReward?.()?.catch?.(() => {}); };
 
     let current: { url: string; company: string; title: string } | null = null;
     let misses = 0; // non-granted ad attempts for the current job
@@ -82,7 +80,6 @@ const allowSkip = f.rewarded?.allowSkip === true; // apply funnels: no skip unle
       msg.textContent = w ? `The application at ${current.company} opened in a new tab.` : `Your application link at ${current.company} is ready.`;
       (dlg.querySelector('[data-ag-open]') as HTMLAnchorElement).textContent = w ? 'Open it again' : `Open application at ${current.company}`;
       view('ready');
-      preloaded = false; preload(); // next click gets a fresh rewarded ad
     };
 
     document.addEventListener('click', (e) => {
@@ -105,6 +102,7 @@ const allowSkip = f.rewarded?.allowSkip === true; // apply funnels: no skip unle
       dlg.querySelectorAll<HTMLButtonElement>('[data-ag-watch]').forEach((b) => (b.disabled = false));
       view('ask');
       dlg.showModal();
+      preload();
       track('apply_gate_open', { company: current.company });
     }, true);
 
