@@ -116,7 +116,11 @@ Only `domain` is required (`url` works too: `https://www.playfun.com` → `playf
   (`torunex-site`). Pass another site key or domain to copy from that site, or `false` for a games-only portal.
   The site gets `"content": { "dir": "<source folder>", "replaceNames": { … } }`, with the source's brand names
   rewritten to this site's name, domain and contact email; `{site}` in the content files becomes the site name.
-  The sites share one content folder, so the text is the same on each of them (only the names differ).
+- **Own lists per site** (`newLists`, default `true`): after site.json is written, the `lists` step has Claude write
+  this site's own best-of lists (10–14, new titles: it is given every other site's list titles to avoid), home-page
+  picks, ~12 reviews and How-we-review page, using only games from the shared pool with their live Google Play facts.
+  Saved to `content/<siteKey>/editorial.json` (`content.editorialDir`). The mobile game pages and Play data stay shared.
+  If generation fails the step is a warning and the site launches with the source's lists. `newLists: false` shares them.
 - `adsTxt`: the lines, or the whole file as one string; invalid lines are refused with `400`. Steps, in order:
 `zone` → `nameservers` (waits until Cloudflare reports the zone active) → `analytics` (GA4: finds the domain's property or creates one, then adds the custom dimensions, metrics and key events below) → `repo` (`sites/<key>/site.json`)
 → `pages` (Cloudflare Pages project `games-<key>`, built from the repo with `SITE=<key>`, rebuilt only by its own folder
@@ -145,6 +149,12 @@ PATCH /v1/games/sites/{id}/config
 `priceOptimiserScript: null` removes the script and its ad divs (no ads until it is added again).
 `content: "torunex-site"` adds (or refreshes) the lists, reviews, mobile game pages and blog on a site launched without
 them; send it again after changing `name` or `contactEmail` so the names in the content follow. `content: null` removes them.
+
+```http
+POST /v1/games/sites/{id}/content/lists   → 202 { lists: [titles], reviews: [paths], avoided, pool, commit, deploy }
+```
+Writes new lists, reviews and How-we-review text for the site (1–3 minutes; the GitHub Action "Games site new lists"
+runs it). Use it after adding `content` to an existing site, or to refresh a site's lists.
 
 ```http
 GET /v1/games/sites/{id}/games   → the games this portal shows, with page URL, play URL, the ad units each one gets, media

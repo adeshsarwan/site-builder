@@ -1,0 +1,29 @@
+name: Games site new lists
+run-name: new lists ${{ inputs.site }}
+
+# Runs POST /api/v1/games/sites/{site}/content/lists: Claude writes this site's own best-of lists, reviews and
+# How-we-review page (new titles, avoiding every other site's), committed to content/<siteKey>/editorial.json.
+# Pages rebuilds the site in 1-3 minutes. Needs the LAUNCH_API_KEY secret.
+on:
+  workflow_dispatch:
+    inputs:
+      site:
+        description: 'Site key or domain, e.g. vulirox.site'
+        required: true
+        type: string
+
+jobs:
+  lists:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write new lists
+        env:
+          KEY: ${{ secrets.LAUNCH_API_KEY }}
+          SITE: ${{ inputs.site }}
+        run: |
+          R=$(curl -sS --max-time 900 -w '\n%{http_code}' -X POST "https://sitebuilder.thebesads.com/api/v1/games/sites/$SITE/content/lists" \
+            -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' -d '{}')
+          CODE=$(echo "$R" | tail -1); JSON=$(echo "$R" | sed '$d')
+          echo "$JSON" | jq . || echo "$JSON"
+          echo "$JSON" | jq -r '"### \(.lists | length // 0) lists, \(.reviews | length // 0) reviews\n\n\((.lists // []) | map("- " + .) | join("\n"))\n\n\(.error // "")"' >> "$GITHUB_STEP_SUMMARY" || true
+          [ "$CODE" -lt 300 ]

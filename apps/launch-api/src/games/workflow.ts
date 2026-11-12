@@ -9,6 +9,7 @@ import * as google from '../services/google';
 import * as repo from './repo';
 import * as pages from './pages';
 import * as ga4 from './analytics';
+import { writeSiteEditorial } from './editorial';
 import { GAMES_STEPS, contentFrom, defaultContentFrom, loadCatalog, newSiteJson, siteGames, sitePath, type GamesLaunchInput } from './sites';
 export { GAMES_STEPS };
 
@@ -137,6 +138,20 @@ export class GamesLaunchWorkflow extends WorkflowEntrypoint<Env, LaunchParams> {
         const r = await repo.updateJson(env, [sitePath(key)], (cur) => ({ [sitePath(key)]: cur[sitePath(key)] ?? site }), `Add games site ${domain}`);
         return { output: { commit: r?.commit ?? null, firstGame }, detail: r ? `sites/${key}/site.json · ${r.commit.slice(0, 7)} · ${contentNote}` : 'site.json already there' };
       });
+
+      // 4b. This site's own lists and reviews (so no two sites share the same list text)
+      await once('lists', async () => {
+        if (input.content === false || input.newLists === false) throw new StepSkipped(input.content === false ? 'Games only (content: false)' : 'Sharing the source site\'s lists (newLists: false)');
+        if (dry) return { output: {}, detail: 'dry run' };
+        try {
+          const r = await writeSiteEditorial(env, key);
+          return { output: r, detail: `${r.lists.length} lists, ${r.reviews.length} reviews (new titles, avoided ${r.avoided} used elsewhere)${r.commit ? ` · ${r.commit.slice(0, 7)}` : ''}` };
+        } catch (e: any) {
+          // Not fatal: the site launches with the source site's lists; POST /v1/games/sites/{id}/content/lists retries.
+          if (/no content block/.test(e.message)) throw new StepSkipped(e.message);
+          throw new StepWarning(`Kept the shared lists: ${e.message}. Retry with POST /v1/games/sites/${domain}/content/lists`);
+        }
+      }, { retries: { limit: 1, delay: '30 seconds' }, timeout: '10 minutes' });
 
       // 5. Pages project
       await once('pages', async () => {

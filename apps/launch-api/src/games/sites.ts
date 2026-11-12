@@ -10,6 +10,7 @@ export const GAMES_STEPS = [
   { key: 'nameservers', label: 'Waiting for nameservers' },
   { key: 'analytics', label: 'GA4: property, dimensions, key events' },
   { key: 'repo', label: 'Write site.json to GitHub' },
+  { key: 'lists', label: 'Write this site\'s own lists and reviews' },
   { key: 'pages', label: 'Create Cloudflare Pages project' },
   { key: 'deploy', label: 'Build & deploy' },
   { key: 'custom_domain', label: 'Attach domain + SSL' },
@@ -69,6 +70,8 @@ export interface GamesLaunchInput {
    * A site key or domain to copy them from (default GAMES_CONTENT_FROM, i.e. torunex-site), or false for games only.
    */
   content?: string | false;
+  /** With content: write this site's own lists, reviews and How-we-review page with Claude (default true). false shares the source's. */
+  newLists?: boolean;
   /** Use an existing GA4 web stream instead of creating a property. */
   ga4MeasurementId?: string;
   webhookUrl?: string;

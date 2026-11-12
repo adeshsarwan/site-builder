@@ -21,6 +21,7 @@
 //   PUT    /games/sites/:id/ads/games/:slug { rewarded, interstitial, native }      DELETE → back to the pattern
 //   POST   /games/sites/:id/ads/enable      { lines? } live ads (stage 2)          POST …/ads/disable → test ads
 //   GET|PUT|PATCH /games/sites/:id/ads.txt
+//   POST   /games/sites/:id/content/lists   new lists + reviews for this site (Claude)
 //   POST   /games/sites/:id/deploy          rebuild now        GET /games/sites/:id/deployments?commit=
 //   GET    /games/sites/:id/health          live checks
 //   POST   /games/sites/:id/analytics/setup { measurementId?, property? } GA4: find/create property, add dimensions, metrics, key events, retention
@@ -33,6 +34,7 @@ import { validateAdsTxt } from '../manage';
 import * as repo from './repo';
 import * as pages from './pages';
 import * as ga4 from './analytics';
+import { writeSiteEditorial } from './editorial';
 import {
   AD_KINDS, CATALOG, GAMES_STEPS, SITE_SLOTS, UNIT_RE, cdn, categoriesOf, isSlug, loadCatalog, newSiteJson, pagesProjectOf, resolveGamesSite,
   siteGames, siteKeyFor, sitePath, siteUnit, unitsFor, poTag, applyPo, isPoTag, contentFrom, type Game, type GamesLaunchInput, type GamesSiteRef,
@@ -325,6 +327,18 @@ games.patch('/games/sites/:id/config', withSite(async (c, ref) => {
     if (content === null) delete s.content;
     else if (content !== undefined) s.content = content;
   });
+}));
+
+// New lists, reviews and How-we-review text for this site, written by Claude (1–3 minutes). Replaces the site's own
+// editorial.json, or gives a site that shares another site's lists its own. Needs a content block (PATCH /config { content }).
+games.post('/games/sites/:id/content/lists', withSite(async (c, ref) => {
+  if (!ref.site.content) return c.json({ error: 'This site has no content block. Add one first: PATCH /config { "content": "torunex-site" }' }, 409);
+  try {
+    const r = await writeSiteEditorial(c.env, ref.key);
+    return c.json({ ...r, deploy: { pagesProject: pagesProjectOf(ref), statusUrl: r.commit ? `/api/v1/games/sites/${ref.key}/deployments?commit=${r.commit}` : null, note: 'Cloudflare Pages rebuilds this site from the commit (1–3 minutes).' } }, r.commit ? 202 : 200);
+  } catch (e: any) {
+    return c.json({ error: e.message }, 502);
+  }
 }));
 
 games.get('/games/sites/:id/games', withSite(async (c, ref) => {
