@@ -208,6 +208,7 @@ export class GamesLaunchWorkflow extends WorkflowEntrypoint<Env, LaunchParams> {
       await once<{ priceOptimiser?: string }>('ads', async () => {
         if (dry) return { output: {}, detail: 'dry run' };
         if (input.priceOptimiserScript) return { output: { priceOptimiser: String(input.priceOptimiserScript) }, detail: `Price Optimiser script ${input.priceOptimiserScript}${input.adsTxt?.length ? ` · ads.txt ${input.adsTxt.length} line(s)` : ' · ads.txt empty: add it with PUT /v1/games/sites/{id}/ads.txt'}` };
+        if (input.adsMode !== 'test') throw new StepSkipped(`No ads yet${input.adsTxt?.length ? ` (ads.txt live, ${input.adsTxt.length} line(s))` : ''}: when GAM approves the site, add the Price Optimiser script with PATCH /v1/games/sites/{id}/config { "priceOptimiserScript": "…" }`);
         throw new StepSkipped('Test ads until stage 2: create the GAM units (or set them with PATCH /v1/games/sites/{id}/ads), then POST /v1/games/sites/{id}/ads/enable with the ads.txt lines');
       });
 

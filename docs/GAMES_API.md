@@ -102,7 +102,14 @@ Only `domain` is required (`url` works too: `https://www.playfun.com` → `playf
   `https://serve.thebesads.com/sdk/<domain>.js`. With it the pages carry no GPT slots of their own: the script fills
   `gam-native-01` (sidebar on desktop) and `gam-native-02` (above "More free games"), plus interstitial and rewarded
   (`ads.mode: "off"`, `ads.nativeSlots: true`). The `ads` step then shows the script instead of being skipped, and
-  `POST …/ads/enable` is refused for that site. Without it the site starts with Google test ads (stage 2 below).
+  `POST …/ads/enable` is refused for that site.
+- **Launching before the script exists** (e.g. while GAM verifies the site): leave `priceOptimiserScript` out. The
+  site goes live with no ad divs and no GPT (`ads.mode: "off"`), and ads.txt is already published for the GAM check.
+  When the script is ready: `PATCH /v1/games/sites/{id}/config { "priceOptimiserScript": "…" }`. That adds the script
+  and the `gam-native-01` / `gam-native-02` divs, and the site rebuilds in 1–3 minutes. `"adsMode": "test"` at launch
+  gives the old Google test ads instead.
+- The div ids are fixed by the site, not the script: every Price Optimiser config for a games site needs two native
+  slots with domId `gam-native-01` and `gam-native-02` (sizes 300x250, 336x280), plus interstitial and rewarded.
 - `adsTxt`: the lines, or the whole file as one string; invalid lines are refused with `400`. Steps, in order:
 `zone` → `nameservers` (waits until Cloudflare reports the zone active) → `analytics` (GA4: finds the domain's property or creates one, then adds the custom dimensions, metrics and key events below) → `repo` (`sites/<key>/site.json`)
 → `pages` (Cloudflare Pages project `games-<key>`, built from the repo with `SITE=<key>`, rebuilt only by its own folder
@@ -127,7 +134,7 @@ PATCH /v1/games/sites/{id}/config
 → 202 { config, commit, deploy: { statusUrl } }
 ```
 `theme` and `logo` merge with what is there; the other fields replace. Unknown game slugs are refused.
-`priceOptimiserScript: null` removes the script and puts the site back on test ads.
+`priceOptimiserScript: null` removes the script and its ad divs (no ads until it is added again).
 
 ```http
 GET /v1/games/sites/{id}/games   → the games this portal shows, with page URL, play URL, the ad units each one gets, media

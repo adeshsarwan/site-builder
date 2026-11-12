@@ -171,6 +171,7 @@ games.post('/games/sites', async (c) => {
   input.domain = domain;
   input.name ||= domain;
   delete input.url;
+  if (input.adsMode !== undefined && !['off', 'test'].includes(input.adsMode)) return c.json({ error: 'adsMode must be "off" (default) or "test"' }, 400);
   if (input.design !== undefined && !['vibrant', 'classic'].includes(input.design)) return c.json({ error: 'design must be "vibrant" (default) or "classic"' }, 400);
   if (input.priceOptimiserScript) {
     const po = poTag(input.priceOptimiserScript, domain);
@@ -330,6 +331,7 @@ games.get('/games/sites/:id/ads', withSite(async (c, ref) => {
     siteKey: ref.key, domain: ref.site.domain || null, mode: a.mode, networkCode: a.networkCode, gameUnitPattern: a.gameUnitPattern, siteUnitPattern: a.siteUnitPattern,
     priceOptimiser: (ref.site.headHtml ?? []).find(isPoTag)?.match(/src="([^"]+)"/)?.[1] ?? null,
     note: (ref.site.headHtml ?? []).some(isPoTag) ? 'Ads on the pages come from the Price Optimiser script (native slots gam-native-01 / gam-native-02, interstitial, rewarded).'
+      : a.mode === 'off' ? 'No ads yet: add the Price Optimiser script with PATCH /config { "priceOptimiserScript": … } (ads.txt is already live).'
       : a.mode === 'test' || !ref.site.domain ? 'Test mode: every slot serves Google sample ads until POST …/ads/enable.' : undefined,
     pageSlots: Object.fromEntries(Object.keys(a.siteSlots ?? {}).map((s) => [s, { sizes: a.siteSlots[s], unit: siteUnit(ref.site, s), custom: Boolean(a.siteUnits?.[s]) }])),
     games: Object.fromEntries(list.map((g) => [g.slug, unitsFor(ref.site, g.slug)])),
@@ -384,6 +386,7 @@ games.delete('/games/sites/:id/ads/games/:slug', withSite(async (c, ref) => {
 games.post('/games/sites/:id/ads/enable', withSite(async (c, ref) => {
   if (!ref.site.domain) return c.json({ error: 'The site has no domain yet; live ads need one.' }, 409);
   if ((ref.site.headHtml ?? []).some(isPoTag)) return c.json({ error: 'This site serves ads through the Price Optimiser script, so there is nothing to enable. Set ads.txt with PUT /v1/games/sites/{id}/ads.txt; remove the script with PATCH /config { "priceOptimiserScript": null }.' }, 409);
+  // (sites without the script can still switch to GPT page slots here)
   const b = await body(c);
   const incoming: string[] = Array.isArray(b.lines) ? b.lines.map(String) : typeof b.text === 'string' ? b.text.split('\n') : [];
   const { lines, warnings } = validateAdsTxt(incoming);

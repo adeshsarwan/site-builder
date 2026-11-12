@@ -14,7 +14,7 @@ export const GAMES_STEPS = [
   { key: 'deploy', label: 'Build & deploy' },
   { key: 'custom_domain', label: 'Attach domain + SSL' },
   { key: 'search_console', label: 'Verify Search Console + sitemap' },
-  { key: 'ads', label: 'Ads (Price Optimiser or test ads)' },
+  { key: 'ads', label: 'Ads (Price Optimiser script, or none yet)' },
   { key: 'smoke_test', label: 'Check site is live' },
 ] as const;
 
@@ -41,6 +41,11 @@ export interface GamesLaunchInput {
    * and serves interstitial/rewarded.
    */
   priceOptimiserScript?: string | boolean;
+  /**
+   * Ads before the Price Optimiser script is added: "off" (default: no ad divs, no GPT, ads.txt still published, so GAM
+   * can verify the site) or "test" (Google sample ads in GPT slots, the old stage-2 flow).
+   */
+  adsMode?: 'off' | 'test';
   name?: string;
   tagline?: string;
   description?: string;
@@ -83,7 +88,7 @@ export function applyPo(site: any, tag: string | null) {
   if (!site.headHtml.length) delete site.headHtml;
   site.ads = site.ads ?? {};
   if (tag) { site.ads.mode = 'off'; site.ads.nativeSlots = true; }
-  else { if (site.ads.mode === 'off') site.ads.mode = 'test'; delete site.ads.nativeSlots; }
+  else delete site.ads.nativeSlots; // mode stays "off": no ads until a script is added again
 }
 
 export const DEFAULT_THEME = { background: '#bfe3ff', backgroundAlt: '#d9efff', accent: '#ff3d77', accentText: '#ffffff', text: '#0b2a4a', tile: '#ffffff' };
@@ -120,7 +125,7 @@ export function newSiteJson(key: string, input: GamesLaunchInput, catalog: Game[
     featured: input.featured ?? chosen.slice(0, 5).map((g) => g.slug),
     categories: input.categories ?? categoriesOf(chosen),
     ads: {
-      mode: 'test',
+      mode: input.adsMode === 'test' ? 'test' : 'off',
       networkCode: input.networkCode || '23360556473',
       gameUnitPattern: '/{network}/{domain}_{game}_{kind}',
       siteUnitPattern: '/{network}/{domain}_{slot}',
@@ -148,7 +153,7 @@ export function siteGames(site: any, catalog: Game[]) {
 /** The ad units a game gets on a site, the same way functions/play resolves them. */
 export function unitsFor(site: any, slug: string) {
   const a = site.ads ?? {};
-  if (a.mode === 'test' || !site.domain) return { source: 'test', units: { rewarded: '/22639388115/rewarded_web_example', interstitial: '/6355419/Travel/Europe/France/Paris', native: '/6355419/Travel/Europe/France/Paris' } };
+  if (a.mode === 'test' || a.mode === 'off' || !site.domain) return { source: 'test', units: { rewarded: '/22639388115/rewarded_web_example', interstitial: '/6355419/Travel/Europe/France/Paris', native: '/6355419/Travel/Europe/France/Paris' } };
   const own = a.games?.[slug];
   if (own?.rewarded && own?.interstitial && own?.native) return { source: 'site', units: own };
   const game = slug.replace(/-/g, '_');
@@ -158,7 +163,7 @@ export function unitsFor(site: any, slug: string) {
 
 export function siteUnit(site: any, slot: string) {
   const a = site.ads ?? {};
-  if (a.mode === 'test' || !site.domain) return '/6355419/Travel/Europe/France/Paris';
+  if (a.mode === 'test' || a.mode === 'off' || !site.domain) return '/6355419/Travel/Europe/France/Paris';
   return a.siteUnits?.[slot] || String(a.siteUnitPattern ?? '').replace('{network}', a.networkCode).replace('{domain}', site.domain).replace('{slot}', slot);
 }
 
