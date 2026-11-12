@@ -35,6 +35,8 @@ export interface Env {
   GAMES_CF_ACCOUNT_ID?: string;
   /** Public base URL of the shared game files (R2). */
   GAMES_CDN?: string;
+  /** Site whose lists, reviews, mobile game pages and blog new portals get by default (site key or domain; "none" to turn off). */
+  GAMES_CONTENT_FROM?: string;
 }
 
 export interface LaunchInput {

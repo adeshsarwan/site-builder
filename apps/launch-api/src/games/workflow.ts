@@ -9,7 +9,7 @@ import * as google from '../services/google';
 import * as repo from './repo';
 import * as pages from './pages';
 import * as ga4 from './analytics';
-import { GAMES_STEPS, loadCatalog, newSiteJson, siteGames, sitePath, type GamesLaunchInput } from './sites';
+import { GAMES_STEPS, contentFrom, defaultContentFrom, loadCatalog, newSiteJson, siteGames, sitePath, type GamesLaunchInput } from './sites';
 export { GAMES_STEPS };
 
 type Key = (typeof GAMES_STEPS)[number]['key'];
@@ -122,12 +122,20 @@ export class GamesLaunchWorkflow extends WorkflowEntrypoint<Env, LaunchParams> {
       const first = await once<{ commit: string | null; firstGame: string | null }>('repo', async () => {
         const catalog = await loadCatalog(env);
         const site = newSiteJson(key, input, catalog);
+        // Lists, reviews, mobile game pages and blog, copied from the template site (torunex-site by default).
+        const from = input.content === false ? null : input.content || defaultContentFrom(env);
+        let contentNote = 'games only';
+        if (from) {
+          const r = await contentFrom(env, from, { name: site.name, domain: site.domain, contactEmail: site.contactEmail || undefined });
+          if ('content' in r) { site.content = r.content; contentNote = `content from ${r.content.dir}`; }
+          else contentNote = `no content: ${r.error}`;
+        }
         site.analytics.ga4 = ga.measurementId ?? '';
         if (ga.property) site.analytics.ga4Property = ga.property;
         const firstGame = site.featured[0] ?? siteGames(site, catalog)[0]?.slug ?? null;
         if (dry) return { output: { commit: 'dry-commit', firstGame }, detail: `sites/${key}/site.json (dry run)` };
         const r = await repo.updateJson(env, [sitePath(key)], (cur) => ({ [sitePath(key)]: cur[sitePath(key)] ?? site }), `Add games site ${domain}`);
-        return { output: { commit: r?.commit ?? null, firstGame }, detail: r ? `sites/${key}/site.json · ${r.commit.slice(0, 7)}` : 'site.json already there' };
+        return { output: { commit: r?.commit ?? null, firstGame }, detail: r ? `sites/${key}/site.json · ${r.commit.slice(0, 7)} · ${contentNote}` : 'site.json already there' };
       });
 
       // 5. Pages project

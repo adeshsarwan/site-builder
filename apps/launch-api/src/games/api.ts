@@ -14,7 +14,7 @@
 //   GET    /games/sites                     list
 //   GET    /games/sites/:id                 launch status + analytics { measurementId, property, propertyId, keyEvents } (live progress: GET /sites/:id/events)
 //   POST   /games/sites/:id/retry           resume a failed launch
-//   GET    /games/sites/:id/config          site.json        PATCH → name, tagline, description, theme, logo, games, exclude, featured, categories, contactEmail
+//   GET    /games/sites/:id/config          site.json        PATCH → name, tagline, description, theme, logo, games, exclude, featured, categories, contactEmail, content
 //   GET    /games/sites/:id/games           games on this site with their URLs and ad units
 //   GET    /games/sites/:id/ads             ad mode, network, units per game and per page slot
 //   PATCH  /games/sites/:id/ads             { networkCode, gameUnitPattern, siteUnitPattern, siteUnits, games: { slug: units | null } }
@@ -35,7 +35,7 @@ import * as pages from './pages';
 import * as ga4 from './analytics';
 import {
   AD_KINDS, CATALOG, GAMES_STEPS, SITE_SLOTS, UNIT_RE, cdn, categoriesOf, isSlug, loadCatalog, newSiteJson, pagesProjectOf, resolveGamesSite,
-  siteGames, siteKeyFor, sitePath, siteUnit, unitsFor, poTag, applyPo, isPoTag, type Game, type GamesLaunchInput, type GamesSiteRef,
+  siteGames, siteKeyFor, sitePath, siteUnit, unitsFor, poTag, applyPo, isPoTag, contentFrom, type Game, type GamesLaunchInput, type GamesSiteRef,
 } from './sites';
 
 type AppEnv = { Bindings: Env; Variables: { role: Role } };
@@ -186,6 +186,12 @@ games.post('/games/sites', async (c) => {
     if (v.warnings.length) return c.json({ error: `adsTxt: ${v.warnings.join('; ')}` }, 400);
     input.adsTxt = v.lines;
   }
+  if (input.content !== undefined && input.content !== false) {
+    if (typeof input.content !== 'string' || !input.content.trim()) return c.json({ error: 'content must be the site key or domain to copy lists/reviews/blog from (e.g. "torunex-site"), or false for games only' }, 400);
+    input.content = input.content.trim().toLowerCase();
+    const r = await contentFrom(c.env, input.content, { name: input.name || domain, domain });
+    if ('error' in r) return c.json({ error: r.error }, 400);
+  }
   const catalog = await loadCatalog(c.env);
   const known = new Set(catalog.map((g) => g.slug));
   for (const k of ['games', 'exclude', 'featured'] as const) {
@@ -279,7 +285,7 @@ const CONFIG_FIELDS = ['name', 'tagline', 'description', 'language', 'theme', 'l
 
 games.patch('/games/sites/:id/config', withSite(async (c, ref) => {
   const b = await body(c);
-  const extra = ['design', 'priceOptimiserScript'];
+  const extra = ['design', 'priceOptimiserScript', 'content'];
   const unknown = Object.keys(b).filter((k) => !CONFIG_FIELDS.includes(k) && !extra.includes(k));
   if (b.design !== undefined && !['vibrant', 'classic'].includes(b.design)) return c.json({ error: 'design must be "vibrant" or "classic"' }, 400);
   let po: string | null | undefined;
@@ -290,6 +296,17 @@ games.patch('/games/sites/:id/config', withSite(async (c, ref) => {
       if ('error' in r) return c.json({ error: r.error }, 400);
       po = r.tag;
     }
+  }
+  // content: a site key/domain to copy lists, reviews, mobile game pages and blog from; null/false removes them.
+  let content: any;
+  if (b.content !== undefined) {
+    if (b.content === null || b.content === false) content = null;
+    else if (typeof b.content === 'string' && b.content.trim()) {
+      const name = String(b.name ?? ref.site.name ?? ref.key);
+      const r = await contentFrom(c.env, b.content.trim().toLowerCase(), { name, domain: String(ref.site.domain ?? ref.key), contactEmail: String(b.contactEmail ?? ref.site.contactEmail ?? '') || undefined });
+      if ('error' in r) return c.json({ error: r.error }, 400);
+      content = r.content;
+    } else return c.json({ error: 'content must be a site key or domain to copy from (e.g. "torunex-site"), or null to remove it' }, 400);
   }
   if (unknown.length) return c.json({ error: `Not editable here: ${unknown.join(', ')}. Editable: ${[...CONFIG_FIELDS, ...extra].join(', ')} (ads: /ads, ads.txt: /ads.txt, domain: launch a new site)` }, 400);
   const known = new Set((await loadCatalog(c.env)).map((g) => g.slug));
@@ -305,6 +322,8 @@ games.patch('/games/sites/:id/config', withSite(async (c, ref) => {
     for (const k of CONFIG_FIELDS) if (b[k] !== undefined) s[k] = (k === 'theme' || k === 'logo') ? { ...(s[k] ?? {}), ...b[k] } : b[k];
     if (b.design !== undefined) s.design = b.design;
     if (po !== undefined) applyPo(s, po);
+    if (content === null) delete s.content;
+    else if (content !== undefined) s.content = content;
   });
 }));
 

@@ -64,6 +64,11 @@ export interface GamesLaunchInput {
   /** ads.txt lines (or the whole file as one string). */
   adsTxt?: string[];
   networkCode?: string;
+  /**
+   * Lists, reviews, mobile game pages and blog (the "What should I download?" part of the home page).
+   * A site key or domain to copy them from (default GAMES_CONTENT_FROM, i.e. torunex-site), or false for games only.
+   */
+  content?: string | false;
   /** Use an existing GA4 web stream instead of creating a property. */
   ga4MeasurementId?: string;
   webhookUrl?: string;
@@ -190,3 +195,40 @@ export async function resolveGamesSite(env: Env, idOrDomain: string): Promise<Ga
 }
 
 export const pagesProjectOf = (ref: GamesSiteRef) => ref.site.pagesProject || projectName(ref.key);
+
+// ---------- content (lists, reviews, mobile game pages, blog) ----------
+
+export const defaultContentFrom = (env: Env) => {
+  const v = (env.GAMES_CONTENT_FROM ?? 'torunex-site').trim();
+  return v && v !== 'none' ? v : null;
+};
+
+/**
+ * The `content` block for a site that reuses another site's content folder. The source's replaceNames
+ * (raw text → source brand) are rewritten to the target's name, domain and contact email.
+ */
+export function contentFor(src: any, target: { name: string; domain: string; contactEmail?: string }) {
+  const c = src?.content;
+  if (!c) return null;
+  const srcName = String(src.name ?? '');
+  const srcDomain = String(src.domain ?? '').replace(/^www\./, '');
+  const dom = target.domain.replace(/^www\./, '');
+  const swap = (v: string) => {
+    let out = v;
+    if (src.contactEmail && target.contactEmail) out = out.split(src.contactEmail).join(target.contactEmail);
+    if (srcDomain) out = out.split(srcDomain).join(dom);
+    if (srcName) out = out.split(srcName.toUpperCase()).join(target.name.toUpperCase()).split(srcName).join(target.name);
+    return out;
+  };
+  const replaceNames = Object.fromEntries(Object.entries(c.replaceNames ?? {}).map(([k, v]) => [k, swap(String(v))]));
+  return { dir: c.dir || src.key, replaceNames, ...(c.excludeApps ? { excludeApps: c.excludeApps } : {}) };
+}
+
+/** Looks up the source site and returns the content block for `target`, or an error message. */
+export async function contentFrom(env: Env, from: string, target: { name: string; domain: string; contactEmail?: string }): Promise<{ content: any } | { error: string }> {
+  const ref = await resolveGamesSite(env, from);
+  if (!ref) return { error: `content: no games site "${from}"` };
+  const content = contentFor({ ...ref.site, key: ref.key }, target);
+  if (!content) return { error: `content: ${ref.key} has no content (lists, reviews, blog) to copy` };
+  return { content };
+}

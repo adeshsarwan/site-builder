@@ -32,7 +32,8 @@
     "GAMES_GITHUB_REPO": "h5-games-site-builder",
     "GAMES_GITHUB_BRANCH": "main",
     "GAMES_CF_ACCOUNT_ID": "4df8c97b1058bcf322f39d3dc24001f3",
-    "GAMES_CDN": "https://games.gamewhame.com"
+    "GAMES_CDN": "https://games.gamewhame.com",
+    "GAMES_CONTENT_FROM": "torunex-site" // new portals copy this site's lists, reviews, mobile game pages and blog
   }
   // Secrets (wrangler secret put …):
   //   API_KEY            – bearer key your frontend sends

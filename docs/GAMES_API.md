@@ -90,6 +90,7 @@ POST /v1/games/sites
   "featured": ["water-sort", "beer-pong"],
   "categories": ["Puzzle", "Casual", "Arcade"],
   "contactEmail": "hello@playfun.com",
+  "content": "torunex-site",
   "networkCode": "23360556473",
   "webhookUrl": "https://your-frontend.example/api/launch-webhook"
 }
@@ -110,6 +111,12 @@ Only `domain` is required (`url` works too: `https://www.playfun.com` → `playf
   gives the old Google test ads instead.
 - The div ids are fixed by the site, not the script: every Price Optimiser config for a games site needs two native
   slots with domId `gam-native-01` and `gam-native-02` (sizes 300x250, 336x280), plus interstitial and rewarded.
+- `content`: the lists, reviews, mobile game pages and blog (home page "What should I download?", `/best/`,
+  `/topgames/`, `/blog/`, `/how-we-review/`). **On by default**: new portals copy them from `GAMES_CONTENT_FROM`
+  (`torunex-site`). Pass another site key or domain to copy from that site, or `false` for a games-only portal.
+  The site gets `"content": { "dir": "<source folder>", "replaceNames": { … } }`, with the source's brand names
+  rewritten to this site's name, domain and contact email; `{site}` in the content files becomes the site name.
+  The sites share one content folder, so the text is the same on each of them (only the names differ).
 - `adsTxt`: the lines, or the whole file as one string; invalid lines are refused with `400`. Steps, in order:
 `zone` → `nameservers` (waits until Cloudflare reports the zone active) → `analytics` (GA4: finds the domain's property or creates one, then adds the custom dimensions, metrics and key events below) → `repo` (`sites/<key>/site.json`)
 → `pages` (Cloudflare Pages project `games-<key>`, built from the repo with `SITE=<key>`, rebuilt only by its own folder
@@ -130,11 +137,14 @@ GET   /v1/games/sites/{id}/config       → the site.json
 PATCH /v1/games/sites/{id}/config
 { "name", "tagline", "description", "language", "theme": { … }, "logo": { … }, "games": "all" | [slugs], "exclude": [slugs],
   "featured": [slugs], "categories": [names], "contactEmail", "assets": "proxy" | "cdn",
-  "design": "vibrant" | "classic", "priceOptimiserScript": "<tag or URL>" | true | null }
+  "design": "vibrant" | "classic", "priceOptimiserScript": "<tag or URL>" | true | null,
+  "content": "<site key or domain to copy lists/reviews/blog from>" | null }
 → 202 { config, commit, deploy: { statusUrl } }
 ```
 `theme` and `logo` merge with what is there; the other fields replace. Unknown game slugs are refused.
 `priceOptimiserScript: null` removes the script and its ad divs (no ads until it is added again).
+`content: "torunex-site"` adds (or refreshes) the lists, reviews, mobile game pages and blog on a site launched without
+them; send it again after changing `name` or `contactEmail` so the names in the content follow. `content: null` removes them.
 
 ```http
 GET /v1/games/sites/{id}/games   → the games this portal shows, with page URL, play URL, the ad units each one gets, media
