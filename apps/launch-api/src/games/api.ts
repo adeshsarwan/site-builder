@@ -178,7 +178,7 @@ games.post('/games/sites', async (c) => {
   if (input.priceOptimiserScript) {
     const po = poTag(input.priceOptimiserScript, domain);
     if ('error' in po) return c.json({ error: po.error }, 400);
-    input.priceOptimiserScript = po.tag.match(/src="([^"]+)"/)![1];
+    input.priceOptimiserScript = po.tag; // keep the whole tag: reducing it to src drops data-po-runtime-config-url
   }
   if (input.adsTxt !== undefined) {
     const raw: unknown = input.adsTxt;
@@ -364,6 +364,7 @@ games.get('/games/sites/:id/ads', withSite(async (c, ref) => {
   return c.json({
     siteKey: ref.key, domain: ref.site.domain || null, mode: a.mode, networkCode: a.networkCode, gameUnitPattern: a.gameUnitPattern, siteUnitPattern: a.siteUnitPattern,
     priceOptimiser: (ref.site.headHtml ?? []).find(isPoTag)?.match(/src="([^"]+)"/)?.[1] ?? null,
+    priceOptimiserRuntime: (ref.site.headHtml ?? []).find(isPoTag)?.match(/data-po-runtime-config-url="([^"]+)"/)?.[1] ?? null,
     note: (ref.site.headHtml ?? []).some(isPoTag) ? 'Ads on the pages come from the Price Optimiser script (native slots gam-native-01 / gam-native-02, interstitial, rewarded).'
       : a.mode === 'off' ? 'No ads yet: add the Price Optimiser script with PATCH /config { "priceOptimiserScript": … } (ads.txt is already live).'
       : a.mode === 'test' || !ref.site.domain ? 'Test mode: every slot serves Google sample ads until POST …/ads/enable.' : undefined,

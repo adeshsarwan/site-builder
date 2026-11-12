@@ -80,15 +80,31 @@ export interface GamesLaunchInput {
 const PO_HOST_RE = /serve\.thebesads\.com\/sdk\//;
 /** true for the head entry that loads the Price Optimiser script. */
 export const isPoTag = (h: unknown) => typeof h === 'string' && PO_HOST_RE.test(h);
-/** Normalises the Price Optimiser input to one <script defer src> tag, or returns an error message. */
+// Rules API SDK. Without an explicit data-po-runtime-config-url this SDK falls back to its built-in default
+// runtime, which is the legacy priceoptimiser1.thebesads.com/v1/runtime-config (404 for Rules API sites).
+export const PO_SDK_URL = 'https://serve.thebesads.com/sdk/publisher-sdk.js';
+export const PO_RUNTIME_URL = 'https://serve.thebesads.com/runtime/config';
+const PO_LEGACY_RUNTIME_RE = /priceoptimiser1\.thebesads\.com|\/v1\/runtime-config/i;
+const attr = (tag: string, name: string) => tag.match(new RegExp(`\\b${name}=["']?([^"'\\s>]+)`, 'i'))?.[1] ?? '';
+
+/** Normalises the Price Optimiser input to one <script defer> tag, or returns an error message. */
 export function poTag(v: unknown, domain: string): { tag: string } | { error: string } {
-  let src = '';
+  let src = '', given = '';
   if (v === true) src = `https://serve.thebesads.com/sdk/${domain}.js`;
   else if (typeof v === 'string' && /^https:\/\/\S+$/.test(v.trim())) src = v.trim();
-  else if (typeof v === 'string') src = v.match(/<script\b[^>]*\bsrc=["']?(https:\/\/[^"'\s>]+)/i)?.[1] ?? '';
+  else if (typeof v === 'string') { given = v; src = attr(v, 'src'); }
   if (!src) return { error: 'priceOptimiserScript must be the <script src="https://…"> tag, its https URL, or true' };
   if (!/^https:\/\/[a-z0-9.-]+\/[\w./%-]+(\?[\w=&.%-]*)?$/i.test(src)) return { error: `priceOptimiserScript: "${src}" is not a plain https script URL` };
-  return { tag: `<script defer src="${src}"></script>` };
+  if (src !== PO_SDK_URL) return { tag: `<script defer src="${src}"></script>` }; // per-domain script, site baked in
+
+  // Rules API SDK: always set the site and the runtime explicitly (never rely on SDK defaults).
+  const site = attr(given, 'data-po-site') || domain;
+  const runtime = attr(given, 'data-po-runtime-config-url') || PO_RUNTIME_URL;
+  if (site !== domain) return { error: `priceOptimiserScript: data-po-site "${site}" does not match the site domain "${domain}"` };
+  if (PO_LEGACY_RUNTIME_RE.test(runtime)) return { error: `priceOptimiserScript: "${runtime}" is the legacy Price Optimiser runtime; use ${PO_RUNTIME_URL}` };
+  if (!/^https:\/\/[a-z0-9.-]+\/[\w./%-]*$/i.test(runtime)) return { error: `priceOptimiserScript: data-po-runtime-config-url "${runtime}" is not a plain https URL` };
+  // data-auto-init="false" is dropped on purpose: games pages have no init script, so the SDK must auto-init.
+  return { tag: `<script defer src="${src}" data-po-site="${site}" data-po-runtime-config-url="${runtime}"></script>` };
 }
 /** Applies (or with null removes) the Price Optimiser script on a site.json. */
 export function applyPo(site: any, tag: string | null) {

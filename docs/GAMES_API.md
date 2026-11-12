@@ -109,6 +109,12 @@ Only `domain` is required (`url` works too: `https://www.playfun.com` → `playf
   When the script is ready: `PATCH /v1/games/sites/{id}/config { "priceOptimiserScript": "…" }`. That adds the script
   and the `gam-native-01` / `gam-native-02` divs, and the site rebuilds in 1–3 minutes. `"adsMode": "test"` at launch
   gives the old Google test ads instead.
+- For the Rules API SDK (`https://serve.thebesads.com/sdk/publisher-sdk.js`) the stored tag always carries
+  `data-po-site="<domain>"` and `data-po-runtime-config-url="https://serve.thebesads.com/runtime/config"` (taken from
+  the tag you send if present, otherwise these defaults). Without them the SDK falls back to the legacy
+  `priceoptimiser1.thebesads.com/v1/runtime-config`, which 404s. A tag pointing at the legacy runtime, or with a
+  `data-po-site` that isn't the site's domain, is refused with 400. `data-auto-init="false"` is dropped (games pages
+  have no init script).
 - The div ids are fixed by the site, not the script: every Price Optimiser config for a games site needs two native
   slots with domId `gam-native-01` and `gam-native-02` (sizes 300x250, 336x280), plus interstitial and rewarded.
 - `content`: the lists, reviews, mobile game pages and blog (home page "What should I download?", `/best/`,
