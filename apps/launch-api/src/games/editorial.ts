@@ -99,7 +99,9 @@ const fact = (g: PoolGame) => `${g.path} | ${g.title} | ${g.genre} | ${g.score ?
 const SYSTEM = (name: string) => `You are the editor of ${name}, a website that recommends Android games from Google Play.
 Write in plain, friendly, specific English for ordinary players. Each sentence must say something concrete about the game
 (what you do in it, how it plays, what it costs, who it suits). No hype words ("ultimate", "epic", "must-have"),
-no claims you cannot back with the facts given or with widely known facts about the game. Never mention other websites.`;
+no claims you cannot back with the facts given or with widely known facts about the game. Never mention other websites.
+Never claim things about how the site works that you were not told: no "we played/tested every game", no team size, no
+scoring formula, no hands-on testing claims. Write about the games and the stated policies only.`;
 
 /** Writes a fresh editorial.json for one site. Throws if the model's answer is unusable. */
 export async function generateEditorial(env: Env, site: { key: string; name: string }, pool: PoolGame[], avoid: string[], reviewCount = 12) {
@@ -128,7 +130,8 @@ Rules:
 - method: the "How we review" page for ${site.name} in your own words, with headings "## …": how games are scored out of 5 and what
   Editor's Choice means; that ratings, installs, prices and ads info come from Google Play and refresh daily; that the games are made
   by their developers, downloaded from Google Play, and ${site.name} is not affiliated with Google or the publishers; that publishers
-  don't pay for placement; how often lists are revisited.`, LIST_SCHEMA, 16000, 'games lists');
+  don't pay for placement; how often lists are revisited. Describe only these points; do not invent a testing process or scoring formula.
+  Write the site name as {site} in method.`, LIST_SCHEMA, 16000, 'games lists');
 
   // ---- validate lists
   const takenSlugs = new Set<string>();
