@@ -77,6 +77,8 @@ It copies the text from `catalog/game.json` into the catalogue. Every portal wit
 POST /v1/games/sites
 {
   "domain": "playfun.com",
+  "priceOptimiserScript": "https://serve.thebesads.com/sdk/playfun.com.js",
+  "adsTxt": ["google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0"],
   "name": "PlayFun",
   "tagline": "Free games, no downloads",
   "description": "SEO text for the home page",
@@ -89,12 +91,19 @@ POST /v1/games/sites
   "categories": ["Puzzle", "Casual", "Arcade"],
   "contactEmail": "hello@playfun.com",
   "networkCode": "23360556473",
-  "adsTxt": ["google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0"],
   "webhookUrl": "https://your-frontend.example/api/launch-webhook"
 }
 → 202 { siteId, siteKey, nameservers, steps, statusUrl, eventsUrl }
 ```
-Only `domain` is required. Show `nameservers` to set at the registrar. Steps, in order:
+Only `domain` is required (`url` works too: `https://www.playfun.com` → `playfun.com`). Show `nameservers` to set at the registrar.
+
+- `design`: `"vibrant"` (default, the torunex.site design: separate desktop and mobile game pages, sidebar ad) or `"classic"`.
+- `priceOptimiserScript`: the Price Optimiser `<script src>` tag, its https URL, or `true` for
+  `https://serve.thebesads.com/sdk/<domain>.js`. With it the pages carry no GPT slots of their own: the script fills
+  `gam-native-01` (sidebar on desktop) and `gam-native-02` (above "More free games"), plus interstitial and rewarded
+  (`ads.mode: "off"`, `ads.nativeSlots: true`). The `ads` step then shows the script instead of being skipped, and
+  `POST …/ads/enable` is refused for that site. Without it the site starts with Google test ads (stage 2 below).
+- `adsTxt`: the lines, or the whole file as one string; invalid lines are refused with `400`. Steps, in order:
 `zone` → `nameservers` (waits until Cloudflare reports the zone active) → `analytics` (GA4: finds the domain's property or creates one, then adds the custom dimensions, metrics and key events below) → `repo` (`sites/<key>/site.json`)
 → `pages` (Cloudflare Pages project `games-<key>`, built from the repo with `SITE=<key>`, rebuilt only by its own folder
 or shared code/catalogue) → `deploy` → `custom_domain` (whatever served apex + www before is detached — Worker custom domains and routes, then A/AAAA/CNAME records, listed in the step detail so you can put them back — then domain attached, SSL, www → apex)
@@ -113,10 +122,12 @@ GET /v1/games/sites/{id}       → { siteKey, domain, pagesProject, adsMode, ana
 GET   /v1/games/sites/{id}/config       → the site.json
 PATCH /v1/games/sites/{id}/config
 { "name", "tagline", "description", "language", "theme": { … }, "logo": { … }, "games": "all" | [slugs], "exclude": [slugs],
-  "featured": [slugs], "categories": [names], "contactEmail", "assets": "proxy" | "cdn" }
+  "featured": [slugs], "categories": [names], "contactEmail", "assets": "proxy" | "cdn",
+  "design": "vibrant" | "classic", "priceOptimiserScript": "<tag or URL>" | true | null }
 → 202 { config, commit, deploy: { statusUrl } }
 ```
 `theme` and `logo` merge with what is there; the other fields replace. Unknown game slugs are refused.
+`priceOptimiserScript: null` removes the script and puts the site back on test ads.
 
 ```http
 GET /v1/games/sites/{id}/games   → the games this portal shows, with page URL, play URL, the ad units each one gets, media

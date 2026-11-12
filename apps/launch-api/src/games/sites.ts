@@ -14,7 +14,7 @@ export const GAMES_STEPS = [
   { key: 'deploy', label: 'Build & deploy' },
   { key: 'custom_domain', label: 'Attach domain + SSL' },
   { key: 'search_console', label: 'Verify Search Console + sitemap' },
-  { key: 'ads', label: 'Ads (test ads until stage 2)' },
+  { key: 'ads', label: 'Ads (Price Optimiser or test ads)' },
   { key: 'smoke_test', label: 'Check site is live' },
 ] as const;
 
@@ -31,6 +31,16 @@ export interface Game { slug: string; title: string; tagline?: string; descripti
 
 export interface GamesLaunchInput {
   domain: string;
+  /** Same as domain; a full URL is fine (https://www.example.com → example.com). */
+  url?: string;
+  /** Page design: "vibrant" (default) or "classic". */
+  design?: 'vibrant' | 'classic';
+  /**
+   * Price Optimiser ad script: the <script> tag, its src URL, or true for https://serve.thebesads.com/sdk/<domain>.js.
+   * With it, portal pages carry no GPT slots of their own: the script fills the two native slots (gam-native-01/02)
+   * and serves interstitial/rewarded.
+   */
+  priceOptimiserScript?: string | boolean;
   name?: string;
   tagline?: string;
   description?: string;
@@ -46,11 +56,34 @@ export interface GamesLaunchInput {
   /** Categories shown on this site, in order (default: every category its games use). */
   categories?: string[];
   contactEmail?: string;
+  /** ads.txt lines (or the whole file as one string). */
   adsTxt?: string[];
   networkCode?: string;
   /** Use an existing GA4 web stream instead of creating a property. */
   ga4MeasurementId?: string;
   webhookUrl?: string;
+}
+
+const PO_HOST_RE = /serve\.thebesads\.com\/sdk\//;
+/** true for the head entry that loads the Price Optimiser script. */
+export const isPoTag = (h: unknown) => typeof h === 'string' && PO_HOST_RE.test(h);
+/** Normalises the Price Optimiser input to one <script defer src> tag, or returns an error message. */
+export function poTag(v: unknown, domain: string): { tag: string } | { error: string } {
+  let src = '';
+  if (v === true) src = `https://serve.thebesads.com/sdk/${domain}.js`;
+  else if (typeof v === 'string' && /^https:\/\/\S+$/.test(v.trim())) src = v.trim();
+  else if (typeof v === 'string') src = v.match(/<script\b[^>]*\bsrc=["']?(https:\/\/[^"'\s>]+)/i)?.[1] ?? '';
+  if (!src) return { error: 'priceOptimiserScript must be the <script src="https://…"> tag, its https URL, or true' };
+  if (!/^https:\/\/[a-z0-9.-]+\/[\w./%-]+(\?[\w=&.%-]*)?$/i.test(src)) return { error: `priceOptimiserScript: "${src}" is not a plain https script URL` };
+  return { tag: `<script defer src="${src}"></script>` };
+}
+/** Applies (or with null removes) the Price Optimiser script on a site.json. */
+export function applyPo(site: any, tag: string | null) {
+  site.headHtml = [...(tag ? [tag] : []), ...(site.headHtml ?? []).filter((h: unknown) => !isPoTag(h))];
+  if (!site.headHtml.length) delete site.headHtml;
+  site.ads = site.ads ?? {};
+  if (tag) { site.ads.mode = 'off'; site.ads.nativeSlots = true; }
+  else { if (site.ads.mode === 'off') site.ads.mode = 'test'; delete site.ads.nativeSlots; }
 }
 
 export const DEFAULT_THEME = { background: '#bfe3ff', backgroundAlt: '#d9efff', accent: '#ff3d77', accentText: '#ffffff', text: '#0b2a4a', tile: '#ffffff' };
@@ -72,7 +105,7 @@ export function newSiteJson(key: string, input: GamesLaunchInput, catalog: Game[
   const name = input.name || input.domain;
   const live = catalog.filter((g) => !g.disabled);
   const chosen = input.games && input.games !== 'all' ? live.filter((g) => (input.games as string[]).includes(g.slug)) : live;
-  return {
+  const site: Record<string, any> = {
     key,
     name,
     domain: input.domain,
@@ -99,7 +132,11 @@ export function newSiteJson(key: string, input: GamesLaunchInput, catalog: Game[
     adsTxt: input.adsTxt ?? [],
     contactEmail: input.contactEmail ?? '',
     analytics: { ga4: input.ga4MeasurementId ?? '' } as { ga4: string; ga4Property?: string },
+    design: input.design === 'classic' ? 'classic' : 'vibrant',
   };
+  const po = input.priceOptimiserScript ? poTag(input.priceOptimiserScript, input.domain) : null;
+  if (po && 'tag' in po) applyPo(site, po.tag);
+  return site;
 }
 
 /** Games a site shows, the same way build.mjs picks them. */

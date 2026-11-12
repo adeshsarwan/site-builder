@@ -35,7 +35,7 @@ import * as pages from './pages';
 import * as ga4 from './analytics';
 import {
   AD_KINDS, CATALOG, GAMES_STEPS, SITE_SLOTS, UNIT_RE, cdn, categoriesOf, isSlug, loadCatalog, newSiteJson, pagesProjectOf, resolveGamesSite,
-  siteGames, siteKeyFor, sitePath, siteUnit, unitsFor, type Game, type GamesLaunchInput, type GamesSiteRef,
+  siteGames, siteKeyFor, sitePath, siteUnit, unitsFor, poTag, applyPo, isPoTag, type Game, type GamesLaunchInput, type GamesSiteRef,
 } from './sites';
 
 type AppEnv = { Bindings: Env; Variables: { role: Role } };
@@ -166,10 +166,25 @@ games.patch('/games', async (c) => {
 
 games.post('/games/sites', async (c) => {
   const input = (await body(c)) as GamesLaunchInput;
-  const domain = String(input?.domain ?? '').toLowerCase().trim().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '');
+  const domain = String(input?.domain || input?.url || '').toLowerCase().trim().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '');
   if (!DOMAIN_RE.test(domain)) return c.json({ error: 'A valid "domain" is required, e.g. "playpop.com"' }, 400);
   input.domain = domain;
   input.name ||= domain;
+  delete input.url;
+  if (input.design !== undefined && !['vibrant', 'classic'].includes(input.design)) return c.json({ error: 'design must be "vibrant" (default) or "classic"' }, 400);
+  if (input.priceOptimiserScript) {
+    const po = poTag(input.priceOptimiserScript, domain);
+    if ('error' in po) return c.json({ error: po.error }, 400);
+    input.priceOptimiserScript = po.tag.match(/src="([^"]+)"/)![1];
+  }
+  if (input.adsTxt !== undefined) {
+    const raw: unknown = input.adsTxt;
+    const lines = typeof raw === 'string' ? raw.split('\n') : raw;
+    if (!Array.isArray(lines) || lines.some((l) => typeof l !== 'string')) return c.json({ error: 'adsTxt must be the ads.txt text or a list of its lines' }, 400);
+    const v = validateAdsTxt(lines);
+    if (v.warnings.length) return c.json({ error: `adsTxt: ${v.warnings.join('; ')}` }, 400);
+    input.adsTxt = v.lines;
+  }
   const catalog = await loadCatalog(c.env);
   const known = new Set(catalog.map((g) => g.slug));
   for (const k of ['games', 'exclude', 'featured'] as const) {
@@ -263,8 +278,19 @@ const CONFIG_FIELDS = ['name', 'tagline', 'description', 'language', 'theme', 'l
 
 games.patch('/games/sites/:id/config', withSite(async (c, ref) => {
   const b = await body(c);
-  const unknown = Object.keys(b).filter((k) => !CONFIG_FIELDS.includes(k));
-  if (unknown.length) return c.json({ error: `Not editable here: ${unknown.join(', ')}. Editable: ${CONFIG_FIELDS.join(', ')} (ads: /ads, ads.txt: /ads.txt, domain: launch a new site)` }, 400);
+  const extra = ['design', 'priceOptimiserScript'];
+  const unknown = Object.keys(b).filter((k) => !CONFIG_FIELDS.includes(k) && !extra.includes(k));
+  if (b.design !== undefined && !['vibrant', 'classic'].includes(b.design)) return c.json({ error: 'design must be "vibrant" or "classic"' }, 400);
+  let po: string | null | undefined;
+  if (b.priceOptimiserScript !== undefined) {
+    if (b.priceOptimiserScript === null || b.priceOptimiserScript === false) po = null;
+    else {
+      const r = poTag(b.priceOptimiserScript, String(ref.site.domain ?? '').replace(/^www\./, ''));
+      if ('error' in r) return c.json({ error: r.error }, 400);
+      po = r.tag;
+    }
+  }
+  if (unknown.length) return c.json({ error: `Not editable here: ${unknown.join(', ')}. Editable: ${[...CONFIG_FIELDS, ...extra].join(', ')} (ads: /ads, ads.txt: /ads.txt, domain: launch a new site)` }, 400);
   const known = new Set((await loadCatalog(c.env)).map((g) => g.slug));
   return changeSite(c, ref, `Edit config: ${Object.keys(b).join(', ')}`, (s) => {
     for (const k of ['games', 'exclude', 'featured']) {
@@ -276,6 +302,8 @@ games.patch('/games/sites/:id/config', withSite(async (c, ref) => {
     if (b.assets !== undefined && !['proxy', 'cdn'].includes(b.assets)) return 'assets must be "proxy" or "cdn"';
     if (b.categories !== undefined && (!Array.isArray(b.categories) || b.categories.some((x: any) => typeof x !== 'string'))) return 'categories must be a list of category names';
     for (const k of CONFIG_FIELDS) if (b[k] !== undefined) s[k] = (k === 'theme' || k === 'logo') ? { ...(s[k] ?? {}), ...b[k] } : b[k];
+    if (b.design !== undefined) s.design = b.design;
+    if (po !== undefined) applyPo(s, po);
   });
 }));
 
@@ -300,7 +328,9 @@ games.get('/games/sites/:id/ads', withSite(async (c, ref) => {
   const list = siteGames(ref.site, await loadCatalog(c.env));
   return c.json({
     siteKey: ref.key, domain: ref.site.domain || null, mode: a.mode, networkCode: a.networkCode, gameUnitPattern: a.gameUnitPattern, siteUnitPattern: a.siteUnitPattern,
-    note: a.mode === 'test' || !ref.site.domain ? 'Test mode: every slot serves Google sample ads until POST …/ads/enable.' : undefined,
+    priceOptimiser: (ref.site.headHtml ?? []).find(isPoTag)?.match(/src="([^"]+)"/)?.[1] ?? null,
+    note: (ref.site.headHtml ?? []).some(isPoTag) ? 'Ads on the pages come from the Price Optimiser script (native slots gam-native-01 / gam-native-02, interstitial, rewarded).'
+      : a.mode === 'test' || !ref.site.domain ? 'Test mode: every slot serves Google sample ads until POST …/ads/enable.' : undefined,
     pageSlots: Object.fromEntries(Object.keys(a.siteSlots ?? {}).map((s) => [s, { sizes: a.siteSlots[s], unit: siteUnit(ref.site, s), custom: Boolean(a.siteUnits?.[s]) }])),
     games: Object.fromEntries(list.map((g) => [g.slug, unitsFor(ref.site, g.slug)])),
     adsTxt: ref.site.adsTxt ?? [],
@@ -353,6 +383,7 @@ games.delete('/games/sites/:id/ads/games/:slug', withSite(async (c, ref) => {
 
 games.post('/games/sites/:id/ads/enable', withSite(async (c, ref) => {
   if (!ref.site.domain) return c.json({ error: 'The site has no domain yet; live ads need one.' }, 409);
+  if ((ref.site.headHtml ?? []).some(isPoTag)) return c.json({ error: 'This site serves ads through the Price Optimiser script, so there is nothing to enable. Set ads.txt with PUT /v1/games/sites/{id}/ads.txt; remove the script with PATCH /config { "priceOptimiserScript": null }.' }, 409);
   const b = await body(c);
   const incoming: string[] = Array.isArray(b.lines) ? b.lines.map(String) : typeof b.text === 'string' ? b.text.split('\n') : [];
   const { lines, warnings } = validateAdsTxt(incoming);
