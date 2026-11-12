@@ -127,11 +127,13 @@ Rules:
 - award: 2-4 words, e.g. "Best for two players". why: one sentence. intro: 1-2 short paragraphs. howWeChose: 1-2 sentences.
 - featured: one standout game. spotlight: 3 picks from 3 different lists (listTitle exactly as you wrote it), each with a short why (under 10 words).
 - homeLists: titles of 6 of your lists to show on the home page.
-- method: the "How we review" page for ${site.name} in your own words, with headings "## …": how games are scored out of 5 and what
-  Editor's Choice means; that ratings, installs, prices and ads info come from Google Play and refresh daily; that the games are made
-  by their developers, downloaded from Google Play, and ${site.name} is not affiliated with Google or the publishers; that publishers
-  don't pay for placement; how often lists are revisited. Describe only these points; do not invent a testing process or scoring formula.
-  Write the site name as {site} in method.`, LIST_SCHEMA, 16000, 'games lists');
+- method: the "How we review" page for ${site.name}, 5-6 short sections with headings "## …", in your own words, saying ONLY these facts:
+  scores out of 5 are the editors' judgment of gameplay and depth, how fair the ads and in-app purchases are, how well it plays on
+  typical phones and how long it stays fun (not the Google Play rating); Editor's Choice marks reviewed games the editors would
+  recommend to almost anyone; ratings, installs, prices, age ratings and ads/purchase info come from Google Play and refresh daily;
+  the games are made by their developers and downloaded from Google Play, and ${site.name} is not affiliated with Google or the
+  publishers; publishers don't pay for reviews or list placements; lists are revisited regularly and readers can report anything
+  out of date via the contact page. Write the site name as {site} in method.`, LIST_SCHEMA, 16000, 'games lists');
 
   // ---- validate lists
   const takenSlugs = new Set<string>();
