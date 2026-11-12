@@ -334,6 +334,7 @@ games.patch('/games/sites/:id/config', withSite(async (c, ref) => {
 games.post('/games/sites/:id/content/lists', withSite(async (c, ref) => {
   if (!ref.site.content) return c.json({ error: 'This site has no content block. Add one first: PATCH /config { "content": "torunex-site" }' }, 409);
   try {
+    await pages.syncWatchPaths(c.env, pagesProjectOf(ref), ref.key).catch(() => false); // so the content commit rebuilds the site
     const r = await writeSiteEditorial(c.env, ref.key);
     return c.json({ ...r, deploy: { pagesProject: pagesProjectOf(ref), statusUrl: r.commit ? `/api/v1/games/sites/${ref.key}/deployments?commit=${r.commit}` : null, note: 'Cloudflare Pages rebuilds this site from the commit (1–3 minutes).' } }, r.commit ? 202 : 200);
   } catch (e: any) {
@@ -454,6 +455,7 @@ games.patch('/games/sites/:id/ads.txt', withSite(async (c, ref) => {
 
 // ---------- deploys + health ----------
 games.post('/games/sites/:id/deploy', withSite(async (c, ref) => {
+  await pages.syncWatchPaths(c.env, pagesProjectOf(ref), ref.key).catch(() => false);
   const d = await pages.triggerDeployment(c.env, pagesProjectOf(ref));
   return c.json({ pagesProject: pagesProjectOf(ref), deploymentId: d.id, statusUrl: `/api/v1/games/sites/${ref.key}/deployments?id=${d.id}` }, 202);
 }));

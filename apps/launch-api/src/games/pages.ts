@@ -34,9 +34,24 @@ export async function getProject(env: Env, name: string) {
  * Creates the project connected to the games repo. Only pushes that touch this site's folder or the shared
  * code/catalog rebuild it (build watch paths), and branches other than main never build.
  */
+/** Pushes that rebuild a site: its own folder, its content (lists, mobile game pool, daily Play data), shared code. */
+export const watchPaths = (siteKey: string) => [`sites/${siteKey}/**`, 'content/**', 'catalog/**', 'src/**', 'functions/play/**', 'build.mjs', 'package.json'];
+
+/** Brings an existing project's build watch paths up to date (projects made before content/** was added). */
+export async function syncWatchPaths(env: Env, name: string, siteKey: string, project?: any) {
+  const p = project ?? await getProject(env, name);
+  const cfg = p?.source?.config;
+  if (!cfg) return false;
+  const want = watchPaths(siteKey);
+  const have: string[] = cfg.path_includes ?? [];
+  if (want.every((w) => have.includes(w))) return false;
+  await cf<any>(env, `/${name}`, { method: 'PATCH', body: JSON.stringify({ source: { type: 'github', config: { ...cfg, path_includes: [...new Set([...have, ...want])] } } }) });
+  return true;
+}
+
 export async function ensureProject(env: Env, name: string, siteKey: string) {
   const existing = await getProject(env, name);
-  if (existing) return existing;
+  if (existing) { await syncWatchPaths(env, name, siteKey, existing).catch(() => false); return existing; }
   const vars = { SITE: { type: 'plain_text', value: siteKey }, NODE_VERSION: { type: 'plain_text', value: '20' } };
   return cf<any>(env, '', {
     method: 'POST',
@@ -49,7 +64,7 @@ export async function ensureProject(env: Env, name: string, siteKey: string) {
           owner: env.GITHUB_OWNER, repo_name: repoName(env), production_branch: env.GAMES_GITHUB_BRANCH || 'main',
           deployments_enabled: true, production_deployments_enabled: true, pr_comments_enabled: false,
           preview_deployment_setting: 'none',
-          path_includes: [`sites/${siteKey}/**`, 'catalog/**', 'src/**', 'functions/play/**', 'build.mjs', 'package.json'],
+          path_includes: watchPaths(siteKey),
           path_excludes: [],
         },
       },
