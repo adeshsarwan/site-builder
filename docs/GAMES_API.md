@@ -78,6 +78,7 @@ POST /v1/games/sites
 {
   "domain": "playfun.com",
   "priceOptimiserScript": "https://serve.thebesads.com/sdk/playfun.com.js",
+  "anchor": true,
   "adsTxt": ["google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0"],
   "name": "PlayFun",
   "tagline": "Free games, no downloads",
@@ -116,7 +117,19 @@ Only `domain` is required (`url` works too: `https://www.playfun.com` → `playf
   `data-po-site` that isn't the site's domain, is refused with 400. `data-auto-init="false"` is dropped (games pages
   have no init script).
 - The div ids are fixed by the site, not the script: every Price Optimiser config for a games site needs two native
-  slots with domId `gam-native-01` and `gam-native-02` (sizes 300x250, 336x280), plus interstitial and rewarded.
+  slots with domId `gam-native-01` and `gam-native-02` (sizes 300x250, 336x280), plus interstitial and rewarded; with
+  `anchor: true` also `gam-anchor` (320x50, 320x100, 728x90). An anchor-only site (`nativeSlots: false`) needs only
+  `gam-anchor`. When adding slots to an existing Rules API site, merge them with the ones it has: full config and
+  inventory updates replace the lists you send, so leaving `gam-anchor` out removes it.
+- `anchor` (default `false`): `true` adds the sticky bottom **anchor ad** to every page: one container with DIV ID
+  `gam-anchor` in the shared layout (`ads.anchor: true`), present in the HTML before the deferred SDK initialises.
+  The Rules API config needs a slot with key and domId `gam-anchor`, sizes 320x50, 320x100 and 728x90, and the same
+  GAM unit mapped to all devices; the SDK picks the 320 sizes below 768px and 728x90 above. It is a fixed display
+  placement, not a GPT out-of-page anchor. The pages reserve 100px (mobile) / 90px (desktop) plus the safe-area
+  inset at the bottom, and the mobile full-screen player stops above the anchor. The container is only rendered
+  while the site has the Price Optimiser script, so `anchor: true` can be sent before the script exists.
+- `nativeSlots` (default `true` with the script): `false` for an **anchor-only** site, so pages carry no
+  `gam-native-01` / `gam-native-02` boxes. Kept when the script is later replaced or re-added.
 - `content`: the lists, reviews, mobile game pages and blog (home page "What should I download?", `/best/`,
   `/topgames/`, `/blog/`, `/how-we-review/`). **On by default**: new portals copy them from `GAMES_CONTENT_FROM`
   (`torunex-site`). Pass another site key or domain to copy from that site, or `false` for a games-only portal.
@@ -148,11 +161,15 @@ PATCH /v1/games/sites/{id}/config
 { "name", "tagline", "description", "language", "theme": { … }, "logo": { … }, "games": "all" | [slugs], "exclude": [slugs],
   "featured": [slugs], "categories": [names], "contactEmail", "assets": "proxy" | "cdn",
   "design": "vibrant" | "classic", "priceOptimiserScript": "<tag or URL>" | true | null,
-  "content": "<site key or domain to copy lists/reviews/blog from>" | null }
+  "content": "<site key or domain to copy lists/reviews/blog from>" | null,
+  "anchor": true | false, "nativeSlots": true | false }
 → 202 { config, commit, deploy: { statusUrl } }
 ```
 `theme` and `logo` merge with what is there; the other fields replace. Unknown game slugs are refused.
 `priceOptimiserScript: null` removes the script and its ad divs (no ads until it is added again).
+`anchor: true` / `false` adds or removes the `gam-anchor` container; `nativeSlots: false` drops the two native boxes
+(anchor-only), `true` brings them back. Updating an existing site goes through this PATCH (look it up with
+`GET /v1/games/sites/{id}/config` first); never `POST /v1/games/sites` again for a site that already exists.
 `content: "torunex-site"` adds (or refreshes) the lists, reviews, mobile game pages and blog on a site launched without
 them; send it again after changing `name` or `contactEmail` so the names in the content follow. `content: null` removes them.
 

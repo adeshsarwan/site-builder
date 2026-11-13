@@ -37,7 +37,7 @@ import * as ga4 from './analytics';
 import { writeSiteEditorial } from './editorial';
 import {
   AD_KINDS, CATALOG, GAMES_STEPS, SITE_SLOTS, UNIT_RE, cdn, categoriesOf, isSlug, loadCatalog, newSiteJson, pagesProjectOf, resolveGamesSite,
-  siteGames, siteKeyFor, sitePath, siteUnit, unitsFor, poTag, applyPo, isPoTag, contentFrom, type Game, type GamesLaunchInput, type GamesSiteRef,
+  siteGames, siteKeyFor, sitePath, siteUnit, unitsFor, poTag, applyPo, applyPlacements, placementError, isPoTag, contentFrom, type Game, type GamesLaunchInput, type GamesSiteRef,
 } from './sites';
 
 type AppEnv = { Bindings: Env; Variables: { role: Role } };
@@ -175,6 +175,8 @@ games.post('/games/sites', async (c) => {
   delete input.url;
   if (input.adsMode !== undefined && !['off', 'test'].includes(input.adsMode)) return c.json({ error: 'adsMode must be "off" (default) or "test"' }, 400);
   if (input.design !== undefined && !['vibrant', 'classic'].includes(input.design)) return c.json({ error: 'design must be "vibrant" (default) or "classic"' }, 400);
+  const pErr = placementError(input);
+  if (pErr) return c.json({ error: pErr }, 400);
   if (input.priceOptimiserScript) {
     const po = poTag(input.priceOptimiserScript, domain);
     if ('error' in po) return c.json({ error: po.error }, 400);
@@ -287,7 +289,9 @@ const CONFIG_FIELDS = ['name', 'tagline', 'description', 'language', 'theme', 'l
 
 games.patch('/games/sites/:id/config', withSite(async (c, ref) => {
   const b = await body(c);
-  const extra = ['design', 'priceOptimiserScript', 'content'];
+  const extra = ['design', 'priceOptimiserScript', 'content', 'anchor', 'nativeSlots'];
+  const pErr = placementError(b, true);
+  if (pErr) return c.json({ error: pErr }, 400);
   const unknown = Object.keys(b).filter((k) => !CONFIG_FIELDS.includes(k) && !extra.includes(k));
   if (b.design !== undefined && !['vibrant', 'classic'].includes(b.design)) return c.json({ error: 'design must be "vibrant" or "classic"' }, 400);
   let po: string | null | undefined;
@@ -323,7 +327,9 @@ games.patch('/games/sites/:id/config', withSite(async (c, ref) => {
     if (b.categories !== undefined && (!Array.isArray(b.categories) || b.categories.some((x: any) => typeof x !== 'string'))) return 'categories must be a list of category names';
     for (const k of CONFIG_FIELDS) if (b[k] !== undefined) s[k] = (k === 'theme' || k === 'logo') ? { ...(s[k] ?? {}), ...b[k] } : b[k];
     if (b.design !== undefined) s.design = b.design;
+    if (b.nativeSlots === false) { s.ads = s.ads ?? {}; s.ads.nativeSlots = false; }
     if (po !== undefined) applyPo(s, po);
+    applyPlacements(s, { anchor: b.anchor, nativeSlots: b.nativeSlots });
     if (content === null) delete s.content;
     else if (content !== undefined) s.content = content;
   });
@@ -365,7 +371,8 @@ games.get('/games/sites/:id/ads', withSite(async (c, ref) => {
     siteKey: ref.key, domain: ref.site.domain || null, mode: a.mode, networkCode: a.networkCode, gameUnitPattern: a.gameUnitPattern, siteUnitPattern: a.siteUnitPattern,
     priceOptimiser: (ref.site.headHtml ?? []).find(isPoTag)?.match(/src="([^"]+)"/)?.[1] ?? null,
     priceOptimiserRuntime: (ref.site.headHtml ?? []).find(isPoTag)?.match(/data-po-runtime-config-url="([^"]+)"/)?.[1] ?? null,
-    note: (ref.site.headHtml ?? []).some(isPoTag) ? 'Ads on the pages come from the Price Optimiser script (native slots gam-native-01 / gam-native-02, interstitial, rewarded).'
+    anchor: Boolean(a.anchor), nativeSlots: Boolean(a.nativeSlots),
+    note: (ref.site.headHtml ?? []).some(isPoTag) ? `Ads on the pages come from the Price Optimiser script (${[a.nativeSlots && 'native slots gam-native-01 / gam-native-02', a.anchor && 'anchor gam-anchor', 'interstitial', 'rewarded'].filter(Boolean).join(', ')}).`
       : a.mode === 'off' ? 'No ads yet: add the Price Optimiser script with PATCH /config { "priceOptimiserScript": … } (ads.txt is already live).'
       : a.mode === 'test' || !ref.site.domain ? 'Test mode: every slot serves Google sample ads until POST …/ads/enable.' : undefined,
     pageSlots: Object.fromEntries(Object.keys(a.siteSlots ?? {}).map((s) => [s, { sizes: a.siteSlots[s], unit: siteUnit(ref.site, s), custom: Boolean(a.siteUnits?.[s]) }])),

@@ -43,6 +43,17 @@ export interface GamesLaunchInput {
    */
   priceOptimiserScript?: string | boolean;
   /**
+   * Anchor ad: a sticky bottom container with DIV ID "gam-anchor" on every page, filled by the Price Optimiser SDK
+   * (Rules API slot "gam-anchor": 320x50 / 320x100 on mobile, 728x90 on desktop). Only rendered while the site has
+   * the Price Optimiser script. Default false.
+   */
+  anchor?: boolean;
+  /**
+   * The two in-page native containers (gam-native-01/02). Default true when the Price Optimiser script is set; false
+   * for an anchor-only site, so pages carry no empty native boxes.
+   */
+  nativeSlots?: boolean;
+  /**
    * Ads before the Price Optimiser script is added: "off" (default: no ad divs, no GPT, ads.txt still published, so GAM
    * can verify the site) or "test" (Google sample ads in GPT slots, the old stage-2 flow).
    */
@@ -106,13 +117,33 @@ export function poTag(v: unknown, domain: string): { tag: string } | { error: st
   // data-auto-init="false" is dropped on purpose: games pages have no init script, so the SDK must auto-init.
   return { tag: `<script defer src="${src}" data-po-site="${site}" data-po-runtime-config-url="${runtime}"></script>` };
 }
-/** Applies (or with null removes) the Price Optimiser script on a site.json. */
+/** Applies (or with null removes) the Price Optimiser script on a site.json. Keeps exactly one SDK tag. */
 export function applyPo(site: any, tag: string | null) {
   site.headHtml = [...(tag ? [tag] : []), ...(site.headHtml ?? []).filter((h: unknown) => !isPoTag(h))];
   if (!site.headHtml.length) delete site.headHtml;
   site.ads = site.ads ?? {};
-  if (tag) { site.ads.mode = 'off'; site.ads.nativeSlots = true; }
-  else delete site.ads.nativeSlots; // mode stays "off": no ads until a script is added again
+  // An explicit nativeSlots: false (anchor-only site) survives adding, replacing or removing the script.
+  if (tag) { site.ads.mode = 'off'; if (site.ads.nativeSlots !== false) site.ads.nativeSlots = true; }
+  else if (site.ads.nativeSlots) delete site.ads.nativeSlots; // mode stays "off": no ads until a script is added again
+}
+/** Sets the Price Optimiser placements on a site.json: anchor (#gam-anchor) and the native containers. */
+export function applyPlacements(site: any, p: { anchor?: boolean | null; nativeSlots?: boolean | null }) {
+  site.ads = site.ads ?? {};
+  if (p.anchor !== undefined) { if (p.anchor) site.ads.anchor = true; else delete site.ads.anchor; }
+  if (p.nativeSlots !== undefined) {
+    if (p.nativeSlots === false) site.ads.nativeSlots = false;
+    else if ((site.headHtml ?? []).some(isPoTag)) site.ads.nativeSlots = true;
+    else delete site.ads.nativeSlots;
+  }
+}
+/** Validates the anchor / nativeSlots inputs (booleans; null allowed when patching). */
+export function placementError(b: any, patch = false): string | null {
+  for (const k of ['anchor', 'nativeSlots']) {
+    const v = b?.[k];
+    if (v === undefined || typeof v === 'boolean' || (patch && v === null)) continue;
+    return `${k} must be true or false`;
+  }
+  return null;
 }
 
 export const DEFAULT_THEME = { background: '#bfe3ff', backgroundAlt: '#d9efff', accent: '#ff3d77', accentText: '#ffffff', text: '#0b2a4a', tile: '#ffffff' };
@@ -163,8 +194,10 @@ export function newSiteJson(key: string, input: GamesLaunchInput, catalog: Game[
     analytics: { ga4: input.ga4MeasurementId ?? '' } as { ga4: string; ga4Property?: string },
     design: input.design === 'classic' ? 'classic' : 'vibrant',
   };
+  if (input.nativeSlots === false) site.ads.nativeSlots = false; // before applyPo, which keeps an explicit false
   const po = input.priceOptimiserScript ? poTag(input.priceOptimiserScript, input.domain) : null;
   if (po && 'tag' in po) applyPo(site, po.tag);
+  applyPlacements(site, { anchor: input.anchor });
   return site;
 }
 
