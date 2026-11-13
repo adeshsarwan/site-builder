@@ -65,7 +65,11 @@ export interface GamesLaunchInput {
   theme?: Record<string, string>;
   /** Shortcut for theme.accent. */
   primaryColor?: string;
-  logo?: { text?: string; mark?: string };
+  /**
+   * motif: retro logo drawn by the builder (header/footer mark, favicon, app icons, /logo.png) — one of LOGO_MOTIFS.
+   * Default: the motif fewest existing sites use, with its default tile colour. tile: any #rrggbb.
+   */
+  logo?: { text?: string; mark?: string; motif?: string; tile?: string };
   /** "all" (default) or a list of game slugs. */
   games?: 'all' | string[];
   exclude?: string[];
@@ -144,6 +148,34 @@ export function placementError(b: any, patch = false): string | null {
     return `${k} must be true or false`;
   }
   return null;
+}
+
+/** Retro logo motifs (h5-games-site-builder src/logo.mjs) and their default tile colours. */
+export const LOGO_TILES: Record<string, string> = { controller: '#B6F23A', cartridge: '#FFD23F', handheld: '#5CE1E6', cassette: '#FF8FB8', joystick: '#B79CFF', crt: '#FF9F45' };
+export const LOGO_MOTIFS = Object.keys(LOGO_TILES);
+const TILE_ALT = ['#FFD23F', '#5CE1E6', '#FF8FB8', '#B79CFF', '#FF9F45', '#B6F23A', '#7CE38B', '#FF7A7A'];
+export function logoError(l: any): string | null {
+  if (l === undefined) return null;
+  if (!l || typeof l !== 'object' || Array.isArray(l)) return 'logo must be an object like { "motif": "cassette", "tile": "#FF8FB8" }';
+  if (l.motif !== undefined && l.motif !== null && !LOGO_MOTIFS.includes(l.motif)) return `logo.motif must be one of ${LOGO_MOTIFS.join(', ')}`;
+  if (l.tile !== undefined && l.tile !== null && !/^#[0-9a-f]{6}$/i.test(String(l.tile))) return 'logo.tile must be a colour like #FF8FB8';
+  return null;
+}
+/** Logo for a new site: the least-used motif across existing sites (ties: by site key), and a tile no site has with it. */
+export async function pickLogo(env: Env, key: string, want?: { motif?: string; tile?: string }) {
+  const used: { motif: string; tile: string }[] = [];
+  for (const d of await repo.listDirs(env, 'sites').catch(() => [] as string[])) {
+    const l = (await repo.readJson<any>(env, sitePath(d)).catch(() => null))?.logo;
+    if (l?.motif) used.push({ motif: l.motif, tile: String(l.tile || LOGO_TILES[l.motif]).toUpperCase() });
+  }
+  let h = 0; for (const c of key) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  const count = (m: string) => used.filter((u) => u.motif === m).length;
+  const motif = want?.motif && LOGO_MOTIFS.includes(want.motif) ? want.motif
+    : [...LOGO_MOTIFS].sort((a, b) => count(a) - count(b) || ((LOGO_MOTIFS.indexOf(a) + h) % 6) - ((LOGO_MOTIFS.indexOf(b) + h) % 6))[0];
+  if (want?.tile) return { motif, tile: want.tile };
+  const taken = new Set(used.filter((u) => u.motif === motif).map((u) => u.tile));
+  const tile = [LOGO_TILES[motif], ...TILE_ALT].find((t) => !taken.has(t.toUpperCase())) ?? LOGO_TILES[motif];
+  return { motif, tile };
 }
 
 export const DEFAULT_THEME = { background: '#bfe3ff', backgroundAlt: '#d9efff', accent: '#ff3d77', accentText: '#ffffff', text: '#0b2a4a', tile: '#ffffff' };

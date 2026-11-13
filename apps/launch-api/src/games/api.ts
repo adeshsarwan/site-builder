@@ -37,7 +37,7 @@ import * as ga4 from './analytics';
 import { writeSiteEditorial } from './editorial';
 import {
   AD_KINDS, CATALOG, GAMES_STEPS, SITE_SLOTS, UNIT_RE, cdn, categoriesOf, isSlug, loadCatalog, newSiteJson, pagesProjectOf, resolveGamesSite,
-  siteGames, siteKeyFor, sitePath, siteUnit, unitsFor, poTag, applyPo, applyPlacements, placementError, isPoTag, contentFrom, type Game, type GamesLaunchInput, type GamesSiteRef,
+  siteGames, siteKeyFor, sitePath, siteUnit, unitsFor, poTag, applyPo, applyPlacements, placementError, logoError, isPoTag, contentFrom, type Game, type GamesLaunchInput, type GamesSiteRef,
 } from './sites';
 
 type AppEnv = { Bindings: Env; Variables: { role: Role } };
@@ -175,6 +175,8 @@ games.post('/games/sites', async (c) => {
   delete input.url;
   if (input.adsMode !== undefined && !['off', 'test'].includes(input.adsMode)) return c.json({ error: 'adsMode must be "off" (default) or "test"' }, 400);
   if (input.design !== undefined && !['vibrant', 'classic'].includes(input.design)) return c.json({ error: 'design must be "vibrant" (default) or "classic"' }, 400);
+  const lErr = logoError(input.logo);
+  if (lErr) return c.json({ error: lErr }, 400);
   const pErr = placementError(input);
   if (pErr) return c.json({ error: pErr }, 400);
   if (input.priceOptimiserScript) {
@@ -290,6 +292,8 @@ const CONFIG_FIELDS = ['name', 'tagline', 'description', 'language', 'theme', 'l
 games.patch('/games/sites/:id/config', withSite(async (c, ref) => {
   const b = await body(c);
   const extra = ['design', 'priceOptimiserScript', 'content', 'anchor', 'nativeSlots'];
+  const lErr = logoError(b.logo);
+  if (lErr) return c.json({ error: lErr }, 400);
   const pErr = placementError(b, true);
   if (pErr) return c.json({ error: pErr }, 400);
   const unknown = Object.keys(b).filter((k) => !CONFIG_FIELDS.includes(k) && !extra.includes(k));

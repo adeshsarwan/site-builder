@@ -79,6 +79,7 @@ POST /v1/games/sites
   "domain": "playfun.com",
   "priceOptimiserScript": "https://serve.thebesads.com/sdk/playfun.com.js",
   "anchor": true,
+  "logo": { "motif": "cassette" },
   "adsTxt": ["google.com, pub-XXXXXXXXXXXXXXXX, DIRECT, f08c47fec0942fa0"],
   "name": "PlayFun",
   "tagline": "Free games, no downloads",
@@ -130,6 +131,13 @@ Only `domain` is required (`url` works too: `https://www.playfun.com` → `playf
   while the site has the Price Optimiser script, so `anchor: true` can be sent before the script exists.
 - `nativeSlots` (default `true` with the script): `false` for an **anchor-only** site, so pages carry no
   `gam-native-01` / `gam-native-02` boxes. Kept when the script is later replaced or re-added.
+- `logo` (optional): every new site gets a **retro logo and favicon**, drawn by the builder. `"motif"` is one of
+  `controller`, `cartridge`, `handheld`, `cassette`, `joystick`, `crt`; `"tile"` is its background colour (`#rrggbb`).
+  Leave it out and the `repo` step picks the motif fewest sites use, in a tile colour no other site has with it. The
+  site then serves `/logo.svg` (header and footer mark), `/favicon.svg` + `/favicon.ico` (a flat version that reads at
+  16px), `/apple-touch-icon.png`, manifest icons, and **`/logo.png` (512×512) for the GAM consent message**.
+  Change it later with `PATCH /config { "logo": { "motif": "crt", "tile": "#FF9F45" } }`; `{ "logo": { "motif": null } }`
+  goes back to the letter mark.
 - `content`: the lists, reviews, mobile game pages and blog (home page "What should I download?", `/best/`,
   `/topgames/`, `/blog/`, `/how-we-review/`). **On by default**: new portals copy them from `GAMES_CONTENT_FROM`
   (`torunex-site`). Pass another site key or domain to copy from that site, or `false` for a games-only portal.

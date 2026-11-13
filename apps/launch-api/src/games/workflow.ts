@@ -10,7 +10,7 @@ import * as repo from './repo';
 import * as pages from './pages';
 import * as ga4 from './analytics';
 import { writeSiteEditorial } from './editorial';
-import { GAMES_STEPS, contentFrom, defaultContentFrom, loadCatalog, newSiteJson, siteGames, sitePath, type GamesLaunchInput } from './sites';
+import { GAMES_STEPS, contentFrom, defaultContentFrom, loadCatalog, newSiteJson, pickLogo, siteGames, sitePath, type GamesLaunchInput } from './sites';
 export { GAMES_STEPS };
 
 type Key = (typeof GAMES_STEPS)[number]['key'];
@@ -131,12 +131,13 @@ export class GamesLaunchWorkflow extends WorkflowEntrypoint<Env, LaunchParams> {
           if ('content' in r) { site.content = r.content; contentNote = `content from ${r.content.dir}`; }
           else contentNote = `no content: ${r.error}`;
         }
+        site.logo = { ...site.logo, ...(await pickLogo(env, key, input.logo)) }; // retro logo + favicon, drawn by the builder
         site.analytics.ga4 = ga.measurementId ?? '';
         if (ga.property) site.analytics.ga4Property = ga.property;
         const firstGame = site.featured[0] ?? siteGames(site, catalog)[0]?.slug ?? null;
         if (dry) return { output: { commit: 'dry-commit', firstGame }, detail: `sites/${key}/site.json (dry run)` };
         const r = await repo.updateJson(env, [sitePath(key)], (cur) => ({ [sitePath(key)]: cur[sitePath(key)] ?? site }), `Add games site ${domain}`);
-        return { output: { commit: r?.commit ?? null, firstGame }, detail: r ? `sites/${key}/site.json · ${r.commit.slice(0, 7)} · ${contentNote}` : 'site.json already there' };
+        return { output: { commit: r?.commit ?? null, firstGame }, detail: r ? `sites/${key}/site.json · ${r.commit.slice(0, 7)} · ${contentNote} · logo ${site.logo.motif}` : 'site.json already there' };
       });
 
       // 4b. This site's own lists and reviews (so no two sites share the same list text)
