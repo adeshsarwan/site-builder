@@ -138,6 +138,9 @@ Only `domain` is required (`url` works too: `https://www.playfun.com` → `playf
   16px), `/apple-touch-icon.png`, manifest icons, and **`/logo.png` (512×512) for the GAM consent message**.
   Change it later with `PATCH /config { "logo": { "motif": "crt", "tile": "#FF9F45" } }`; `{ "logo": { "motif": null } }`
   goes back to the letter mark.
+- `gtm` (default `GTM-WV6SWT6V`, the shared games container): Google Tag Manager, loaded first in `<head>` on every
+  page; Microsoft Clarity and other tags are managed there, each limited to its site's hostname. `false` for none;
+  `PATCH /config { "gtm": "GTM-…" }` or `null` changes it on a live site.
 - `content`: the lists, reviews, mobile game pages and blog (home page "What should I download?", `/best/`,
   `/topgames/`, `/blog/`, `/how-we-review/`). **On by default**: new portals copy them from `GAMES_CONTENT_FROM`
   (`torunex-site`). Pass another site key or domain to copy from that site, or `false` for a games-only portal.
