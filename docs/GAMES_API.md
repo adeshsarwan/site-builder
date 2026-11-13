@@ -141,6 +141,10 @@ Only `domain` is required (`url` works too: `https://www.playfun.com` → `playf
 - `gtm` (default `GTM-WV6SWT6V`, the shared games container): Google Tag Manager, loaded first in `<head>` on every
   page; Microsoft Clarity and other tags are managed there, each limited to its site's hostname. `false` for none;
   `PATCH /config { "gtm": "GTM-…" }` or `null` changes it on a live site.
+- `clarity`: Microsoft Clarity project ID (the `<id>` in `clarity.microsoft.com/projects/view/<id>`). The site loads
+  Clarity directly, recording into its own project. Clarity has no API to create projects, so create one per site in
+  Clarity first (no GTM step needed), then send the ID at launch or later with `PATCH /config { "clarity": "<id>" }`
+  (`null` removes it).
 - `content`: the lists, reviews, mobile game pages and blog (home page "What should I download?", `/best/`,
   `/topgames/`, `/blog/`, `/how-we-review/`). **On by default**: new portals copy them from `GAMES_CONTENT_FROM`
   (`torunex-site`). Pass another site key or domain to copy from that site, or `false` for a games-only portal.

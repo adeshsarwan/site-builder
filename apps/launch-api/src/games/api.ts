@@ -37,7 +37,7 @@ import * as ga4 from './analytics';
 import { writeSiteEditorial } from './editorial';
 import {
   AD_KINDS, CATALOG, GAMES_STEPS, SITE_SLOTS, UNIT_RE, cdn, categoriesOf, isSlug, loadCatalog, newSiteJson, pagesProjectOf, resolveGamesSite,
-  siteGames, siteKeyFor, sitePath, siteUnit, unitsFor, poTag, applyPo, applyPlacements, placementError, logoError, GTM_RE, isPoTag, contentFrom, type Game, type GamesLaunchInput, type GamesSiteRef,
+  siteGames, siteKeyFor, sitePath, siteUnit, unitsFor, poTag, applyPo, applyPlacements, placementError, logoError, GTM_RE, CLARITY_RE, isPoTag, contentFrom, type Game, type GamesLaunchInput, type GamesSiteRef,
 } from './sites';
 
 type AppEnv = { Bindings: Env; Variables: { role: Role } };
@@ -177,6 +177,7 @@ games.post('/games/sites', async (c) => {
   if (input.design !== undefined && !['vibrant', 'classic'].includes(input.design)) return c.json({ error: 'design must be "vibrant" (default) or "classic"' }, 400);
   const lErr = logoError(input.logo);
   if (lErr) return c.json({ error: lErr }, 400);
+  if (input.clarity !== undefined && !CLARITY_RE.test(String(input.clarity))) return c.json({ error: 'clarity must be the Clarity project ID, e.g. zcx0i3zfmu' }, 400);
   if (input.gtm !== undefined && input.gtm !== false && !GTM_RE.test(String(input.gtm))) return c.json({ error: 'gtm must be a container ID like GTM-WV6SWT6V, or false' }, 400);
   const pErr = placementError(input);
   if (pErr) return c.json({ error: pErr }, 400);
@@ -292,7 +293,8 @@ const CONFIG_FIELDS = ['name', 'tagline', 'description', 'language', 'theme', 'l
 
 games.patch('/games/sites/:id/config', withSite(async (c, ref) => {
   const b = await body(c);
-  const extra = ['design', 'priceOptimiserScript', 'content', 'anchor', 'nativeSlots', 'gtm'];
+  const extra = ['design', 'priceOptimiserScript', 'content', 'anchor', 'nativeSlots', 'gtm', 'clarity'];
+  if (b.clarity !== undefined && b.clarity !== null && !CLARITY_RE.test(String(b.clarity))) return c.json({ error: 'clarity must be the Clarity project ID (e.g. zcx0i3zfmu), or null to remove it' }, 400);
   if (b.gtm !== undefined && b.gtm !== null && b.gtm !== false && !GTM_RE.test(String(b.gtm))) return c.json({ error: 'gtm must be a container ID like GTM-WV6SWT6V, or null to remove it' }, 400);
   const lErr = logoError(b.logo);
   if (lErr) return c.json({ error: lErr }, 400);
@@ -336,6 +338,7 @@ games.patch('/games/sites/:id/config', withSite(async (c, ref) => {
     if (b.nativeSlots === false) { s.ads = s.ads ?? {}; s.ads.nativeSlots = false; }
     if (po !== undefined) applyPo(s, po);
     applyPlacements(s, { anchor: b.anchor, nativeSlots: b.nativeSlots });
+    if (b.clarity !== undefined) { s.analytics = s.analytics ?? {}; if (b.clarity) s.analytics.clarity = b.clarity; else delete s.analytics.clarity; }
     if (b.gtm !== undefined) { s.analytics = s.analytics ?? {}; if (b.gtm) s.analytics.gtm = b.gtm; else delete s.analytics.gtm; }
     if (content === null) delete s.content;
     else if (content !== undefined) s.content = content;

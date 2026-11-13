@@ -89,6 +89,8 @@ export interface GamesLaunchInput {
   newLists?: boolean;
   /** Google Tag Manager container for the site (Clarity etc.). Default GAMES_GTM_ID (GTM-WV6SWT6V); false for none. */
   gtm?: string | false;
+  /** Microsoft Clarity project ID (clarity.microsoft.com/projects/view/<id>); Clarity has no API to create projects. */
+  clarity?: string;
   /** Use an existing GA4 web stream instead of creating a property. */
   ga4MeasurementId?: string;
   webhookUrl?: string;
@@ -183,6 +185,7 @@ export async function pickLogo(env: Env, key: string, want?: { motif?: string; t
 /** Shared Tag Manager container of the games portals (Microsoft Clarity and other tags, one trigger per hostname). */
 export const DEFAULT_GTM = 'GTM-WV6SWT6V';
 export const GTM_RE = /^GTM-[A-Z0-9]+$/;
+export const CLARITY_RE = /^[a-z0-9]{6,16}$/;
 
 export const DEFAULT_THEME = { background: '#bfe3ff', backgroundAlt: '#d9efff', accent: '#ff3d77', accentText: '#ffffff', text: '#0b2a4a', tile: '#ffffff' };
 const CATEGORY_ORDER = ['Puzzle', 'Casual', 'Word', 'Arcade', 'Brain', 'Cards', 'Casino', 'Sports', 'Action'];
@@ -229,7 +232,7 @@ export function newSiteJson(key: string, input: GamesLaunchInput, catalog: Game[
     assets: 'proxy',
     adsTxt: input.adsTxt ?? [],
     contactEmail: input.contactEmail ?? '',
-    analytics: { ga4: input.ga4MeasurementId ?? '', ...(input.gtm === false ? {} : { gtm: input.gtm || DEFAULT_GTM }) } as { ga4: string; ga4Property?: string; gtm?: string },
+    analytics: { ga4: input.ga4MeasurementId ?? '', ...(input.gtm === false ? {} : { gtm: input.gtm || DEFAULT_GTM }), ...(input.clarity ? { clarity: input.clarity } : {}) } as { ga4: string; ga4Property?: string; gtm?: string; clarity?: string },
     design: input.design === 'classic' ? 'classic' : 'vibrant',
   };
   if (input.nativeSlots === false) site.ads.nativeSlots = false; // before applyPo, which keeps an explicit false
