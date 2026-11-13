@@ -37,7 +37,7 @@ import * as ga4 from './analytics';
 import { writeSiteEditorial } from './editorial';
 import {
   AD_KINDS, CATALOG, GAMES_STEPS, SITE_SLOTS, UNIT_RE, cdn, categoriesOf, isSlug, loadCatalog, newSiteJson, pagesProjectOf, resolveGamesSite,
-  siteGames, siteKeyFor, sitePath, siteUnit, unitsFor, poTag, applyPo, applyPlacements, placementError, logoError, GTM_RE, CLARITY_RE, isPoTag, contentFrom, type Game, type GamesLaunchInput, type GamesSiteRef,
+  siteGames, siteKeyFor, sitePath, siteUnit, unitsFor, poTag, applyPo, applyPlacements, placementError, logoError, GTM_RE, CLARITY_RE, siteNameFor, isPoTag, contentFrom, type Game, type GamesLaunchInput, type GamesSiteRef,
 } from './sites';
 
 type AppEnv = { Bindings: Env; Variables: { role: Role } };
@@ -171,7 +171,7 @@ games.post('/games/sites', async (c) => {
   const domain = String(input?.domain || input?.url || '').toLowerCase().trim().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '');
   if (!DOMAIN_RE.test(domain)) return c.json({ error: 'A valid "domain" is required, e.g. "playpop.com"' }, 400);
   input.domain = domain;
-  input.name ||= domain;
+  input.name ||= siteNameFor(domain);
   delete input.url;
   if (input.adsMode !== undefined && !['off', 'test'].includes(input.adsMode)) return c.json({ error: 'adsMode must be "off" (default) or "test"' }, 400);
   if (input.design !== undefined && !['vibrant', 'classic'].includes(input.design)) return c.json({ error: 'design must be "vibrant" (default) or "classic"' }, 400);

@@ -190,6 +190,8 @@ export const CLARITY_RE = /^[a-z0-9]{6,16}$/;
 export const DEFAULT_THEME = { background: '#bfe3ff', backgroundAlt: '#d9efff', accent: '#ff3d77', accentText: '#ffffff', text: '#0b2a4a', tile: '#ffffff' };
 const CATEGORY_ORDER = ['Puzzle', 'Casual', 'Word', 'Arcade', 'Brain', 'Cards', 'Casino', 'Sports', 'Action'];
 
+/** Default site name: the first part of the domain, capitalised (branevora.com → Branevora). Also the logo text. */
+export const siteNameFor = (domain: string) => { const w = domain.replace(/^www\./, '').split('.')[0]; return w.charAt(0).toUpperCase() + w.slice(1); };
 export const siteKeyFor = (domain: string) => slugFromDomain(domain);
 
 export async function loadCatalog(env: Env): Promise<Game[]> {
@@ -203,7 +205,7 @@ export function categoriesOf(games: Game[]) {
 
 /** The site.json a new portal starts with. */
 export function newSiteJson(key: string, input: GamesLaunchInput, catalog: Game[]) {
-  const name = input.name || input.domain;
+  const name = input.name || siteNameFor(input.domain);
   const live = catalog.filter((g) => !g.disabled);
   const chosen = input.games && input.games !== 'all' ? live.filter((g) => (input.games as string[]).includes(g.slug)) : live;
   const site: Record<string, any> = {

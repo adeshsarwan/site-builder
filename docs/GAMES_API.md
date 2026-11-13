@@ -98,7 +98,7 @@ POST /v1/games/sites
 }
 → 202 { siteId, siteKey, nameservers, steps, statusUrl, eventsUrl }
 ```
-Only `domain` is required (`url` works too: `https://www.playfun.com` → `playfun.com`). Show `nameservers` to set at the registrar.
+`name` defaults to the first part of the domain, capitalised (`playfun.com` → `PlayFun` only if you send it; otherwise `Playfun`), and is also the text next to the logo. Only `domain` is required (`url` works too: `https://www.playfun.com` → `playfun.com`). Show `nameservers` to set at the registrar.
 
 - `design`: `"vibrant"` (default, the torunex.site design: separate desktop and mobile game pages, sidebar ad) or `"classic"`.
 - `priceOptimiserScript`: the Price Optimiser `<script src>` tag, its https URL, or `true` for
