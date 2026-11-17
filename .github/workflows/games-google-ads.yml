@@ -1,0 +1,39 @@
+name: Games site Google Ads connect
+run-name: google-ads ${{ inputs.site }} ${{ inputs.customer_id }}
+
+# Runs PUT /api/v1/games/sites/{site}/google-ads: records the Google Ads account in site.json (the site then sends
+# ad_shown once per session on page load) and marks ad_shown as a GA4 key event. Safe to run again.
+# Normally the frontend calls this endpoint; this workflow is for manual runs. Needs the LAUNCH_API_KEY secret.
+on:
+  workflow_dispatch:
+    inputs:
+      site:
+        description: 'Site key or domain, e.g. torunex-site'
+        required: true
+        type: string
+      customer_id:
+        description: 'Google Ads customer ID, e.g. 295-799-5545'
+        required: true
+        type: string
+      send_to:
+        description: 'Optional: AW-123456789/label to also send ad_shown straight to a Google Ads conversion action'
+        required: false
+        type: string
+
+jobs:
+  connect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Connect Google Ads
+        env:
+          KEY: ${{ secrets.LAUNCH_API_KEY }}
+          SITE: ${{ inputs.site }}
+          CID: ${{ inputs.customer_id }}
+          SEND_TO: ${{ inputs.send_to }}
+        run: |
+          BODY=$(jq -n --arg c "$CID" --arg s "$SEND_TO" '{customerId: $c} + (if $s == "" then {} else {sendTo: $s} end)')
+          R=$(curl -sS -w '\n%{http_code}' -X PUT "https://sitebuilder.thebesads.com/api/v1/games/sites/$SITE/google-ads" \
+            -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' -d "$BODY")
+          CODE=$(echo "$R" | tail -1); JSON=$(echo "$R" | sed '$d')
+          echo "$JSON" | jq . || echo "$JSON"
+          [ "$CODE" -lt 300 ]
