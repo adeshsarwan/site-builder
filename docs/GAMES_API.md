@@ -259,6 +259,27 @@ Works for sites made by hand too (`{id}` = site key, e.g. `torunex-site`). `anal
 property to use when linking GA4 to Ad Manager and Google Ads from your frontend (available once the `analytics` step is done). Not done by the API: the Ad Manager link (frontend)
 and the Google Ads link. Enhanced measurement is on by default for every new web stream.
 
+### Google Ads (`ad_shown` conversion)
+After your frontend links the site's GA4 property (`analytics.propertyId`) to a Google Ads account, it confirms the
+connection here. The site then sends a GA4 `ad_shown` event **on page load, once per browser session** (sessionStorage
+`ad_shown_sent`; params `page_type`, `view`, `trigger: "page_load"`), and `ad_shown` is marked as a GA4 key event so
+Google Ads can import it as a conversion. Sites without this send no `ad_shown`.
+
+```http
+PUT    /v1/games/sites/{id}/google-ads   { "customerId": "295-799-5545", "sendTo"?: "AW-123456789/AbCdEfGh" }
+→ 202 { changed: true, googleAds, events: ["ad_shown"], keyEvents: { created, existing, errors }, next, commit, deploy }
+→ 200 { changed: false, … }               already connected with the same values
+→ 409                                      the site has no GA4 tag yet (run /analytics/setup first)
+GET    /v1/games/sites/{id}/google-ads   → { connected, googleAds: { customerId, sendTo?, connectedAt } | null, events, ga4Property }
+DELETE /v1/games/sites/{id}/google-ads   → stops ad_shown after the rebuild (the GA4 key event stays)
+```
+- **Without `sendTo`** (default): Google Ads gets `ad_shown` by importing it from GA4: Goals → Conversions → New conversion
+  → Import → Google Analytics 4 → Web → `ad_shown`. Imports lag up to about a day.
+- **With `sendTo`** (conversion ID / label from a Google Ads "Website" conversion action's tag setup): the page also
+  loads `gtag('config', 'AW-…')` and sends `gtag('event', 'conversion', { send_to })` with the same once-per-session
+  rule. Use one route per Ads account, or keep only one of the two conversion actions Primary, so nothing is counted twice.
+- Stored in `site.json` as `analytics.googleAds`; `GET /v1/games/sites/{id}` also returns it (and `ad_shown` in `keyEvents`).
+
 ### Deploys and health
 Every change returns `commit` and `deploy.statusUrl`:
 ```http

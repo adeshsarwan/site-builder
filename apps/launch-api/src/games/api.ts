@@ -25,6 +25,8 @@
 //   POST   /games/sites/:id/deploy          rebuild now        GET /games/sites/:id/deployments?commit=
 //   GET    /games/sites/:id/health          live checks
 //   POST   /games/sites/:id/analytics/setup { measurementId?, property? } GA4: find/create property, add dimensions, metrics, key events, retention
+//   GET|PUT|DELETE /games/sites/:id/google-ads { customerId, sendTo? }  the frontend confirms the site's GA4 is linked to this
+//                                           Google Ads account: the site then sends ad_shown (once per session, page load)
 import { Hono } from 'hono';
 import type { Env } from '../types';
 import type { Role } from '../libraryApi';
@@ -241,7 +243,7 @@ games.get('/games/sites/:id', async (c) => {
   if (!ref) return notFound(c);
   const status = ref.siteId ? await siteStatus(c.env, ref.siteId) : null;
   const a = ref.site.analytics ?? {};
-  const analytics = { measurementId: a.ga4 || null, property: a.ga4Property || null, propertyId: a.ga4Property ? String(a.ga4Property).replace(/^properties\//, '') : null, keyEvents: ga4.GA_KEY_EVENTS };
+  const analytics = { measurementId: a.ga4 || null, property: a.ga4Property || null, propertyId: a.ga4Property ? String(a.ga4Property).replace(/^properties\//, '') : null, keyEvents: a.googleAds ? [...ga4.GA_KEY_EVENTS, ...ga4.GA_ADS_KEY_EVENTS] : ga4.GA_KEY_EVENTS, googleAds: a.googleAds ?? null };
   return c.json({ siteKey: ref.key, domain: ref.site.domain || null, pagesProject: pagesProjectOf(ref), adsMode: ref.site.ads?.mode, analytics, launch: status, eventsUrl: ref.siteId ? `/api/v1/sites/${ref.siteId}/events` : null });
 });
 
@@ -515,6 +517,49 @@ games.post('/games/sites/:id/analytics/setup', withSite(async (c, ref) => {
   const result = { measurementId: found.measurementId, property: found.property, createdProperty: created, setup, summary: ga4.setupSummary(setup) };
   if (ref.site.analytics?.ga4 === found.measurementId && ref.site.analytics?.ga4Property === found.property) return c.json({ changed: false, ...result });
   return changeSite(c, ref, `GA4 ${found.measurementId}`, (s) => { s.analytics = { ...(s.analytics ?? {}), ga4: found!.measurementId, ga4Property: found!.property }; }, result);
+}));
+
+// Google Ads: the frontend links the site's GA4 property (analytics.propertyId) to a Google Ads account, then calls PUT
+// here. That stores analytics.googleAds in site.json (the site rebuilds and starts sending ad_shown once per session on
+// page load) and marks ad_shown as a GA4 key event, ready to import into Google Ads as a conversion. sendTo
+// ("AW-123456789/AbCdEf") also sends ad_shown straight to that Google Ads conversion action. DELETE stops it.
+const ADS_CID_RE = /^\d{3}-?\d{3}-?\d{4}$/;
+const SEND_TO_RE = /^AW-\d+\/[A-Za-z0-9_-]+$/;
+
+games.get('/games/sites/:id/google-ads', withSite(async (c, ref) => {
+  const g = ref.site.analytics?.googleAds ?? null;
+  return c.json({ siteKey: ref.key, connected: Boolean(g), googleAds: g, events: g ? ga4.GA_ADS_KEY_EVENTS : [], ga4Property: ref.site.analytics?.ga4Property ?? null });
+}));
+
+games.put('/games/sites/:id/google-ads', withSite(async (c, ref) => {
+  const b = await body(c);
+  const cid = String(b.customerId ?? '').trim();
+  if (!ADS_CID_RE.test(cid)) return c.json({ error: 'customerId must be the Google Ads customer ID, e.g. 295-799-5545' }, 400);
+  const customerId = cid.replace(/\D/g, '').replace(/^(\d{3})(\d{3})(\d{4})$/, '$1-$2-$3');
+  const sendTo = b.sendTo == null || b.sendTo === '' ? undefined : String(b.sendTo).trim();
+  if (sendTo && !SEND_TO_RE.test(sendTo)) return c.json({ error: 'sendTo must look like AW-123456789/AbCdEfGh (conversion ID / label from the Google Ads tag setup)' }, 400);
+  if (!ref.site.analytics?.ga4) return c.json({ error: 'The site has no GA4 tag yet: run POST /v1/games/sites/{id}/analytics/setup first' }, 409);
+
+  // Key event first, so the site never sends ad_shown into a property where it can't be imported.
+  let keyEvents: { created: string[]; existing: string[]; errors: string[] } | { skipped: string } = { skipped: 'GA4 API not configured; mark ad_shown as a key event in GA4 by hand' };
+  const property = ref.site.analytics?.ga4Property;
+  if (property && ga4.gaConfigured(c.env)) {
+    try { keyEvents = await ga4.ensureKeyEvents(await ga4.gaToken(c.env), property, ga4.GA_ADS_KEY_EVENTS); }
+    catch (e: any) { keyEvents = { created: [], existing: [], errors: [e.message] }; }
+  }
+  const cur = ref.site.analytics?.googleAds ?? {};
+  const result = { googleAds: { customerId, ...(sendTo ? { sendTo } : {}) }, events: ga4.GA_ADS_KEY_EVENTS, adShown: 'page load, once per browser session', keyEvents,
+    next: sendTo ? 'ad_shown goes to GA4 and straight to the Google Ads conversion action.' : 'In Google Ads: Goals → Conversions → New conversion → Import → Google Analytics 4 → Web → ad_shown (needs the GA4 ↔ Google Ads link).' };
+  if (cur.customerId === customerId && (cur.sendTo ?? undefined) === sendTo) return c.json({ changed: false, ...result });
+  return changeSite(c, ref, `Google Ads ${customerId}`, (s) => {
+    s.analytics = s.analytics ?? {};
+    s.analytics.googleAds = { customerId, ...(sendTo ? { sendTo } : {}), connectedAt: new Date().toISOString().slice(0, 10) };
+  }, result);
+}));
+
+games.delete('/games/sites/:id/google-ads', withSite(async (c, ref) => {
+  if (!ref.site.analytics?.googleAds) return c.json({ changed: false, connected: false });
+  return changeSite(c, ref, 'Disconnect Google Ads', (s) => { delete s.analytics.googleAds; }, { connected: false, note: 'ad_shown stops after the rebuild. The GA4 key event is left in place.' });
 }));
 
 games.get('/games/sites/:id/health', withSite(async (c, ref) => {

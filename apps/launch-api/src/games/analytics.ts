@@ -24,6 +24,21 @@ export const GA_METRICS: [param: string, unit: 'STANDARD' | 'SECONDS', descripti
 ];
 /** Events marked as key events (importable into Google Ads as conversions). */
 export const GA_KEY_EVENTS = ['game_start', 'store_click'];
+/** Extra key events for sites connected to a Google Ads account (PUT /games/sites/:id/google-ads). */
+export const GA_ADS_KEY_EVENTS = ['ad_shown'];
+
+/** Marks events as key events (created before GA has seen them, so there is no 24-hour wait). Idempotent. */
+export async function ensureKeyEvents(token: string, propertyIn: string, events: string[]): Promise<{ created: string[]; existing: string[]; errors: string[] }> {
+  const property = normProperty(propertyIn);
+  const out = { created: [] as string[], existing: [] as string[], errors: [] as string[] };
+  const keys = new Set((await listAll<any>(token, `${ADM}/${property}/keyEvents`, 'keyEvents')).map((k) => k.eventName));
+  for (const ev of events) {
+    if (keys.has(ev)) { out.existing.push(ev); continue; }
+    try { await google.g(token, `${ADM}/${property}/keyEvents`, { method: 'POST', body: JSON.stringify({ eventName: ev, countingMethod: 'ONCE_PER_EVENT' }) }); out.created.push(ev); }
+    catch (e: any) { out.errors.push(`key event ${ev}: ${e.message}`); }
+  }
+  return out;
+}
 
 export const gaTimeZone = (env: Env) => env.GA4_TIME_ZONE || 'Asia/Singapore';
 export const gaConfigured = (env: Env) => Boolean(env.GA4_ACCOUNT_ID && env.GCP_SA_JSON);
