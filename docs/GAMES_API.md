@@ -280,6 +280,21 @@ DELETE /v1/games/sites/{id}/google-ads   → stops ad_shown after the rebuild (t
   rule. Use one route per Ads account, or keep only one of the two conversion actions Primary, so nothing is counted twice.
 - Stored in `site.json` as `analytics.googleAds`; `GET /v1/games/sites/{id}` also returns it (and `ad_shown` in `keyEvents`).
 
+**Setup guide in the response.** `PUT` and `GET` (`GET …/google-ads?customerId=123-456-7890` works before turning it on)
+return `ga4AdsLink` and `setup`:
+```json
+"ga4AdsLink": { "status": "linked" | "not_linked" | "unknown" },
+"setup": { "summary": "www.torunex.site: … GA4 ↔ Google Ads 295-799-5545: not linked. 6 step(s) left.",
+  "steps": [ { "step": 2, "id": "ga4_ads_link", "title": "…", "status": "done" | "todo" | "unknown",
+               "where": "<GA4 admin URL or Google Ads page>", "actions": ["…click by click…"], "note"?: "…" } ] }
+```
+Step ids, in order: `ga4_key_event`, `ga4_ads_link` (checked live with the GA4 Admin API; when not linked the actions
+explain linking, including the cross-login request + approval), `ads_import_conversion` (Edit data sources → GA4 property
+→ ad_shown → category Page view), `conversion_settings` (Primary, Count Every, 1-day click-through and engaged-view
+windows, value), `clean_conversions`, `campaign_goal` (Campaign-specific → only Page views, or a custom goal; Maximize
+conversions → Target CPA; final URL), `verify`. With `sendTo` the GA4 link/import steps are replaced by `ads_tag_conversion`.
+Steps the API cannot see inside Google Ads are `unknown`: show them as a checklist. Built in `apps/launch-api/src/games/googleAds.ts`.
+
 ### Deploys and health
 Every change returns `commit` and `deploy.statusUrl`:
 ```http
