@@ -13,7 +13,7 @@ export const GA_DIMENSIONS: [param: string, description: string][] = [
   ['page_type', 'Type of page (home, game, list, app, category)'],
   ['app_name', 'Play Store game clicked (store_click)'],
   ['list', 'Best-of list (list_view, list_click)'],
-  ['source', 'Which Play button started the game'],
+  ['source', 'Which Play button started the game; rewarded_watched: game_finder or play_gate'],
   ['view', 'mobile or desktop layout'],
   ['ad_slot', 'Native ad slot id (ad_filled, ad_empty)'],
   ['stage', 'Game finder step the visitor left at (match_drop): q1-q4, matching, reveal, ad, ad_incomplete'],
@@ -29,7 +29,7 @@ export const GA_METRICS: [param: string, unit: 'STANDARD' | 'SECONDS', descripti
 /** Events marked as key events (importable into Google Ads as conversions). */
 export const GA_KEY_EVENTS = ['game_start', 'store_click'];
 /** Extra key events for sites connected to a Google Ads account (PUT /games/sites/:id/google-ads). */
-export const GA_ADS_KEY_EVENTS = ['ad_shown'];
+export const GA_ADS_KEY_EVENTS = ['ad_shown', 'rewarded_watched'];
 
 /** Marks events as key events (created before GA has seen them, so there is no 24-hour wait). Idempotent. */
 export async function ensureKeyEvents(token: string, propertyIn: string, events: string[]): Promise<{ created: string[]; existing: string[]; errors: string[] }> {

@@ -260,6 +260,11 @@ property to use when linking GA4 to Ad Manager and Google Ads from your frontend
 and the Google Ads link. Enhanced measurement is on by default for every new web stream.
 
 ### Google Ads (`ad_shown` conversion)
+Two conversions: `ad_shown` (page load, once per session; goal **Page views**) and `rewarded_watched` (one per rewarded
+video that counts as watched: game finder completed or closed after `minWatch` seconds, Play gate granted; never when no
+ad was shown; params `source` game_finder/play_gate, `via`, `app`, `watched`; goal **Engagement**). Both are marked as
+GA4 key events by `PUT …/google-ads`. Campaigns landing on `/best/` use the Engagement goal, others Page views.
+
 After your frontend links the site's GA4 property (`analytics.propertyId`) to a Google Ads account, it confirms the
 connection here. The site then sends a GA4 `ad_shown` event **on page load, once per browser session** (sessionStorage
 `ad_shown_sent`; params `page_type`, `view`, `trigger: "page_load"`), and `ad_shown` is marked as a GA4 key event so

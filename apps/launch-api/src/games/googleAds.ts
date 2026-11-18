@@ -31,14 +31,16 @@ export function setupGuide(env: Env, site: any, customerId: string, opts: { send
   const domain = site.domain || '(no domain yet)';
   const finalUrl = site.domain ? `https://${site.domain}/` : '(site domain)';
   const convName = `${propName} (web) ad_shown`;
+  const rwName = `${propName} (web) rewarded_watched`;
+  const bestUrl = site.domain ? `https://${site.domain}/best/` : '(site domain)/best/';
   const gaAdmin = env.GA4_ACCOUNT_ID && /^\d+$/.test(propertyId) ? `https://analytics.google.com/analytics/web/#/a${env.GA4_ACCOUNT_ID}p${propertyId}/admin/integrations/google-ads` : 'GA4 → Admin → Product links → Google Ads links';
   const steps: SetupStep[] = [];
   let n = 0;
 
   steps.push({
-    step: ++n, id: 'ga4_key_event', title: 'Mark ad_shown as a GA4 key event', where: `GA4 property ${propName} (${propertyId})`,
+    step: ++n, id: 'ga4_key_event', title: 'Mark ad_shown and rewarded_watched as GA4 key events', where: `GA4 property ${propName} (${propertyId})`,
     status: opts.keyEventDone === true ? 'done' : opts.keyEventDone === false ? 'todo' : 'unknown',
-    actions: ['Done by the API when Google Ads is turned on. If it failed: GA4 → Admin → Data display → Events → ad_shown → Mark as key event.'],
+    actions: ['Done by the API when Google Ads is turned on. If it failed: GA4 → Admin → Data display → Events → ad_shown and rewarded_watched → Mark as key event.'],
   });
 
   if (!opts.sendTo) {
@@ -58,14 +60,14 @@ export function setupGuide(env: Env, site: any, customerId: string, opts: { send
       ],
     });
     steps.push({
-      step: ++n, id: 'ads_import_conversion', title: `Import ad_shown from ${propName} as a conversion`, where: `Google Ads ${customerId} → Goals → Conversions`,
+      step: ++n, id: 'ads_import_conversion', title: `Import ad_shown and rewarded_watched from ${propName} as conversions`, where: `Google Ads ${customerId} → Goals → Conversions`,
       status: 'unknown',
-      note: 'ad_shown can show "Inactive" or not be listed until GA4 has received the event (the site sends it on page load); try again a few hours after the site rebuild.',
+      note: 'An event can show "Inactive" or not be listed until GA4 has received it: ad_shown fires on page load, rewarded_watched when someone watches a rewarded video (game finder on /best/ or the Play gate). Import what is listed and come back for the other.',
       actions: [
         'Goals → Conversions → New conversion → tick "Conversions on a website".',
         `Edit data sources → Web page URL ${finalUrl} (use the address Google recommends) → untick "Google tag" → tick the GA4 property ${propName} (${propertyId}, "Linked to this account") → Done. Untick phone calls / app / offline.`,
-        'Save and continue → Select events from ' + propName + ' → tick only ad_shown → Conversion category: Page view → Select events.',
-        `Edit settings on "${convName}" (next step), then Save and continue → Finish. Ignore "See event snippet": the site already sends the event.`,
+        'Save and continue → Select events from ' + propName + ' → tick ad_shown (Conversion category: Page view) and rewarded_watched (Conversion category: Engagement) → Select events.',
+        `Edit settings on "${convName}" and "${rwName}" (next step), then Save and continue → Finish. Ignore "See event snippet": the site already sends the events.`,
       ],
     });
   } else {
@@ -77,47 +79,46 @@ export function setupGuide(env: Env, site: any, customerId: string, opts: { send
   }
 
   steps.push({
-    step: ++n, id: 'conversion_settings', title: `Settings for "${opts.sendTo ? opts.sendTo : convName}"`, where: 'Conversion action → Edit settings',
+    step: ++n, id: 'conversion_settings', title: opts.sendTo ? `Settings for "${opts.sendTo}"` : `Settings for "${rwName}" and "${convName}"`, where: 'Conversion action → Edit settings',
     status: 'unknown',
     actions: [
-      'Action optimization: Primary action used for bidding optimization.',
-      'Value: "Don\'t use a value" for Target CPA, or "Use the same value for each conversion" = average ad revenue per session (in the account currency) to use Target ROAS later.',
-      'Count: Every conversion (the site already sends at most one per session).',
-      'Click-through conversion window: Custom → 1 day. Engaged-view conversion window: Custom → 1 day.',
-      'Attribution: Data-driven.',
+      ...(opts.sendTo ? [] : [`"${rwName}" (Engagement): Primary; Count: Every conversion (one per watched video); Value: "Use the same value for each conversion" = rewarded revenue per watched video (rewarded eCPM ÷ 1000, account currency), or "Don't use a value" for Target CPA.`]),
+      `"${opts.sendTo ? opts.sendTo : convName}" (Page view): Primary; Count: Every conversion (the site sends at most one per session); Value: average ad revenue per session, or none.`,
+      'Both: Click-through conversion window Custom → 1 day; Engaged-view conversion window Custom → 1 day; Attribution: Data-driven.',
+      'Both stay Primary: each campaign picks its own goal (next steps), so never leave a campaign on "Account-default".',
     ],
   });
   steps.push({
-    step: ++n, id: 'clean_conversions', title: 'Keep ad_shown the only Primary Page view action', where: `Google Ads ${customerId} → Goals → Conversions → All conversions`,
+    step: ++n, id: 'clean_conversions', title: 'One Primary action per goal: Page views = ad_shown, Engagement = rewarded_watched', where: `Google Ads ${customerId} → Goals → Conversions → All conversions`,
     status: 'unknown',
     actions: [
-      `Under "Page views", remove (or set to Secondary) every Primary action other than "${convName}", e.g. old Google-tag ad_shown actions or another site's tag.`,
+      `Under "Page views", remove (or set to Secondary) every Primary action other than "${convName}", e.g. old Google-tag ad_shown actions or another site's tag. Under "Engagement", the same for everything other than "${rwName}".`,
       'Actions with a lock icon belong to a manager account: change them there, or rely on the campaign goal below.',
       'Optional: Tools → Data manager → Google tag → ⋮ → Unlink any tag for a site that is not yours.',
     ],
   });
   steps.push({
-    step: ++n, id: 'campaign_goal', title: `Point every ${propName} campaign at ad_shown only`, where: 'Campaign → Settings → Conversion goals',
+    step: ++n, id: 'campaign_goal', title: `Give each ${propName} campaign one goal`, where: 'Campaign → Settings → Conversion goals',
     status: 'unknown',
     actions: [
-      'Conversion goals: change "Account-default" to "Campaign-specific" → Choose campaign goals → tick only "Page views (Website)" → Save → Save.',
-      `Check Goals → Conversions → Summary → Page views lists only "${convName}" as active. If it lists others, use a custom goal instead: Conversion goals → Use a custom goal → Create new → name "${propName} ad_shown" → only "${convName}" → Save.`,
-      'Bidding: Maximize conversions to start; switch to Target CPA after 15–30 conversions.',
-      `Final URL of every ad: ${finalUrl} (the exact address, so there is no redirect and the click ID (gclid) is kept).`,
+      ...(opts.sendTo ? [] : [`Campaigns optimising on rewarded watches (landing page ${bestUrl}, the game finder): Conversion goals → "Campaign-specific" → Choose campaign goals → tick only "Engagement (Website)" → Save. Bidding: Maximize conversions to start, then Target CPA (or Target ROAS with a value) after 15–30 watches. Budget: enough for 15–30 watches a month, or bidding cannot learn.`]),
+      `Campaigns optimising on visits (landing pages like /topgames/… or ${finalUrl}): Conversion goals → "Campaign-specific" → tick only "Page views (Website)" → Save. Bidding: Maximize conversions, then Target CPA after 15–30 conversions.`,
+      'If a goal lists other active actions in Goals → Conversions → Summary, use a custom goal instead: Conversion goals → Use a custom goal → Create new → only the one action → Save.',
+      `Final URL: the exact https://${site.domain || '<domain>'}/… address (www included), so there is no redirect and the click ID (gclid) is kept.`,
     ],
   });
   steps.push({
     step: ++n, id: 'verify', title: 'Verify', where: 'GA4 Realtime and Google Ads → Conversions',
     status: 'unknown',
     actions: [
-      `Open ${finalUrl} in a private window → GA4 → Reports → Realtime → Event count by Event name shows ad_shown within a minute.`,
-      `Google Ads: "${opts.sendTo ? opts.sendTo : convName}" moves from Inactive to "Recording conversions" within about 24 hours of the first ad click.`,
+      `Open ${opts.sendTo ? finalUrl : bestUrl} in a private window → GA4 → Reports → Realtime → Event count by Event name shows ad_shown within a minute${opts.sendTo ? '' : ', and rewarded_watched after answering the questions and watching the video'}.`,
+      `Google Ads: the conversion actions move from Inactive to "Recording conversions" within about 24 hours of the first conversion from an ad click.`,
     ],
   });
 
   const todo = steps.filter((s) => s.status !== 'done').length;
   const summary = opts.sendTo
     ? `${domain}: ad_shown is sent to GA4 and to ${opts.sendTo}. ${todo} step(s) to check in Google Ads ${customerId}.`
-    : `${domain}: ad_shown is sent to GA4 property ${propertyId}. GA4 ↔ Google Ads ${customerId}: ${opts.link.status.replace('_', ' ')}. ${todo} step(s) left.`;
+    : `${domain}: ad_shown and rewarded_watched are sent to GA4 property ${propertyId}. GA4 ↔ Google Ads ${customerId}: ${opts.link.status.replace('_', ' ')}. ${todo} step(s) left.`;
   return { summary, steps };
 }
