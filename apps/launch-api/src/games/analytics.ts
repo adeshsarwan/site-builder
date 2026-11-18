@@ -16,11 +16,15 @@ export const GA_DIMENSIONS: [param: string, description: string][] = [
   ['source', 'Which Play button started the game'],
   ['view', 'mobile or desktop layout'],
   ['ad_slot', 'Native ad slot id (ad_filled, ad_empty)'],
+  ['stage', 'Game finder step the visitor left at (match_drop): q1-q4, matching, reveal, ad, ad_incomplete'],
+  ['via', 'How the game finder match was unlocked (match_unlock)'],
 ];
 /** Numeric event parameters reported as custom metrics. */
 export const GA_METRICS: [param: string, unit: 'STANDARD' | 'SECONDS', description: string][] = [
   ['seconds_played', 'SECONDS', 'Total and average play time per game (game_exit)'],
   ['list_position', 'STANDARD', 'Average list rank of Play Store clicks (store_click)'],
+  ['answered', 'STANDARD', 'Game finder questions answered before leaving (match_drop)'],
+  ['seconds_on_finder', 'SECONDS', 'Time on the game finder before leaving (match_drop)'],
 ];
 /** Events marked as key events (importable into Google Ads as conversions). */
 export const GA_KEY_EVENTS = ['game_start', 'store_click'];
