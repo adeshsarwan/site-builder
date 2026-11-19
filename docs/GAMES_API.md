@@ -115,8 +115,13 @@ POST /v1/games/sites
   `data-po-site="<domain>"` and `data-po-runtime-config-url="https://serve.thebesads.com/runtime/config"` (taken from
   the tag you send if present, otherwise these defaults). Without them the SDK falls back to the legacy
   `priceoptimiser1.thebesads.com/v1/runtime-config`, which 404s. A tag pointing at the legacy runtime, or with a
-  `data-po-site` that isn't the site's domain, is refused with 400. `data-auto-init="false"` is dropped (games pages
-  have no init script).
+  `data-po-site` that isn't the site's domain, is refused with 400. `data-auto-init="false"` is not stored; the
+  build adds it because these sites also get `ads.poAds` (below).
+- With `publisher-sdk.js` the site also gets `ads.poAds: { "skipInterstitialPaths": "^/best(/|$)" }` (kept if already
+  set; removed with the script). The build then adds `po-ads.js`, which decides when the positions are called (natives
+  as they near the screen, the anchor on load) and requests one interstitial per page, priced by Price Optimiser's
+  session ladder (top price first, the next price on the next page after an empty response, no retry), with no
+  interstitial on `/best/`. DIV ids, sizes, split, prices and refresh stay in the Price Optimiser backend.
 - The div ids are fixed by the site, not the script: every Price Optimiser config for a games site needs two native
   slots with domId `gam-native-01` and `gam-native-02` (sizes 300x250, 336x280), plus interstitial and rewarded; with
   `anchor: true` also `gam-anchor` (320x50, 320x100, 728x90). An anchor-only site (`nativeSlots: false`) needs only

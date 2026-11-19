@@ -122,7 +122,8 @@ export function poTag(v: unknown, domain: string): { tag: string } | { error: st
   if (site !== domain) return { error: `priceOptimiserScript: data-po-site "${site}" does not match the site domain "${domain}"` };
   if (PO_LEGACY_RUNTIME_RE.test(runtime)) return { error: `priceOptimiserScript: "${runtime}" is the legacy Price Optimiser runtime; use ${PO_RUNTIME_URL}` };
   if (!/^https:\/\/[a-z0-9.-]+\/[\w./%-]*$/i.test(runtime)) return { error: `priceOptimiserScript: data-po-runtime-config-url "${runtime}" is not a plain https URL` };
-  // data-auto-init="false" is dropped on purpose: games pages have no init script, so the SDK must auto-init.
+  // data-auto-init="false" is not stored here: the H5 build adds it when site.json ads.poAds is set (po-ads.js then
+  // starts the SDK); without poAds the SDK must auto-init.
   return { tag: `<script defer src="${src}" data-po-site="${site}" data-po-runtime-config-url="${runtime}"></script>` };
 }
 /** Applies (or with null removes) the Price Optimiser script on a site.json. Keeps exactly one SDK tag. */
@@ -133,7 +134,14 @@ export function applyPo(site: any, tag: string | null) {
   // An explicit nativeSlots: false (anchor-only site) survives adding, replacing or removing the script.
   if (tag) { site.ads.mode = 'off'; if (site.ads.nativeSlots !== false) site.ads.nativeSlots = true; }
   else if (site.ads.nativeSlots) delete site.ads.nativeSlots; // mode stays "off": no ads until a script is added again
+  // Standard ad controller (h5-games-site-builder src/po-ads.js) on every site with the shared publisher-sdk.js:
+  // it decides when the positions are called and requests one interstitial per page (Price Optimiser session ladder),
+  // skipped on the rewarded-first /best/ funnel. Existing per-site settings are kept. The H5 build refuses poAds
+  // without publisher-sdk.js, so it goes with the SDK tag.
+  if (tag && tag.includes(PO_SDK_URL)) site.ads.poAds = site.ads.poAds ?? { ...DEFAULT_PO_ADS };
+  else delete site.ads.poAds;
 }
+export const DEFAULT_PO_ADS = { skipInterstitialPaths: '^/best(/|$)' };
 /** Sets the Price Optimiser placements on a site.json: anchor (#gam-anchor) and the native containers. */
 export function applyPlacements(site: any, p: { anchor?: boolean | null; nativeSlots?: boolean | null }) {
   site.ads = site.ads ?? {};
